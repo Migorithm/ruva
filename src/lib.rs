@@ -7,10 +7,10 @@ pub mod outbox;
 pub mod repository;
 pub mod responses;
 
-
-pub mod prelude{
+pub mod prelude {
     pub use crate::count;
-    pub use crate::domain::{Aggregate ,Buildable, Builder, Message};
+    pub use crate::domain::{Aggregate, Buildable, Builder, Message};
     pub use crate::Aggregate as AggregateMacro;
+    pub use serde::ser::SerializeStruct;
 }
 pub use prelude::*;

@@ -1,10 +1,9 @@
 use std::{any::Any, collections::VecDeque, fmt::Debug};
 
+use crate::outbox::OutBox;
 use downcast_rs::{impl_downcast, Downcast};
 use serde::Serialize;
 use serde_json::Value;
-
-use crate::outbox::OutBox;
 
 // Aggregate!
 pub trait Aggregate: Send + Sync + Default {
@@ -15,9 +14,9 @@ pub trait Aggregate: Send + Sync + Default {
             VecDeque::new()
         }
     }
-    fn events(&self) -> &VecDeque<Box<dyn Message>>;
+    fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>>;
 
-    fn take_events(&mut self) -> VecDeque<Box<dyn Message>>;
+    fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
     fn raise_event(&mut self, event: Box<dyn Message>);
 }
 
@@ -63,10 +62,10 @@ macro_rules! Aggregate {
 
         $( #[$attr])*
         impl Aggregate for $aggregate {
-            fn events(&self) -> &VecDeque<Box<dyn Message>> {
+            fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>> {
                 &self.events
             }
-            fn take_events(&mut self) -> VecDeque<Box<dyn Message>> {
+            fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>> {
                 std::mem::take(&mut self.events)
             }
             fn raise_event(&mut self, event: Box<dyn Message>) {
