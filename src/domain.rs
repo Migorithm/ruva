@@ -54,11 +54,15 @@ macro_rules! Aggregate {
         $( #[$attr:meta] )*
         $pub:vis
         struct $aggregate:ident {
-            #[serde(skip_deserializing,skip_serializing)]
+            $(#[$event_field_attr:meta])*
             events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
-            $(#[$field_attr:meta])*
-            $($field_pub:vis $field_name:ident :$field_type:ty),*
-        $(,)?}
+            $(
+                $(#[$field_attr:meta])*
+                $field_vis:vis // this visibility will be applied to the getters instead
+                $field_name:ident : $field_type:ty
+            ),* $(,)?
+
+        }
     ) => {
 
         $( #[$attr])*
@@ -78,7 +82,6 @@ macro_rules! Aggregate {
                 Builder::<$aggregate>::new()
             }
         }
-
     };
 }
 
@@ -89,9 +92,12 @@ macro_rules! Entity {
         $( #[$attr:meta] )*
         $pub:vis
         struct $classic:ident {
-            $(#[$field_attr:meta])*
-            $($field_pub:vis $field_name:ident :$field_type:ty),*
-    $(,)?}
+            $(
+                $(#[$field_attr:meta])*
+                $field_vis:vis // this visibility will be applied to the getters instead
+                $field_name:ident : $field_type:ty
+            ),* $(,)?
+    }
 ) => {
         impl $classic {
             $(
