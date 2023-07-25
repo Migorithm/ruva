@@ -11,6 +11,6 @@ pub mod prelude {
     pub use crate::count;
     pub use crate::domain::{Aggregate, Buildable, Builder, Message};
     pub use crate::Aggregate as AggregateMacro;
-    pub use serde::ser::SerializeStruct;
+    pub use serde::{Deserialize, Serialize};
 }
 pub use prelude::*;

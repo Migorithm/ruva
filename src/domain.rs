@@ -54,6 +54,7 @@ macro_rules! Aggregate {
         $( #[$attr:meta] )*
         $pub:vis
         struct $aggregate:ident {
+            #[serde(skip_deserializing,skip_serializing)]
             events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
             $(#[$field_attr:meta])*
             $($field_pub:vis $field_name:ident :$field_type:ty),*
@@ -77,19 +78,7 @@ macro_rules! Aggregate {
                 Builder::<$aggregate>::new()
             }
         }
-        impl serde::Serialize for $aggregate{
-            fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                let mut aggregate = serializer.serialize_struct(stringify!($aggregate),$crate::count!($($field_name)* ))?;
-                $(
 
-                    aggregate.serialize_field(stringify!($field_name), &self.$field_name)?;
-                )*
-                aggregate.end()
-            }
-        }
     };
 }
 
@@ -200,21 +189,22 @@ pub trait Command: 'static + Send + Any + Sync {}
 fn test_aggregate_macro() {
     use crate::domain::Message;
     use crate::Aggregate;
-    use serde::ser::SerializeStruct;
+    use serde::{Deserialize, Serialize};
 
-    #[derive(Debug,Default,Aggregate!)]
+    #[derive(Debug,Default,Serialize,Deserialize,Aggregate!)]
     pub struct SampleAggregate {
+        #[serde(skip_deserializing, skip_serializing)]
         events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
         pub(crate) id: String,
         pub(crate) entity: Vec<Entity>,
     }
 
-    #[derive(Default, Debug, Serialize)]
+    #[derive(Default, Debug, Serialize, Deserialize)]
     pub struct Entity {
         pub(crate) id: i64,
         pub(crate) sub_entity: Vec<SubEntity>,
     }
-    #[derive(Default, Debug, Serialize)]
+    #[derive(Default, Debug, Serialize, Deserialize)]
     pub struct SubEntity {
         pub(crate) id: i64,
     }
