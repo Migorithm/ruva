@@ -43,35 +43,52 @@ impl<T: Aggregate> Default for Builder<T> {
 }
 
 #[macro_export]
+macro_rules! count {
+    () => (0usize);
+    ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
+}
+
+#[macro_export]
 macro_rules! Aggregate {
     (
 
         $( #[$attr:meta] )*
         $pub:vis
         struct $aggregate:ident {
+            events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
             $(#[$field_attr:meta])*
             $($field_pub:vis $field_name:ident :$field_type:ty),*
         $(,)?}
     ) => {
 
         $( #[$attr])*
-
-
-        impl $crate::domain::Aggregate for $aggregate {
+        impl Aggregate for $aggregate {
             fn events(&self) -> &VecDeque<Box<dyn Message>> {
                 &self.events
             }
             fn take_events(&mut self) -> VecDeque<Box<dyn Message>> {
-                mem::take(&mut self.events)
+                std::mem::take(&mut self.events)
             }
             fn raise_event(&mut self, event: Box<dyn Message>) {
                 self.events.push_back(event)
             }
         }
-
-        impl $crate::domain::Buildable<$aggregate> for $aggregate {
+        impl Buildable<$aggregate> for $aggregate {
             fn builder() -> Builder<$aggregate> {
                 Builder::<$aggregate>::new()
+            }
+        }
+        impl serde::Serialize for $aggregate{
+            fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let mut aggregate = serializer.serialize_struct(stringify!($aggregate),$crate::count!($($field_name)* ))?;
+                $(
+
+                    aggregate.serialize_field(stringify!($field_name), &self.$field_name)?;
+                )*
+                aggregate.end()
             }
         }
     };
@@ -179,3 +196,35 @@ macro_rules! message {
 }
 
 pub trait Command: 'static + Send + Any + Sync {}
+
+#[test]
+fn test_aggregate_macro() {
+    use crate::domain::Message;
+    use crate::Aggregate;
+    use serde::ser::SerializeStruct;
+
+    #[derive(Debug,Default,Aggregate!)]
+    pub struct SampleAggregate {
+        events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
+        pub(crate) id: String,
+        pub(crate) entity: Vec<Entity>,
+    }
+
+    #[derive(Default, Debug, Serialize)]
+    pub struct Entity {
+        pub(crate) id: i64,
+        pub(crate) sub_entity: Vec<SubEntity>,
+    }
+    #[derive(Default, Debug, Serialize)]
+    pub struct SubEntity {
+        pub(crate) id: i64,
+    }
+
+    let mut aggregate = SampleAggregate::default();
+    let mut entity = Entity::default();
+    entity.sub_entity.push(SubEntity { id: 1 });
+    aggregate.entity.push(entity);
+
+    let res = serde_json::to_string(&aggregate).unwrap();
+    println!("{:?}", res)
+}
