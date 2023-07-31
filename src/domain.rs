@@ -159,14 +159,12 @@ macro_rules! MailSendable {
         $( #[$attr:meta] )*
         $pub:vis
         struct $mail_sendable:ident {
-            $(#[$event_field_attr:meta])*
-            events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
             $(
                 $(#[$field_attr:meta])*
                 $field_vis:vis // this visibility will be applied to the getters instead
                 $field_name:ident : $field_type:ty
             ),* $(,)?
-        }
+    }
     ) => {
         $( #[$attr])*
         impl $crate::domain::MailSendable for $mail_sendable {
