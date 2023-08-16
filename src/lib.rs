@@ -9,7 +9,7 @@ pub mod responses;
 
 pub mod prelude {
 	pub use crate::count;
-	pub use crate::domain::{Aggregate, Buildable, Builder, Message};
+	pub use crate::domain::{Aggregate, Message};
 	pub use crate::Aggregate as AggregateMacro;
 	pub use crate::Entity;
 	pub use async_trait::async_trait;
