@@ -7,38 +7,41 @@ use serde_json::Value;
 
 // Aggregate!
 pub trait Aggregate: Send + Sync + Default {
-    fn collect_events(&mut self) -> VecDeque<Box<dyn Message>> {
-        if !self.events().is_empty() {
-            self.take_events()
-        } else {
-            VecDeque::new()
-        }
-    }
-    fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>>;
+	fn collect_events(&mut self) -> VecDeque<Box<dyn Message>> {
+		if !self.events().is_empty() {
+			self.take_events()
+		} else {
+			VecDeque::new()
+		}
+	}
+	fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>>;
 
-    fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
-    fn raise_event(&mut self, event: Box<dyn Message>);
+	fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
+	fn raise_event(
+		&mut self,
+		event: Box<dyn Message>,
+	);
 }
 
 pub trait Buildable<B: Aggregate> {
-    fn builder() -> Builder<B>;
+	fn builder() -> Builder<B>;
 }
 
 pub struct Builder<T: Aggregate>(pub T);
 
 impl<T: Aggregate> Builder<T> {
-    pub fn new() -> Self {
-        Builder(T::default())
-    }
-    pub fn build(self) -> T {
-        self.0
-    }
+	pub fn new() -> Self {
+		Builder(T::default())
+	}
+	pub fn build(self) -> T {
+		self.0
+	}
 }
 
 impl<T: Aggregate> Default for Builder<T> {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 #[macro_export]
@@ -101,7 +104,7 @@ macro_rules! Entity {
 ) => {
         impl $classic {
             $(
-                paste::paste!{
+                $crate::paste!{
                 pub fn [< set_ $field_name >] (&mut self, $field_name:$field_type){
                     self.$field_name = $field_name
                 }
@@ -113,43 +116,46 @@ macro_rules! Entity {
 }
 
 pub trait Message: Sync + Send + Any + Downcast {
-    fn externally_notifiable(&self) -> bool {
-        false
-    }
-    fn internally_notifiable(&self) -> bool {
-        false
-    }
+	fn externally_notifiable(&self) -> bool {
+		false
+	}
+	fn internally_notifiable(&self) -> bool {
+		false
+	}
 
-    fn metadata(&self) -> MessageMetadata;
-    fn outbox(&self) -> Box<dyn OutBox>;
-    // {
-    //     let metadata = self.metadata();
-    //     Outbox::new(metadata.aggregate_id, metadata.topic, self.state())
-    // }
-    fn message_clone(&self) -> Box<dyn Message>;
+	fn metadata(&self) -> MessageMetadata;
+	fn outbox(&self) -> Box<dyn OutBox>;
+	// {
+	//     let metadata = self.metadata();
+	//     Outbox::new(metadata.aggregate_id, metadata.topic, self.state())
+	// }
+	fn message_clone(&self) -> Box<dyn Message>;
 
-    fn state(&self) -> String;
+	fn state(&self) -> String;
 
-    fn to_message(self) -> Box<dyn Message + 'static>;
+	fn to_message(self) -> Box<dyn Message + 'static>;
 }
 impl_downcast!(Message);
 impl Debug for dyn Message {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.metadata().topic)
-    }
+	fn fmt(
+		&self,
+		f: &mut std::fmt::Formatter<'_>,
+	) -> std::fmt::Result {
+		write!(f, "{}", self.metadata().topic)
+	}
 }
 
 pub struct MessageMetadata {
-    pub aggregate_id: String,
-    pub topic: String,
+	pub aggregate_id: String,
+	pub topic: String,
 }
 
 // Trait To Mark Event As Mail Sendable. Note that template_name must be specified.
 pub trait MailSendable: Message + Serialize + Send + Sync + 'static {
-    fn template_name(&self) -> String;
-    fn to_json(&self) -> Value {
-        serde_json::to_value(self).unwrap()
-    }
+	fn template_name(&self) -> String;
+	fn to_json(&self) -> Value {
+		serde_json::to_value(self).unwrap()
+	}
 }
 
 #[macro_export]
@@ -175,7 +181,6 @@ macro_rules! MailSendable {
         }
     };
 }
-
 
 #[macro_export]
 macro_rules! message {
@@ -218,33 +223,33 @@ pub trait Command: 'static + Send + Any + Sync {}
 
 #[test]
 fn test_aggregate_macro() {
-    use crate::domain::Message;
-    use crate::Aggregate;
-    use serde::{Deserialize, Serialize};
+	use crate::domain::Message;
+	use crate::Aggregate;
+	use serde::{Deserialize, Serialize};
 
-    #[derive(Debug,Default,Serialize,Deserialize,Aggregate!)]
-    pub struct SampleAggregate {
-        #[serde(skip_deserializing, skip_serializing)]
-        events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
-        pub(crate) id: String,
-        pub(crate) entity: Vec<Entity>,
-    }
+	#[derive(Debug,Default,Serialize,Deserialize,Aggregate!)]
+	pub struct SampleAggregate {
+		#[serde(skip_deserializing, skip_serializing)]
+		events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
+		pub(crate) id: String,
+		pub(crate) entity: Vec<Entity>,
+	}
 
-    #[derive(Default, Debug, Serialize, Deserialize)]
-    pub struct Entity {
-        pub(crate) id: i64,
-        pub(crate) sub_entity: Vec<SubEntity>,
-    }
-    #[derive(Default, Debug, Serialize, Deserialize)]
-    pub struct SubEntity {
-        pub(crate) id: i64,
-    }
+	#[derive(Default, Debug, Serialize, Deserialize)]
+	pub struct Entity {
+		pub(crate) id: i64,
+		pub(crate) sub_entity: Vec<SubEntity>,
+	}
+	#[derive(Default, Debug, Serialize, Deserialize)]
+	pub struct SubEntity {
+		pub(crate) id: i64,
+	}
 
-    let mut aggregate = SampleAggregate::default();
-    let mut entity = Entity::default();
-    entity.sub_entity.push(SubEntity { id: 1 });
-    aggregate.entity.push(entity);
+	let mut aggregate = SampleAggregate::default();
+	let mut entity = Entity::default();
+	entity.sub_entity.push(SubEntity { id: 1 });
+	aggregate.entity.push(entity);
 
-    let res = serde_json::to_string(&aggregate).unwrap();
-    println!("{:?}", res)
+	let res = serde_json::to_string(&aggregate).unwrap();
+	println!("{:?}", res)
 }
