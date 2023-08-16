@@ -8,9 +8,11 @@ pub mod repository;
 pub mod responses;
 
 pub mod prelude {
-    pub use crate::count;
-    pub use crate::domain::{Aggregate, Buildable, Builder, Message};
-    pub use crate::Aggregate as AggregateMacro;
-    pub use serde::{Deserialize, Serialize};
+	pub use crate::count;
+	pub use crate::domain::{Aggregate, Buildable, Builder, Message};
+	pub use crate::Aggregate as AggregateMacro;
+	pub use crate::Entity;
+	pub use paste::paste;
+	pub use serde::{Deserialize, Serialize};
 }
 pub use prelude::*;
