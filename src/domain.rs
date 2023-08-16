@@ -23,27 +23,6 @@ pub trait Aggregate: Send + Sync + Default {
 	);
 }
 
-pub trait Buildable<B: Aggregate> {
-	fn builder() -> Builder<B>;
-}
-
-pub struct Builder<T: Aggregate>(pub T);
-
-impl<T: Aggregate> Builder<T> {
-	pub fn new() -> Self {
-		Builder(T::default())
-	}
-	pub fn build(self) -> T {
-		self.0
-	}
-}
-
-impl<T: Aggregate> Default for Builder<T> {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
 #[macro_export]
 macro_rules! count {
     () => (0usize);
@@ -80,11 +59,7 @@ macro_rules! Aggregate {
                 self.events.push_back(event)
             }
         }
-        impl Buildable<$aggregate> for $aggregate {
-            fn builder() -> Builder<$aggregate> {
-                Builder::<$aggregate>::new()
-            }
-        }
+
     };
 }
 
@@ -105,8 +80,10 @@ macro_rules! Entity {
         impl $classic {
             $(
                 $crate::paste!{
-                pub fn [< set_ $field_name >] (&mut self, $field_name:$field_type){
-                    self.$field_name = $field_name
+                pub fn [< set_ $field_name >] (mut self, $field_name:$field_type)-> Self{
+                    self.$field_name = $field_name;
+                    self
+
                 }
             }
             )*
