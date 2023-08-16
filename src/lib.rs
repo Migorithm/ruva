@@ -12,6 +12,7 @@ pub mod prelude {
 	pub use crate::domain::{Aggregate, Buildable, Builder, Message};
 	pub use crate::Aggregate as AggregateMacro;
 	pub use crate::Entity;
+	pub use async_trait::async_trait;
 	pub use paste::paste;
 	pub use serde::{Deserialize, Serialize};
 }
