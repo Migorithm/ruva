@@ -8,10 +8,7 @@ pub trait TRepository<Executor> {
 	fn new(executor: Arc<RwLock<Executor>>) -> Self;
 
 	fn get_events(&mut self) -> VecDeque<Box<dyn Message>>;
-	fn set_events(
-		&mut self,
-		events: VecDeque<Box<dyn Message>>,
-	);
+	fn set_events(&mut self, events: VecDeque<Box<dyn Message>>);
 }
 
 // To Support Bulk Insert Operation

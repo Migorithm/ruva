@@ -8,15 +8,15 @@ use crate::domain::Message;
 
 #[async_trait]
 pub trait OutBox: Send + Sync + 'static {
-    fn convert_event(&self) -> Box<dyn Message>;
-    fn tag_processed(&mut self);
+	fn convert_event(&self) -> Box<dyn Message>;
+	fn tag_processed(&mut self);
 
-    fn id(&self) -> Uuid;
-    fn aggregate_id(&self) -> &str;
-    fn topic(&self) -> &str;
-    fn state(&self) -> &str;
-    fn processed(&self) -> bool;
-    fn create_dt(&self) -> DateTime<Utc>;
+	fn id(&self) -> Uuid;
+	fn aggregate_id(&self) -> &str;
+	fn topic(&self) -> &str;
+	fn state(&self) -> &str;
+	fn processed(&self) -> bool;
+	fn create_dt(&self) -> DateTime<Utc>;
 }
 
 #[macro_export]

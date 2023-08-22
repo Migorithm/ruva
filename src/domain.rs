@@ -17,10 +17,7 @@ pub trait Aggregate: Send + Sync + Default {
 	fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>>;
 
 	fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
-	fn raise_event(
-		&mut self,
-		event: Box<dyn Message>,
-	);
+	fn raise_event(&mut self, event: Box<dyn Message>);
 }
 
 #[macro_export]
@@ -114,10 +111,7 @@ pub trait Message: Sync + Send + Any + Downcast {
 }
 impl_downcast!(Message);
 impl Debug for dyn Message {
-	fn fmt(
-		&self,
-		f: &mut std::fmt::Formatter<'_>,
-	) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", self.metadata().topic)
 	}
 }
