@@ -1,25 +1,23 @@
 use crate::{
-    domain::Message,
-    responses::{ApplicationError, ApplicationResponse, BaseError},
+	domain::Message,
+	responses::{ApplicationError, ApplicationResponse, BaseError},
 };
 use tokio::sync::{
-    mpsc::{channel, error::TryRecvError, Receiver, Sender},
-    RwLock,
+	mpsc::{channel, error::TryRecvError, Receiver, Sender},
+	RwLock,
 };
 
 use crate::domain::Command;
 use std::{
-    any::{Any, TypeId},
-    collections::HashMap,
-    pin::Pin,
-    sync::Arc,
+	any::{Any, TypeId},
+	collections::HashMap,
+	pin::Pin,
+	sync::Arc,
 };
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
-pub type TEventHandler<T, R, E> =
-    HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, T) -> Future<R, E> + Send + Sync>>>;
-pub type TCommandHandler<T, R, E> =
-    HashMap<TypeId, Box<dyn Fn(Box<dyn Any + Send + Sync>, T) -> Future<R, E> + Send + Sync>>;
+pub type TEventHandler<T, R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, T) -> Future<R, E> + Send + Sync>>>;
+pub type TCommandHandler<T, R, E> = HashMap<TypeId, Box<dyn Fn(Box<dyn Any + Send + Sync>, T) -> Future<R, E> + Send + Sync>>;
 
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 
@@ -27,123 +25,108 @@ pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 /// This is called for every time Messagebus.handle is invoked within which it manages events raised in service.
 /// It spawns out Executor that manages transaction.
 pub struct ContextManager {
-    pub sender: Sender<Box<dyn Message>>,
+	pub sender: Sender<Box<dyn Message>>,
 }
 
 impl ContextManager {
-    /// Creation of context manager returns context manager AND event receiver
-    pub fn new() -> (Arc<RwLock<Self>>, Receiver<Box<dyn Message>>) {
-        let (sender, receiver) = channel(20);
-        (Arc::new(RwLock::new(Self { sender })), receiver)
-    }
+	/// Creation of context manager returns context manager AND event receiver
+	pub fn new() -> (Arc<RwLock<Self>>, Receiver<Box<dyn Message>>) {
+		let (sender, receiver) = channel(20);
+		(Arc::new(RwLock::new(Self { sender })), receiver)
+	}
 }
-pub struct MessageBus<
-    R: ApplicationResponse,
-    E: ApplicationError + std::convert::From<crate::responses::BaseError>,
-> {
-    command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
-    event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
+pub struct MessageBus<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::responses::BaseError>> {
+	command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
+	event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
 }
 
-impl<
-        R: ApplicationResponse,
-        E: ApplicationError + std::convert::From<crate::responses::BaseError>,
-    > MessageBus<R, E>
-{
-    pub fn new(
-        command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
-        event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
-    ) -> Arc<Self> {
-        Self {
-            command_handler,
-            event_handler,
-        }
-        .into()
-    }
+impl<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::responses::BaseError>> MessageBus<R, E> {
+	pub fn new(
+		command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
+		event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
+	) -> Arc<Self> {
+		Self {
+			command_handler,
+			event_handler,
+		}
+		.into()
+	}
 
-    pub async fn handle<C>(&self, message: C) -> Result<R, E>
-    where
-        C: Command,
-    {
-        let (context_manager, mut event_receiver) = ContextManager::new();
+	pub async fn handle<C>(&self, message: C) -> Result<R, E>
+	where
+		C: Command,
+	{
+		let (context_manager, mut event_receiver) = ContextManager::new();
 
-        let res = self
-            .command_handler
-            .get(&message.type_id())
-            .ok_or_else(|| {
-                eprintln!("Unprocessable Command Given!");
-                BaseError::CommandNotFound
-            })?(Box::new(message), context_manager.clone())
-        .await?;
+		let res = self.command_handler.get(&message.type_id()).ok_or_else(|| {
+			eprintln!("Unprocessable Command Given!");
+			BaseError::CommandNotFound
+		})?(Box::new(message), context_manager.clone())
+		.await?;
 
-        'event_handling_loop: loop {
-            // * use of try_recv is to stop blocking it when all events are drained.
+		'event_handling_loop: loop {
+			// * use of try_recv is to stop blocking it when all events are drained.
 
-            match event_receiver.try_recv() {
-                // * Logging!
-                Ok(msg) => {
-                    println!("BreakPoint on OK");
-                    if let Err(err) = self.handle_event(msg, context_manager.clone()).await {
-                        // ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-                        if let "EventNotFound" = err.to_string().as_str() {
-                            continue;
-                        }
-                    }
-                }
-                Err(TryRecvError::Empty) => {
-                    println!("BreakPoint on Empty");
-                    if Arc::strong_count(&context_manager) == 1 {
-                        break 'event_handling_loop;
-                    } else {
-                        continue;
-                    }
-                }
-                Err(TryRecvError::Disconnected) => {
-                    println!("BreakPoint on Disconnected");
-                    break 'event_handling_loop;
-                }
-            };
-        }
-        drop(context_manager);
-        Ok(res)
-    }
+			match event_receiver.try_recv() {
+				// * Logging!
+				Ok(msg) => {
+					tracing::info!("BreakPoint on OK");
 
-    async fn handle_event(
-        &self,
-        msg: Box<dyn Message>,
-        context_manager: AtomicContextManager,
-    ) -> Result<(), E> {
-        // ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
+					if let Err(err) = self.handle_event(msg, context_manager.clone()).await {
+						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+						if let "EventNotFound" = err.to_string().as_str() {
+							continue;
+						}
+					}
+				}
+				Err(TryRecvError::Empty) => {
+					tracing::info!("BreakPoint on Empty");
 
-        let handlers = self
-            .event_handler
-            .get(&msg.metadata().topic)
-            .ok_or_else(|| {
-                eprintln!("Unprocessable Event Given! {:?}", msg);
-                BaseError::EventNotFound
-            })?;
+					if Arc::strong_count(&context_manager) == 1 {
+						break 'event_handling_loop;
+					} else {
+						continue;
+					}
+				}
+				Err(TryRecvError::Disconnected) => {
+					tracing::error!("BreakPoint on Disconnected");
+					break 'event_handling_loop;
+				}
+			};
+		}
+		drop(context_manager);
+		Ok(res)
+	}
 
-        for handler in handlers.iter() {
-            match handler(msg.message_clone(), context_manager.clone()).await {
-                Ok(_val) => {
-                    println!("Event Handling Succeeded!");
-                }
+	async fn handle_event(&self, msg: Box<dyn Message>, context_manager: AtomicContextManager) -> Result<(), E> {
+		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
-                // ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-                Err(err) => match err.to_string().as_str() {
-                    "StopSentinel" => {
-                        eprintln!("Stop Sentinel Arrived!");
-                        break;
-                    }
-                    _ => {
-                        eprintln!("Error Occurred While Handling Event! Error:{}", err);
-                    }
-                },
-            };
-        }
-        drop(context_manager);
-        Ok(())
-    }
+		let handlers = self.event_handler.get(&msg.metadata().topic).ok_or_else(|| {
+			eprintln!("Unprocessable Event Given! {:?}", msg);
+			BaseError::EventNotFound
+		})?;
+
+		for handler in handlers.iter() {
+			match handler(msg.message_clone(), context_manager.clone()).await {
+				Ok(_val) => {
+					println!("Event Handling Succeeded!");
+				}
+
+				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+				Err(err) => match err.to_string().as_str() {
+					"StopSentinel" => {
+						eprintln!("Stop Sentinel Arrived!");
+						break;
+					}
+					_ => {
+						eprintln!("Error Occurred While Handling Event! Error:{}", err);
+					}
+				},
+			};
+		}
+		drop(context_manager);
+		Ok(())
+	}
 }
 
 /// init_command_handler creating macro

@@ -15,10 +15,7 @@ pub enum BaseError {
 
 impl std::error::Error for BaseError {}
 impl Display for BaseError {
-	fn fmt(
-		&self,
-		f: &mut std::fmt::Formatter<'_>,
-	) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			BaseError::CommandNotFound => write!(f, "CommandNotFound"),
 			BaseError::EventNotFound => write!(f, "EventNotFound"),
@@ -59,9 +56,7 @@ macro_rules! ApplicationError {
 				$error_enum::BaseError(value)
 			}
 		}
-		impl From<std::boxed::Box<$error_enum>>
-			for std::boxed::Box<dyn $crate::responses::ApplicationError>
-		{
+		impl From<std::boxed::Box<$error_enum>> for std::boxed::Box<dyn $crate::responses::ApplicationError> {
 			fn from(value: std::boxed::Box<$error_enum>) -> Self {
 				value
 			}
