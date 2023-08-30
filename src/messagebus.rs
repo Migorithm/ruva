@@ -107,6 +107,7 @@ impl<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::res
 		})?;
 
 		for handler in handlers.iter() {
+			println!("Handle Event : {:?}", msg);
 			match handler(msg.message_clone(), context_manager.clone()).await {
 				Ok(_val) => {
 					println!("Event Handling Succeeded!");
