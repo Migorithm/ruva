@@ -1,0 +1,15 @@
+[package]
+name = "lib_macros"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro=true
+
+[dependencies]
+lib_traits = {path="../lib_traits"}
+syn = {version="*", fetures=["extra-traits","derive","full"]}
+quote = "*"
+proc-macro2="*"

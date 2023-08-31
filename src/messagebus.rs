@@ -1,13 +1,10 @@
-use crate::{
-	domain::Message,
-	responses::{ApplicationError, ApplicationResponse, BaseError},
-};
+use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
+use macros::prelude::{Command, Message};
 use tokio::sync::{
 	mpsc::{channel, error::TryRecvError, Receiver, Sender},
 	RwLock,
 };
 
-use crate::domain::Command;
 use std::{
 	any::{Any, TypeId},
 	collections::HashMap,
