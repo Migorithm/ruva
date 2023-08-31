@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lib_traits= {path="./lib_traits"}
-lib_macros= {path="./lib_macros"}
+lib_traits= {version="0.1.0", path="./lib_traits"}
+lib_macros= {version="0.1.0", path="./lib_macros"}

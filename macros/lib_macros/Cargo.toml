@@ -9,7 +9,7 @@ edition = "2021"
 proc-macro=true
 
 [dependencies]
-lib_traits = {path="../lib_traits"}
+lib_traits = {version="0.1.0", path="../lib_traits"}
 syn = {version="*", fetures=["extra-traits","derive","full"]}
 quote = "*"
 proc-macro2="*"
