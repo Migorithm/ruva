@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, sync::Arc};
 
-use macros::prelude::Message;
+use crate::prelude::Message;
 use tokio::sync::RwLock;
 
 pub trait TRepository<Executor> {

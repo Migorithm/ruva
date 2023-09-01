@@ -1,5 +1,5 @@
 [package]
-name = "lib_macros"
+name = "event-driven-macro"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ edition = "2021"
 proc-macro=true
 
 [dependencies]
-lib_traits = {version="0.1.0", path="../lib_traits"}
+event-driven-core = {version="0.1.0", path="../event-driven-core"}
 syn = {version="*", fetures=["extra-traits","derive","full"]}
 quote = "*"
 proc-macro2="*"
