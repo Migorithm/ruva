@@ -12,6 +12,6 @@ proc-macro=true
 
 [dependencies]
 event-driven-core = {version="0.1.0", path="../event-driven-core"}
-syn = {version="*", fetures=["extra-traits","derive","full"]}
-quote = "*"
-proc-macro2="*"
+syn = {version="1", fetures=["extra-traits","derive","full"]}
+quote = "1"
+proc-macro2="1"
