@@ -10,7 +10,6 @@ description = "Rust Library For Event Driven Message Handling"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
-
 [dependencies]
-event-driven-core= {path="./event-driven-core"}
-event-driven-macro= {path="./event-driven-macro"}
+event-driven-core= {version="0.1.0", path="./event-driven-core"}
+event-driven-macro= {version="0.1.0", path="./event-driven-macro"}
