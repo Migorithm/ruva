@@ -2,6 +2,8 @@
 name = "event-driven-core"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
+description = "Rust Library For Event Driven Message Handling"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
