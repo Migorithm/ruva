@@ -12,8 +12,9 @@ pub mod prelude {
 
 #[cfg(test)]
 mod test_expand {
+
 	#[test]
-	fn test_entaty() {
+	fn entity() {
 		#[derive(event_driven_macro::Entity, Default)]
 		struct SomeEntity {
 			age: i64,

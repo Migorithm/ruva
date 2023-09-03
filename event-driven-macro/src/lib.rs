@@ -1,6 +1,6 @@
 use aggregate::{render_aggregate_token, render_entity_token};
 use error::render_error_token;
-use message::{render_event_visibility, render_message_token};
+use message::{find_identifier, render_event_visibility, render_message_token};
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 #[macro_use]
@@ -9,12 +9,13 @@ mod aggregate;
 mod error;
 mod message;
 
-#[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable))]
+#[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable, identifier))]
 pub fn message_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 	let propagatability = render_event_visibility(&ast);
+	let identifier = find_identifier(&ast);
 
-	render_message_token(&ast, propagatability)
+	render_message_token(&ast, propagatability, identifier)
 }
 
 #[proc_macro_derive(Aggregate)]
