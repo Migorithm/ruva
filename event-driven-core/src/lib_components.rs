@@ -91,46 +91,6 @@ pub trait Aggregate: Send + Sync + Default {
 }
 
 #[macro_export]
-macro_rules! count {
-    () => (0usize);
-    ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
-}
-
-#[macro_export]
-macro_rules! AggregateMacro {
-    (
-
-        $( #[$attr:meta] )*
-        $pub:vis
-        struct $aggregate:ident {
-            $(#[$event_field_attr:meta])*
-            events: std::collections::VecDeque<std::boxed::Box<dyn Message>>,
-            $(
-                $(#[$field_attr:meta])*
-                $field_vis:vis // this visibility will be applied to the getters instead
-                $field_name:ident : $field_type:ty
-            ),* $(,)?
-
-        }
-    ) => {
-
-        $( #[$attr])*
-        impl $crate::prelude::Aggregate for $aggregate {
-            fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>> {
-                &self.events
-            }
-            fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>> {
-                std::mem::take(&mut self.events)
-            }
-            fn raise_event(&mut self, event: Box<dyn Message>) {
-                self.events.push_back(event)
-            }
-        }
-
-    };
-}
-
-#[macro_export]
 macro_rules! Entity {
     (
 

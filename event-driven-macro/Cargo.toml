@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-macro"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license-file = "LICENSE"
 description = "Rust Library For Event Driven Message Handling"
@@ -11,7 +11,7 @@ description = "Rust Library For Event Driven Message Handling"
 proc-macro=true
 
 [dependencies]
-event-driven-core = {version="0.1.0", path="../event-driven-core"}
+event-driven-core = {version="0.1.1", path="../event-driven-core"}
 syn = {version="1", fetures=["extra-traits","derive","full"]}
 quote = "1"
 proc-macro2="1"
