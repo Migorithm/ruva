@@ -6,6 +6,6 @@ pub mod prelude {
 	pub use event_driven_core::event_macros::*;
 	pub use event_driven_core::lib_components::{Aggregate, Command, MailSendable, Message, MessageMetadata, OutBox};
 	pub use event_driven_core::prelude::*;
-	pub use event_driven_core::{convert_event, AggregateMacro, Entity, MailSendableMacro};
-	pub use event_driven_macro::Message;
+	pub use event_driven_core::{convert_event, Entity, MailSendableMacro};
+	pub use event_driven_macro::{Aggregate, Message};
 }
