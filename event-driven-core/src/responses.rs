@@ -1,7 +1,5 @@
 use std::{error, fmt::Display};
 
-use downcast_rs::{impl_downcast, Downcast};
-
 pub type AnyError = dyn error::Error + Send + Sync;
 
 #[derive(Debug)]
@@ -28,43 +26,11 @@ impl Display for BaseError {
 
 pub trait ApplicationResponse: 'static {}
 
-pub trait ApplicationError: std::error::Error + Downcast + 'static {}
+pub trait ApplicationError: std::error::Error + 'static {}
 impl ApplicationError for BaseError {}
 
 impl From<BaseError> for Box<dyn ApplicationError> {
 	fn from(value: BaseError) -> Self {
 		Box::new(value)
 	}
-}
-
-impl_downcast!(ApplicationError);
-
-#[macro_export]
-macro_rules! ApplicationError {
-	(
-        $( #[$attr:meta] )*
-        $pub:vis
-        enum $error_enum:ident {
-            $(#[$field_attr:meta])*
-            $($variant:ident$($value:ty)?),*$(,)?
-        }
-    ) => {
-		impl std::error::Error for $error_enum {}
-		impl $crate::responses::ApplicationError for $error_enum {}
-		impl From<$crate::responses::BaseError> for $error_enum {
-			fn from(value: $crate::responses::BaseError) -> Self {
-				$error_enum::BaseError(value)
-			}
-		}
-		impl From<std::boxed::Box<$error_enum>> for std::boxed::Box<dyn $crate::responses::ApplicationError> {
-			fn from(value: std::boxed::Box<$error_enum>) -> Self {
-				value
-			}
-		}
-		impl From<$error_enum> for std::boxed::Box<dyn $crate::responses::ApplicationError> {
-			fn from(value: $error_enum) -> Self {
-				std::boxed::Box::new(value)
-			}
-		}
-	};
 }

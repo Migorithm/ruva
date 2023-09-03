@@ -50,30 +50,6 @@ pub trait MailSendable: Message + Serialize + Send + Sync + 'static {
 	}
 }
 
-#[macro_export]
-macro_rules! MailSendableMacro {
-    (
-
-        $( #[$attr:meta] )*
-        $pub:vis
-        struct $mail_sendable:ident {
-            $(
-                $(#[$field_attr:meta])*
-                $field_vis:vis // this visibility will be applied to the getters instead
-                $field_name:ident : $field_type:ty
-            ),* $(,)?
-    }
-    ) => {
-        $( #[$attr])*
-        impl $crate::lib_components::MailSendable for $mail_sendable {
-            fn template_name(&self) -> String {
-                // * subject to change
-                stringify!($mail_sendable).into()
-            }
-        }
-    };
-}
-
 pub trait Command: 'static + Send + Any + Sync {}
 
 pub trait Aggregate: Send + Sync + Default {

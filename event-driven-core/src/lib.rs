@@ -18,5 +18,4 @@ pub mod event_macros {
 	pub use crate::init_command_handler;
 	pub use crate::init_event_handler;
 	pub use crate::prepare_bulk_insert;
-	pub use crate::ApplicationError;
 }
