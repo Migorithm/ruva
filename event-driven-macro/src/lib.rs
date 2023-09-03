@@ -1,4 +1,4 @@
-use aggregate::render_aggregate_token;
+use aggregate::{render_aggregate_token, render_entity_token};
 use error::render_error_token;
 use message::{render_event_visibility, render_message_token};
 use proc_macro::TokenStream;
@@ -29,4 +29,11 @@ pub fn error_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 
 	render_error_token(&ast)
+}
+
+#[proc_macro_derive(Entity)]
+pub fn entity_derive(attr: TokenStream) -> TokenStream {
+	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+
+	render_entity_token(&ast)
 }
