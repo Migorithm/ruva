@@ -66,35 +66,6 @@ pub trait Aggregate: Send + Sync + Default {
 	fn raise_event(&mut self, event: Box<dyn Message>);
 }
 
-#[macro_export]
-macro_rules! Entity {
-    (
-
-        $( #[$attr:meta] )*
-        $pub:vis
-        struct $classic:ident {
-            $(
-                $(#[$field_attr:meta])*
-                $field_vis:vis // this visibility will be applied to the getters instead
-                $field_name:ident : $field_type:ty
-            ),* $(,)?
-    }
-) => {
-        impl $classic {
-            $(
-                $crate::paste!{
-                pub fn [< set_ $field_name >] (mut self, $field_name:$field_type)-> Self{
-                    self.$field_name = $field_name;
-                    self
-
-                }
-            }
-            )*
-
-        }
-    };
-}
-
 #[async_trait]
 pub trait OutBox: Send + Sync + 'static {
 	fn convert_event(&self) -> Box<dyn Message>;
