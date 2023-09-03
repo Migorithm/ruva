@@ -46,7 +46,7 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<&'static str> {
 		.attrs
 		.iter()
 		.flat_map(|attr| {
-			if let Meta::Path(Path { segments, .. }) = &attr.parse_meta().unwrap() {
+			if let Meta::Path(Path { segments, .. }) = &attr.meta {
 				segments
 					.iter()
 					.map(|s| {
