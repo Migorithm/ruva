@@ -32,12 +32,19 @@ impl ContextManager {
 		(Arc::new(RwLock::new(Self { sender })), receiver)
 	}
 }
-pub struct MessageBus<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::responses::BaseError>> {
+pub struct MessageBus<
+	R: ApplicationResponse,
+	E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
+> {
 	command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
 	event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
 }
 
-impl<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::responses::BaseError>> MessageBus<R, E> {
+impl<
+		R: ApplicationResponse,
+		E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
+	> MessageBus<R, E>
+{
 	pub fn new(
 		command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
 		event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
@@ -111,12 +118,18 @@ impl<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::res
 				}
 
 				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-				Err(err) => match err.to_string().as_str() {
-					"StopSentinel" => {
+				Err(err) => match err.into() {
+					BaseError::StopSentinel => {
 						eprintln!("Stop Sentinel Arrived!");
+
 						break;
 					}
-					_ => {
+					BaseError::StopSentinelWithEvent(event) => {
+						eprintln!("Stop Sentinel With Event Arrived!");
+						context_manager.write().await.sender.send(event).await.expect("Event Collecting failed!");
+						break;
+					}
+					err => {
 						eprintln!("Error Occurred While Handling Event! Error:{}", err);
 					}
 				},
