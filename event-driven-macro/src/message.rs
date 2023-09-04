@@ -1,5 +1,4 @@
 use proc_macro::TokenStream;
-use quote::ToTokens;
 use syn::{Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, Ident, Meta, Path};
 
 pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<&'static str>, identifier: String) -> TokenStream {
