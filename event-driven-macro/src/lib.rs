@@ -38,3 +38,14 @@ pub fn entity_derive(attr: TokenStream) -> TokenStream {
 
 	render_entity_token(&ast)
 }
+
+#[proc_macro_derive(Command)]
+pub fn command_derive(attr: TokenStream) -> TokenStream {
+	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	let name = ast.ident;
+
+	quote!(
+		impl Command for #name{}
+	)
+	.into()
+}
