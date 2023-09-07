@@ -7,7 +7,7 @@ pub mod prelude {
 	pub use event_driven_core::event_macros::*;
 	pub use event_driven_core::lib_components::{Aggregate, Command, Message, MessageMetadata, OutBox};
 	pub use event_driven_core::prelude::*;
-	pub use event_driven_macro::{Aggregate, ApplicationError, Entity, Message};
+	pub use event_driven_macro::{Aggregate, ApplicationError, Command, Entity, Message};
 }
 
 #[cfg(test)]
