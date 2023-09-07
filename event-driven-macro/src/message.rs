@@ -48,13 +48,13 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<&'static str> {
 			if let Meta::Path(Path { segments, .. }) = &attr.meta {
 				segments
 					.iter()
-					.map(|s| {
+					.filter_map(|s| {
 						if s.ident.to_string().as_str() == "internally_notifiable" {
-							"fn internally_notifiable(&self)->bool{true}"
+							Some("fn internally_notifiable(&self)->bool{true}")
 						} else if s.ident.to_string().as_str() == "externally_notifiable" {
-							"fn externally_notifiable(&self)->bool{true}"
+							Some("fn externally_notifiable(&self)->bool{true}")
 						} else {
-							panic!("Error!")
+							None
 						}
 					})
 					.collect::<Vec<_>>()
@@ -63,6 +63,9 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<&'static str> {
 			}
 		})
 		.collect::<Vec<_>>();
+	if propagatability.is_empty() {
+		panic!("Either `internally_notifiable` or `externally_notifiable` must be given!")
+	}
 	propagatability
 }
 
