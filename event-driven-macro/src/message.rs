@@ -80,7 +80,10 @@ pub(crate) fn find_identifier(ast: &DeriveInput) -> String {
 				.iter()
 				.filter(|f| get_attributes(f).into_iter().any(|ident| ident == *"identifier"))
 				.collect::<Vec<_>>();
-			assert_eq!(identifier.len(), 1);
+			if identifier.len() != 1 {
+				panic!("One identifier Must Be Given To Message!")
+			}
+
 			let ident = identifier.first().unwrap().ident.clone().unwrap().clone();
 
 			format!(
