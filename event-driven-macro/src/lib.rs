@@ -1,6 +1,7 @@
 use aggregate::{render_aggregate_token, render_entity_token};
 use error::render_error_token;
 use message::{find_identifier, render_event_visibility, render_message_token};
+// use outbox::render_outbox_token;
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 #[macro_use]
@@ -49,3 +50,10 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 	)
 	.into()
 }
+
+// #[proc_macro_derive(OutBox)]
+// pub fn outbox_derive(attr: TokenStream) -> TokenStream {
+// 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+
+// 	render_outbox_token(&ast)
+// }
