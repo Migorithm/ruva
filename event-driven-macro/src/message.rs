@@ -21,12 +21,6 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<&'sta
 			fn to_message(self)-> Box<dyn Message+'static>{
 				Box::new(self)
 			}
-			fn outbox(&self) -> Box<dyn OutBox>
-			{
-				let metadata = self.metadata();
-				Box::new(Outbox::new(metadata.aggregate_id, metadata.topic, self.state()))
-			}
-
 
 			#joined
 		}

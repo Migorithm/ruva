@@ -1,12 +1,14 @@
 pub use paste::paste;
-pub mod lib_components;
+pub mod message;
 pub mod messagebus;
+pub mod outbox;
 pub mod repository;
 pub mod responses;
 pub mod prelude {
 
-	pub use crate::lib_components::*;
+	pub use crate::message::*;
 	pub use crate::messagebus::*;
+	pub use crate::outbox::OutBox;
 	pub use crate::repository::TRepository;
 	pub use crate::responses::*;
 	pub use async_trait::async_trait;

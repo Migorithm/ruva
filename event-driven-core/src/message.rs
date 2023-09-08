@@ -1,13 +1,10 @@
-use async_trait::async_trait;
 use downcast_rs::{impl_downcast, Downcast};
 
 use serde::Serialize;
 use serde_json::Value;
 use std::{any::Any, collections::VecDeque, fmt::Debug};
 
-use chrono::{DateTime, Utc};
-
-use uuid::Uuid;
+use crate::prelude::OutBox;
 
 pub trait Message: Sync + Send + Any + Downcast {
 	fn externally_notifiable(&self) -> bool {
@@ -18,11 +15,10 @@ pub trait Message: Sync + Send + Any + Downcast {
 	}
 
 	fn metadata(&self) -> MessageMetadata;
-	fn outbox(&self) -> Box<dyn OutBox>;
-	// {
-	//     let metadata = self.metadata();
-	//     Outbox::new(metadata.aggregate_id, metadata.topic, self.state())
-	// }
+	fn outbox(&self) -> OutBox {
+		let metadata = self.metadata();
+		OutBox::new(metadata.aggregate_id, metadata.topic, self.state())
+	}
 	fn message_clone(&self) -> Box<dyn Message>;
 
 	fn state(&self) -> String;
@@ -64,19 +60,6 @@ pub trait Aggregate: Send + Sync + Default {
 
 	fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
 	fn raise_event(&mut self, event: Box<dyn Message>);
-}
-
-#[async_trait]
-pub trait OutBox: Send + Sync + 'static {
-	fn convert_event(&self) -> Box<dyn Message>;
-	fn tag_processed(&mut self);
-
-	fn id(&self) -> Uuid;
-	fn aggregate_id(&self) -> &str;
-	fn topic(&self) -> &str;
-	fn state(&self) -> &str;
-	fn processed(&self) -> bool;
-	fn create_dt(&self) -> DateTime<Utc>;
 }
 
 #[macro_export]
