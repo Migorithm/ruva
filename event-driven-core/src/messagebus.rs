@@ -14,7 +14,8 @@ use std::{
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type TEventHandler<T, R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, T) -> Future<R, E> + Send + Sync>>>;
-pub type TCommandHandler<T, R, E> = HashMap<TypeId, Box<dyn Fn(Box<dyn Any + Send + Sync>, T) -> Future<R, E> + Send + Sync>>;
+
+pub type TCommandHandler<R, E> = HashMap<TypeId, fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E>>;
 
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 
@@ -36,7 +37,7 @@ pub struct MessageBus<
 	R: ApplicationResponse,
 	E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
 > {
-	command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
+	command_handler: &'static TCommandHandler<R, E>,
 	event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
 }
 
@@ -45,10 +46,7 @@ impl<
 		E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
 	> MessageBus<R, E>
 {
-	pub fn new(
-		command_handler: &'static TCommandHandler<AtomicContextManager, R, E>,
-		event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
-	) -> Arc<Self> {
+	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<AtomicContextManager, R, E>) -> Arc<Self> {
 		Self {
 			command_handler,
 			event_handler,
@@ -60,6 +58,7 @@ impl<
 	where
 		C: Command,
 	{
+		println!("Handle Command {:?}", message);
 		let (context_manager, mut event_receiver) = ContextManager::new();
 
 		let res = self.command_handler.get(&message.type_id()).ok_or_else(|| {
@@ -114,7 +113,7 @@ impl<
 			println!("Handle Event : {:?}", msg);
 			match handler(msg.message_clone(), context_manager.clone()).await {
 				Ok(_val) => {
-					println!("Event Handling Succeeded!");
+					eprintln!("Event Handling Succeeded!");
 				}
 
 				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
@@ -147,15 +146,15 @@ macro_rules! init_command_handler {
         {$($command:ty:$handler:expr $(=>($($injectable:ident),*))? ),* $(,)?}
     )
         => {
-        pub async fn init_command_handler() -> HashMap::<TypeId,Box<dyn Fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<ServiceResponse,ServiceError> + Send + Sync>>{
+        pub async fn init_command_handler() -> HashMap::<TypeId,fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<ServiceResponse, ServiceError>> {
             let _dependency= dependency();
 
-            let mut _map: HashMap::<_,Box<dyn Fn(_, _ ) -> Future<_,_> + Send + Sync>> = HashMap::new();
+            let mut _map: HashMap::<TypeId,fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<ServiceResponse, ServiceError>>= HashMap::new();
             $(
                 _map.insert(
                     // ! Only one command per one handler is acceptable, so the later insertion override preceding one.
                     TypeId::of::<$command>(),
-                    Box::new(
+
                         |c:Box<dyn Any+Send+Sync>, context_manager: AtomicContextManager|->Future<ServiceResponse,ServiceError>{
                             // * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
                             // ! Logically, as it's from TypId of command, it doesn't make to cause an error.
@@ -168,7 +167,7 @@ macro_rules! init_command_handler {
                             )?
                           ))
                         },
-                    )
+
                 );
             )*
             _map

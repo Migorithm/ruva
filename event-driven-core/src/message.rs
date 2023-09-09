@@ -2,7 +2,11 @@ use downcast_rs::{impl_downcast, Downcast};
 
 use serde::Serialize;
 use serde_json::Value;
-use std::{any::Any, collections::VecDeque, fmt::Debug};
+use std::{
+	any::Any,
+	collections::VecDeque,
+	fmt::{Debug, Display},
+};
 
 use crate::prelude::OutBox;
 
@@ -46,7 +50,7 @@ pub trait MailSendable: Message + Serialize + Send + Sync + 'static {
 	}
 }
 
-pub trait Command: 'static + Send + Any + Sync {}
+pub trait Command: 'static + Send + Any + Sync + Debug {}
 
 pub trait Aggregate: Send + Sync + Default {
 	fn collect_events(&mut self) -> VecDeque<Box<dyn Message>> {
