@@ -13,7 +13,7 @@ use std::{
 };
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
-pub type TEventHandler<T, R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, T) -> Future<R, E> + Send + Sync>>>;
+pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 pub type TCommandHandler<R, E> = HashMap<TypeId, fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E>>;
 
@@ -38,7 +38,7 @@ pub struct MessageBus<
 	E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
 > {
 	command_handler: &'static TCommandHandler<R, E>,
-	event_handler: &'static TEventHandler<AtomicContextManager, R, E>,
+	event_handler: &'static TEventHandler<R, E>,
 }
 
 impl<
@@ -46,7 +46,7 @@ impl<
 		E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
 	> MessageBus<R, E>
 {
-	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<AtomicContextManager, R, E>) -> Arc<Self> {
+	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<R, E>) -> Arc<Self> {
 		Self {
 			command_handler,
 			event_handler,
@@ -140,6 +140,7 @@ impl<
 }
 
 /// init_command_handler creating macro
+// TODO proc_macro
 #[macro_export]
 macro_rules! init_command_handler {
     (
@@ -176,14 +177,15 @@ macro_rules! init_command_handler {
 }
 
 /// init_event_handler creating macro
+// TODO proc_macro
 #[macro_export]
 macro_rules! init_event_handler {
     (
         {$($event:ty: [$($handler:expr $(=>($($injectable:ident),*))? ),* $(,)? ]),* $(,)?}
     ) =>{
-        pub async fn init_event_handler() -> HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<ServiceResponse,ServiceError> + Send + Sync>>>{
+        pub async fn init_event_handler() -> TEventHandler<ServiceResponse, ServiceError>{
             let dependency= dependency();
-            let mut _map : HashMap<String, Vec<Box<dyn Fn(_, _) -> Future<_,_> + Send + Sync>>> = HashMap::new();
+            let mut _map : TEventHandler<ServiceResponse, ServiceError> = HashMap::new();
             $(
                 _map.insert(
                     stringify!($event).into(),

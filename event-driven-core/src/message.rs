@@ -2,11 +2,7 @@ use downcast_rs::{impl_downcast, Downcast};
 
 use serde::Serialize;
 use serde_json::Value;
-use std::{
-	any::Any,
-	collections::VecDeque,
-	fmt::{Debug, Display},
-};
+use std::{any::Any, collections::VecDeque, fmt::Debug};
 
 use crate::prelude::OutBox;
 
