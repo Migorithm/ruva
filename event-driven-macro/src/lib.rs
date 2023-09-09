@@ -50,10 +50,3 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 	)
 	.into()
 }
-
-// #[proc_macro_derive(OutBox)]
-// pub fn outbox_derive(attr: TokenStream) -> TokenStream {
-// 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
-
-// 	render_outbox_token(&ast)
-// }
