@@ -12,4 +12,4 @@ description = "Rust Library For Event Driven Message Handling"
 
 [dependencies]
 event-driven-core= {version="0.1.10", path="./event-driven-core"}
-event-driven-macro= {version="0.1.9", path="./event-driven-macro"}
+event-driven-macro= {version="0.1.10", path="./event-driven-macro"}
