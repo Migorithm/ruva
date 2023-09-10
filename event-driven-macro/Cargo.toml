@@ -11,6 +11,6 @@ description = "Rust Library For Event Driven Message Handling"
 proc-macro=true
 
 [dependencies]
-syn = {version="2", fetures=["full"]}
+syn = {version="2", features=["full"]}
 quote = "1"
 proc-macro2="1"
