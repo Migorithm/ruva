@@ -1,7 +1,7 @@
+This is event-driven library(I should've named it as framework though) for writing reliable and scalable system.<br>
 
-# A event-driven framework for writing reliable and scalable system.
 
-At a high level, it provides a few major components:
+At a high level, it provides a few major components.
 - Tools for [core components with traits][event-driven-core],
 - [Macros][event-driven-macro] for processing events and commands
 
@@ -18,11 +18,11 @@ their uses.
 
 
 ### Registering Command
-Event-Driven-Library is great for writing applications and handlers that are extensible, and modularic.
-In Event-Drieven Achitecture, `Command` is a request you are given from enduser whereby user
-expects to get a return as a result of its processing. Handling `Command` may or may not result in `event`,
-the result of which is not be directly seen by end user as it is side effect.
-Therefore, you don't want to string along more than one handler for each `Command`.
+Event-Driven-Library is great for writing applications and handlers that are extensible, and modularic.<br>
+In Event-Drieven Achitecture, `Command` is a request you are given from enduser whereby user<br>
+expects to get a return as a result of its processing. Handling `Command` may or may not result in `event`,<br>
+the result of which is not be directly seen by end user as it is side effect.<br>
+Therefore, you don't want to string along more than one handler for each `Command`.<br>
 
 
 #### Example
@@ -67,7 +67,7 @@ other dependencies other than message and `Context`(which will be covered later)
 You can simply register dependencies by putting attribute on top of free function.
 
 #### Example
-```
+```rust
 #[dependency]
 pub fn mail_sender() {
    ...
@@ -77,7 +77,7 @@ This is great as you can take your mind off static nature of the language.
 
 ### Command & Event
 You can register any general struct with `Command`[Command] Derive Macro as follows:
-```
+```rust
 #[derive(Command)]
 pub struct CustomCommand {
     pub id: i64,
@@ -86,7 +86,7 @@ pub struct CustomCommand {
 ```
 
 Likewise, you can do the same thing for Event:
-```
+```rust
 #[derive(Serialize, Deserialize, Clone, Message)]
 #[internally_notifiable]
 pub struct YourCustomEvent {
@@ -114,8 +114,8 @@ As this is done only in framework side, the only way you can 'feel' the presence
 when you invoke it. Everything else is done magically.
 
 #### Example
-```
 
+```rust
 #[derive(Command)]
 pub struct TestCommand { // Test Command
     pub id: i64,
