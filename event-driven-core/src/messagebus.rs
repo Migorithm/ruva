@@ -131,28 +131,14 @@ impl<R: ApplicationResponse, E: ApplicationError + std::convert::Into<crate::res
 /// Whatever dependency container you want.
 #[macro_export]
 macro_rules! create_dependency {
-	($dependency:tt) => {
-		pub fn dependency() -> &'static $dependency {
-			static DEPENDENCY: OnceLock<$dependency> = OnceLock::new();
+	() => {
+		pub struct Dependency;
+		pub fn dependency() -> &'static Dependency {
+			static DEPENDENCY: OnceLock<Dependency> = OnceLock::new();
 			let dp = match DEPENDENCY.get() {
 				None => {
-					let dependency = $dependency;
+					let dependency = Dependency;
 
-					DEPENDENCY.get_or_init(|| dependency)
-				}
-				Some(dependency) => dependency,
-			};
-			dp
-		}
-	};
-	($dependency:tt { $($name:ident:$value:expr),*}) => {
-		pub fn dependency() -> &'static $dependency {
-			static DEPENDENCY: OnceLock<$dependency> = OnceLock::new();
-			let dp = match DEPENDENCY.get() {
-				None => {
-					let dependency = $dependency{
-						$($name : $value)*
-					};
 					DEPENDENCY.get_or_init(|| dependency)
 				}
 				Some(dependency) => dependency,
@@ -193,7 +179,6 @@ macro_rules! init_command_handler {
                             )?
                           ))
                         },
-
                 );
             )*
             _map
