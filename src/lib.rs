@@ -139,10 +139,6 @@
 //!
 //! [MessageBus]: crate::event_driven_core::messagebus::MessageBus
 
-#![macro_use]
-extern crate event_driven_core;
-extern crate event_driven_macro;
-
 pub mod prelude {
 	pub use event_driven_core::convert_event;
 	pub use event_driven_core::event_macros::*;
