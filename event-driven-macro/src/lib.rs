@@ -54,6 +54,6 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn dependency(_: TokenStream, input: TokenStream) -> TokenStream {
-	let ast: syn::ItemFn = syn::parse_macro_input!(input as ItemFn);
+	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
 	dependency::register_dependency(ast)
 }
