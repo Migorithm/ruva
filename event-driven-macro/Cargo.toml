@@ -11,7 +11,6 @@ description = "Rust Library For Event Driven Message Handling"
 proc-macro=true
 
 [dependencies]
-event-driven-core = {version="0.1.6", path="../event-driven-core"}
 syn = {version="2", fetures=["extra-traits","derive","full"]}
 quote = "1"
 proc-macro2="1"

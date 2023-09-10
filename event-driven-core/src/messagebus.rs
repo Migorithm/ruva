@@ -13,11 +13,9 @@ use std::{
 };
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
-pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
-
-pub type TCommandHandler<R, E> = HashMap<TypeId, fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E>>;
-
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
+pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
+pub type TCommandHandler<R, E> = HashMap<TypeId, fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E>>;
 
 /// Task Local Context Manager
 /// This is called for every time Messagebus.handle is invoked within which it manages events raised in service.
@@ -33,25 +31,14 @@ impl ContextManager {
 		(Arc::new(RwLock::new(Self { sender })), receiver)
 	}
 }
-pub struct MessageBus<
-	R: ApplicationResponse,
-	E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
-> {
+pub struct MessageBus<R: ApplicationResponse, E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>> {
 	command_handler: &'static TCommandHandler<R, E>,
 	event_handler: &'static TEventHandler<R, E>,
 }
 
-impl<
-		R: ApplicationResponse,
-		E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>,
-	> MessageBus<R, E>
-{
+impl<R: ApplicationResponse, E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>> MessageBus<R, E> {
 	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<R, E>) -> Arc<Self> {
-		Self {
-			command_handler,
-			event_handler,
-		}
-		.into()
+		Self { command_handler, event_handler }.into()
 	}
 
 	pub async fn handle<C>(&self, message: C) -> Result<R, E>
@@ -139,16 +126,54 @@ impl<
 	}
 }
 
+/// Dependency Initializer
+/// You must initialize this in crate::dependencies with
+/// Whatever dependency container you want.
+#[macro_export]
+macro_rules! create_dependency {
+	($dependency:tt) => {
+		pub fn dependency() -> &'static $dependency {
+			static DEPENDENCY: OnceLock<$dependency> = OnceLock::new();
+			let dp = match DEPENDENCY.get() {
+				None => {
+					let dependency = $dependency;
+
+					DEPENDENCY.get_or_init(|| dependency)
+				}
+				Some(dependency) => dependency,
+			};
+			dp
+		}
+	};
+	($dependency:tt { $($name:ident:$value:expr),*}) => {
+		pub fn dependency() -> &'static $dependency {
+			static DEPENDENCY: OnceLock<$dependency> = OnceLock::new();
+			let dp = match DEPENDENCY.get() {
+				None => {
+					let dependency = $dependency{
+						$($name : $value)*
+					};
+					DEPENDENCY.get_or_init(|| dependency)
+				}
+				Some(dependency) => dependency,
+			};
+			dp
+		}
+	};
+}
+
 /// init_command_handler creating macro
-// TODO proc_macro
+/// Not that crate must have `Dependency` struct with its own implementation
 #[macro_export]
 macro_rules! init_command_handler {
     (
         {$($command:ty:$handler:expr $(=>($($injectable:ident),*))? ),* $(,)?}
     )
         => {
+
         pub async fn init_command_handler() -> HashMap::<TypeId,fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<ServiceResponse, ServiceError>> {
-            let _dependency= dependency();
+			extern crate self as current_crate;
+            let dependency= current_crate::dependencies::dependency();
 
             let mut _map: HashMap::<TypeId,fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<ServiceResponse, ServiceError>>= HashMap::new();
             $(
@@ -177,14 +202,16 @@ macro_rules! init_command_handler {
 }
 
 /// init_event_handler creating macro
-// TODO proc_macro
+/// Not that crate must have `Dependency` struct with its own implementation
 #[macro_export]
 macro_rules! init_event_handler {
     (
         {$($event:ty: [$($handler:expr $(=>($($injectable:ident),*))? ),* $(,)? ]),* $(,)?}
     ) =>{
         pub async fn init_event_handler() -> TEventHandler<ServiceResponse, ServiceError>{
-            let dependency= dependency();
+			extern crate self as current_crate;
+            let dependency= current_crate::dependencies::dependency();
+
             let mut _map : TEventHandler<ServiceResponse, ServiceError> = HashMap::new();
             $(
                 _map.insert(
