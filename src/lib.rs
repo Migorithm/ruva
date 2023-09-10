@@ -51,8 +51,14 @@
 //! ```
 //! init_event_handler!(
 //! {
-//!    Event1: [EventHandler1,EventHandler2,EventHandler3],
-//!    Event2: [EventHandler4 => (mail_sender)
+//!    Event1: [
+//!            EventHandler1,
+//!            EventHandler2,
+//!            EventHandler3
+//!            ],
+//!    Event2: [
+//!            EventHandler4 => (mail_sender)
+//!            ]
 //! }
 //! ```
 //!
