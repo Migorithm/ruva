@@ -39,7 +39,7 @@ pub(crate) fn render_entity_token(ast: &DeriveInput) -> TokenStream {
 		let ty = f.ty.to_token_stream().to_string();
 
 		let code = format!(
-			"pub fn set_{}(mut self, {}:{})->Self{{self.{}={}; self }}",
+			"pub fn set_{}(mut self, {}:impl core::convert::Into<{}>)->Self{{self.{}={}.into(); self }}",
 			ident, ident, ty, ident, ident
 		);
 
