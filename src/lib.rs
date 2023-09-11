@@ -163,3 +163,15 @@ mod test_expand {
 		assert_eq!(entity.name, "MigoLee".to_string())
 	}
 }
+
+#[cfg(test)]
+mod dependency_test {
+	use event_driven_core::create_dependency;
+	create_dependency!();
+
+	#[event_driven_macro::dependency]
+	fn test() -> i32 {
+		"hello";
+		0
+	}
+}

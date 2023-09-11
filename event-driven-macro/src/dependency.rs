@@ -23,9 +23,9 @@ pub fn register_dependency(ast: ItemFn) -> TokenStream {
 	impl Dependency{
 		pub #asyncness fn #ident #generics(&self,#inputs)-> #var{
 			#block
-
 		}
 	}
+	#[allow(dead_code)]
 	#ast
 	)
 	.into()
