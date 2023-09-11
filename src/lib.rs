@@ -71,7 +71,7 @@
 //!
 //! ```ignore
 //! #[dependency]
-//! pub fn mail_sender() {
+//! pub fn mail_sender() -> Box<dyn std::any::Any> {
 //!    ...
 //! }
 //! ```

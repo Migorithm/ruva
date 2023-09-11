@@ -2,6 +2,8 @@ use proc_macro::TokenStream;
 use syn::{ItemFn, ReturnType, Signature};
 
 pub fn register_dependency(ast: ItemFn) -> TokenStream {
+	const OUTPUT_TYPE_NOT_VALID: &str = "#[dependency] fn must have valid output type";
+
 	let ItemFn {
 		sig: Signature {
 			ident,
@@ -11,13 +13,19 @@ pub fn register_dependency(ast: ItemFn) -> TokenStream {
 			asyncness,
 			..
 		},
-
 		block,
 		..
 	} = ast.clone()
 	else {
-		panic!("Fail!")
+		panic!("{}", OUTPUT_TYPE_NOT_VALID)
 	};
+
+	// check return type is not void '()'
+	if let syn::Type::Tuple(tuple) = var.as_ref() {
+		if tuple.elems.is_empty() {
+			panic!("{}", OUTPUT_TYPE_NOT_VALID)
+		}
+	}
 
 	quote!(
 	impl Dependency{
