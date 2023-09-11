@@ -171,7 +171,7 @@ mod dependency_test {
 
 	#[event_driven_macro::dependency]
 	fn test() -> i32 {
-		"hello";
+		let _ = "hello";
 		0
 	}
 }

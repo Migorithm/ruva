@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-library"
-version = "0.1.25"
+version = "0.1.26"
 edition = "2021"
 license = "MIT"
 license-file = "LICENSE"
@@ -11,5 +11,5 @@ repository = "https://github.com/BeringLab/event-driven-library"
 
 
 [dependencies]
-event-driven-core= {version="0.1.10", path="./event-driven-core"}
+event-driven-core= {version="0.1.11", path="./event-driven-core"}
 event-driven-macro= {version="0.1.10", path="./event-driven-macro"}
