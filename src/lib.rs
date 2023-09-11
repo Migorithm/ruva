@@ -29,7 +29,7 @@
 //!
 //! #### Example
 //!
-//! ```
+//! ```ignore
 //! use event_driven_library::prelude::{init_command_handler,init_event_handler};
 //! init_command_handler!(
 //! {
@@ -48,7 +48,7 @@
 //!
 //! #### Example
 //!
-//! ```
+//! ```ignore
 //! init_event_handler!(
 //! {
 //!    Event1: [
@@ -69,7 +69,7 @@
 //!
 //! #### Example
 //!
-//! ```
+//! ```ignore
 //! #[dependency]
 //! pub fn mail_sender() {
 //!    ...
@@ -81,7 +81,7 @@
 //!
 //! ### Command & Event
 //! You can register any general struct with `Command`[Command] Derive Macro as follows:
-//! ```
+//! ```ignore
 //! #[derive(Command)]
 //! pub struct CustomCommand {
 //!     pub id: i64,
@@ -90,7 +90,7 @@
 //! ```
 //!
 //! Likewise, you can do the same thing for Event:
-//! ```
+//! ```ignore
 //! #[derive(Serialize, Deserialize, Clone, Message)]
 //! #[internally_notifiable]
 //! pub struct YourCustomEvent {
@@ -118,8 +118,7 @@
 //! when you invoke it. Everything else is done magically.
 //!
 //! #### Example
-//! ```
-//!
+//! ```ignore
 //! #[derive(Command)]
 //! pub struct TestCommand { // Test Command
 //!     pub id: i64,
