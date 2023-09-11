@@ -1,5 +1,11 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use tokio::sync::RwLock;
 use uuid::Uuid;
+
+use crate::{prelude::BaseError, unit_of_work::Executor};
 
 #[derive(Debug, Clone)]
 pub struct OutBox {
@@ -49,4 +55,12 @@ impl OutBox {
 	pub fn create_dt(&self) -> DateTime<Utc> {
 		self.create_dt
 	}
+}
+
+#[async_trait]
+pub trait IOutBox<E: Executor> {
+	fn new(aggregate_id: String, topic: String, state: String) -> Self;
+	async fn add(executor: Arc<RwLock<E>>, outboxes: Vec<OutBox>) -> Result<(), BaseError>;
+	async fn get(executor: Arc<RwLock<E>>) -> Result<Vec<OutBox>, BaseError>;
+	async fn update(&self, executor: Arc<RwLock<E>>) -> Result<(), BaseError>;
 }
