@@ -134,16 +134,8 @@ macro_rules! create_dependency {
 	() => {
 		pub struct Dependency;
 		pub fn dependency() -> &'static Dependency {
-			static DEPENDENCY: OnceLock<Dependency> = OnceLock::new();
-			let dp = match DEPENDENCY.get() {
-				None => {
-					let dependency = Dependency;
-
-					DEPENDENCY.get_or_init(|| dependency)
-				}
-				Some(dependency) => dependency,
-			};
-			dp
+			static DEPENDENCY: ::std::sync::OnceLock<Dependency> = ::std::sync::OnceLock::new();
+			DEPENDENCY.get_or_init(|| Dependency)
 		}
 	};
 }
