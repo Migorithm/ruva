@@ -20,16 +20,16 @@
 //!    let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
 //!   
 //!    // Fetch data
-//!	   let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+//!    let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
 //!   
 //!    // Process business logic
-//!	   aggregate.process_business_logic(cmd)?;
+//!    aggregate.process_business_logic(cmd)?;
 //!   
 //!    // Apply changes
-//!	   uow.repository().update(&mut aggregate).await?;
+//!    uow.repository().update(&mut aggregate).await?;
 //!   
 //!    // Commit transaction
-//!	   uow.commit::<ServiceOutBox>().await?;
+//!    uow.commit::<ServiceOutBox>().await?;
 //! ```
 //!
 //!
@@ -42,7 +42,7 @@
 //!    let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
 //!   
 //!    // Fetch data
-//!	   let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+//!    let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
 //!   
 //!    // Switch repo
 //!    let mut uow = uow.switch_repository::<Repository<DifferentTaskAggregate>>();

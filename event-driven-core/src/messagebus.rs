@@ -96,8 +96,8 @@ impl<R: ApplicationResponse, E: ApplicationError + std::convert::Into<crate::res
 			BaseError::EventNotFound
 		})?;
 
+		println!("Handle Event : {:?}", msg);
 		for handler in handlers.iter() {
-			println!("Handle Event : {:?}", msg);
 			match handler(msg.message_clone(), context_manager.clone()).await {
 				Ok(_val) => {
 					eprintln!("Event Handling Succeeded!");
