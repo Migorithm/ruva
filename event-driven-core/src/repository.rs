@@ -1,9 +1,9 @@
 use std::{collections::VecDeque, sync::Arc};
 
-use crate::prelude::Message;
+use crate::prelude::{Executor, Message};
 use tokio::sync::RwLock;
 
-pub trait TRepository<E> {
+pub trait TRepository<E: Executor> {
 	fn new(executor: Arc<RwLock<E>>) -> Self;
 
 	fn get_events(&mut self) -> VecDeque<Box<dyn Message>>;
