@@ -134,3 +134,62 @@ When command has not yet been regitered, it returns an error - `BaseError::Comma
 Be mindful that bus does NOT return the result of event processing as in distributed event processing.
 
 [MessageBus]: crate::event_driven_core::messagebus::MessageBus
+
+
+
+### UnitOfWork
+
+`UnitOfWork` is to a unit that manages atomic transaction.
+
+Its `executor` is supposed to be shared with its sub type `Repository`.
+
+`commit`, and `rollback`, is governed by this implementation.
+
+When events are collected in `Repository`, you can collect them
+
+automatically thanks to `_commit_hook` method.
+
+
+#### Usage Pattern 1
+
+```rust
+   // Intialize Uow, start transaction
+   let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
+  
+   // Fetch data
+   let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+  
+   // Process business logic
+   aggregate.process_business_logic(cmd)?;
+  
+   // Apply changes
+   uow.repository().update(&mut aggregate).await?;
+  
+   // Commit transaction
+   uow.commit::<ServiceOutBox>().await?;
+```
+
+
+#### Usage Pattern 2
+Sometimes, you have to get the data from different aggregate and apply changes to
+different aggregates. For that, you can switch repository and use the following pattern.
+
+```rust
+   // Intialize Uow, start transaction
+   let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
+  
+   // Fetch data
+   let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+  
+   // Switch repo
+   let mut uow = uow.switch_repository::<Repository<DifferentTaskAggregate>>();
+  
+   // Process business logic
+   aggregate.process_business_logic(cmd)?;
+  
+   // Apply changes
+   uow.repository().update(&mut aggregate).await?;
+
+   // Commit transaction
+   uow.commit::<ServiceOutBox>().await?;
+```
