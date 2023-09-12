@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-library"
-version = "0.1.26"
+version = "0.1.27"
 edition = "2021"
 license = "MIT"
 license-file = "LICENSE"
