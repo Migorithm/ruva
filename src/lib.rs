@@ -29,7 +29,7 @@
 //!
 //! #### Example
 //!
-//! ```ignore
+//! ```text
 //! use event_driven_library::prelude::{init_command_handler,init_event_handler};
 //! init_command_handler!(
 //! {
@@ -48,7 +48,7 @@
 //!
 //! #### Example
 //!
-//! ```ignore
+//! ```text
 //! init_event_handler!(
 //! {
 //!    Event1: [
@@ -69,7 +69,7 @@
 //!
 //! #### Example
 //!
-//! ```ignore
+//! ```rust
 //! #[dependency]
 //! pub fn mail_sender() -> Box<dyn std::any::Any> {
 //!    ...
@@ -81,7 +81,7 @@
 //!
 //! ### Command & Event
 //! You can register any general struct with `Command`[Command] Derive Macro as follows:
-//! ```ignore
+//! ```rust
 //! #[derive(Command)]
 //! pub struct CustomCommand {
 //!     pub id: i64,
@@ -90,7 +90,7 @@
 //! ```
 //!
 //! Likewise, you can do the same thing for Event:
-//! ```ignore
+//! ```rust
 //! #[derive(Serialize, Deserialize, Clone, Message)]
 //! #[internally_notifiable]
 //! pub struct YourCustomEvent {
@@ -118,7 +118,8 @@
 //! when you invoke it. Everything else is done magically.
 //!
 //! #### Example
-//! ```ignore
+//!
+//! ```rust
 //! #[derive(Command)]
 //! pub struct TestCommand { // Test Command
 //!     pub id: i64,
@@ -137,6 +138,9 @@
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
 //!
 //! [MessageBus]: crate::event_driven_core::messagebus::MessageBus
+
+extern crate event_driven_core;
+extern crate event_driven_macro;
 
 pub mod prelude {
 	pub use event_driven_core::convert_event;
