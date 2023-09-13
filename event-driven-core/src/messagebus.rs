@@ -30,12 +30,17 @@ impl ContextManager {
 		(Arc::new(RwLock::new(Self { sender })), receiver)
 	}
 }
-pub struct MessageBus<R: ApplicationResponse, E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>> {
+pub struct MessageBus<R: ApplicationResponse, E: ApplicationError> {
 	command_handler: &'static TCommandHandler<R, E>,
 	event_handler: &'static TEventHandler<R, E>,
 }
 
-impl<R: ApplicationResponse, E: ApplicationError + std::convert::Into<crate::responses::BaseError> + std::convert::From<crate::responses::BaseError>> MessageBus<R, E> {
+impl<R, E> MessageBus<R, E>
+where
+	R: ApplicationResponse,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
+	BaseError: std::convert::From<E>,
+{
 	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<R, E>) -> Arc<Self> {
 		Self { command_handler, event_handler }.into()
 	}
