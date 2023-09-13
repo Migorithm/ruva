@@ -27,9 +27,22 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 	render_aggregate_token(&ast)
 }
 
-#[proc_macro_derive(ApplicationError)]
+/// Define a Application Error type that can be used in the event-driven-library.
+///
+/// Before deriving this, you must impl `Debug` and `Display` traits.
+///
+/// This macro can be only used in enum.
+///
+/// ## Attributes
+///
+/// - `#[crates(...)]` - Specify the name of root of event-driven-library crate. (Default is `event_driven_library`)
+/// - `#[error]` - Specify the error matching for `BaseError::StopSentinel`.
+/// - `#[error_with_event]` - Specify the error matching for `BaseError::StopSentinelWithEvent`.
+/// - `#[database_error]` - Specify the error matching for `BaseError::DatabaseError`.
+/// - `#[service_error]` - Specify the error matching for `BaseError::ServiceError`.
+#[proc_macro_derive(ApplicationError, attributes(error, error_with_event, database_error, service_error, crates))]
 pub fn error_derive(attr: TokenStream) -> TokenStream {
-	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	let ast: DeriveInput = syn::parse(attr).unwrap();
 
 	error::render_error_token(&ast)
 }

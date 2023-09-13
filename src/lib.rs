@@ -211,8 +211,8 @@
 //!
 //!
 
-extern crate event_driven_core;
-extern crate event_driven_macro;
+pub extern crate event_driven_core;
+pub extern crate event_driven_macro;
 
 pub mod prelude {
 	pub use event_driven_core::convert_event;
@@ -249,5 +249,26 @@ mod dependency_test {
 	fn test() -> i32 {
 		let _ = "hello";
 		0
+	}
+}
+
+#[cfg(test)]
+mod application_error_derive_test {
+	use crate as event_driven_library;
+	use event_driven_macro::ApplicationError;
+	use std::fmt::Display;
+
+	#[derive(Debug, ApplicationError)]
+	#[crates(event_driven_library)]
+	enum Err {
+		#[error]
+		Items,
+		#[error_with_event]
+		Items2,
+	}
+	impl Display for Err {
+		fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			unimplemented!()
+		}
 	}
 }
