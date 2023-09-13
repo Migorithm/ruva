@@ -1,12 +1,17 @@
+//! [event-driven-core]: https://docs.rs/event-driven-core
+//! [event-driven-macro]: https://docs.rs/event-driven-macro
+//! [Command]: https://docs.rs/event-driven-core/latest/event_driven_core/message/trait.Command.html
+//! [Event]: https://docs.rs/event-driven-core/latest/event_driven_core/message/trait.Message.html
+//! [MessageBus]: https://docs.rs/event-driven-core/latest/event_driven_core/messagebus/index.html
+//! [Context]: https://docs.rs/event-driven-core/latest/event_driven_core/messagebus/struct.ContextManager.html
+//! [AtomicContextManager]: https://docs.rs/event-driven-core/latest/event_driven_core/messagebus/type.AtomicContextManager.html
+//!
 //! A event-driven framework for writing reliable and scalable system.
 //!
 //! At a high level, it provides a few major components:
 //!
 //! * Tools for [core components with traits][event-driven-core],
 //! * [Macros][event-driven-macro] for processing events and commands
-//!
-//! [event-driven-core]: crate::event_driven_core
-//! [event-driven-macro]: crate::event_driven_macro
 //!
 //!
 //! # A Tour of Event-Driven-Library
@@ -16,97 +21,33 @@
 //! section, we will take a brief tour, summarizing the major APIs and
 //! their uses.
 //!
-//!
-//!
-//! ### Registering Command
-//!
-//! Event-Driven-Library is great for writing applications and handlers that are extensible, and modularic.
-//! In Event-Drieven Achitecture, `Command` is a request you are given from enduser whereby user
-//! expects to get a return as a result of its processing. Handling `Command` may or may not result in `event`,
-//! the result of which is not be directly seen by end user as it is side effect.
-//! Therefore, you don't want to string along more than one handler for each `Command`.
-//!
-//!
-//! #### Example
-//!
-//! ```
-//! # const IGNORE_1: &str = stringify! {
-//! use event_driven_library::prelude::{init_command_handler, init_event_handler};
-//! # };
-//! # macro_rules! init_command_handler {
-//! #    ($($tt:tt)*) => {}
-//! # }
-//! init_command_handler!(
-//! {
-//!    Command1: CommandHandler1,
-//!    Command2: CommandHandler2,
-//!    Command3: CommandHandler3,
-//!    Command4: CommandHandler4,
-//! }
-//! );
-//! ```
-//!
-//!
-//! ### Registering Event
-//!
-//! `Event` on the other hand, is a side effect of command processing. You can't predict how many
-//! transactions should be processed; for that reason, you have vector of events for each event.
-//!
-//! #### Example
-//!
-//! ```
-//! # macro_rules! init_event_handler {
-//! #    ($($tt:tt)*) => {}
-//! # }
-//! init_event_handler!(
-//! {
-//!    Event1: [
-//!            EventHandler1,
-//!            EventHandler2,
-//!            EventHandler3
-//!            ],
-//!    Event2: [
-//!            EventHandler4 => (mail_sender)
-//!            ]
-//! }
-//! );
-//! ```
-//!
-//! ### Dependency Injection
-//! As you may have noticed in the example above command handler or event handler may have
-//! other dependencies other than message and `Context`(which will be covered later). In this case,
-//! You can simply register dependencies by putting attribute on top of free function.
-//!
-//! #### Example
-//!
-//! ```ignore
-//! #[dependency]
-//! pub fn mail_sender() -> Box<dyn std::any::Any> {
-//!    ...
-//! }
-//! ```
-//!
-//! This is great as you can take your mind off static nature of the language.
-//!
-//!
-//! ### Command & Event
-//! You can register any general struct with `Command`[Command] Derive Macro as follows:
+//! ## Command & Event
+//! You can register any general struct with [Command] Derive Macro as follows:
 //! ```ignore
 //! #[derive(Command)]
-//! pub struct CustomCommand {
-//!     pub id: i64,
-//!     pub name: String,
+//! pub struct MakeOrder {
+//!     pub user_id: i64,
+//!     pub items: Vec<String>,
 //! }
 //! ```
+//! As you attach [Command] derive macro, MessageBus now is going to be able to understand how and where it should
+//! dispatch the command to.
 //!
 //! Likewise, you can do the same thing for Event:
 //! ```ignore
 //! #[derive(Serialize, Deserialize, Clone, Message)]
 //! #[internally_notifiable]
-//! pub struct YourCustomEvent {
+//! pub struct OrderFailed {
 //!     #[identifier]
-//!     pub user_id: UserId,
-//!     pub random_uuid: Uuid,
+//!     pub user_id: i64,
+//! }
+//!
+//! #[derive(Serialize, Deserialize, Clone, Message)]
+//! #[internally_notifiable]
+//! pub struct OrderSucceeded{
+//!     #[identifier]
+//!     pub user_id: i64,
+//!     pub items: Vec<String>
 //! }
 //! ```
 //! Note that use of `internally_notifiable`(or `externally_notifiable`) and `identifier` is MUST.
@@ -116,38 +57,159 @@
 //! * `externally_notifiable` is to leave `OutBox`.
 //! * `identifier` is to record aggregate id.
 //!
-//! [Command]: crate::event_driven_core::message::Command
-//! [Message]: crate::event_driven_core::message::Message
+//!
+//!
+//! ## Initializing Command Handlers
+//! Command handlers are responsible for handling commands in an application, the response of which is sent directly to
+//! clients. Commands are imperative in nature, meaning they specify what should be done.
+//!
+//! ```
+//! # const IGNORE_1: &str = stringify! {
+//! use event_driven_library::prelude::{init_command_handler, init_event_handler};
+//! # };
+//! # macro_rules! init_command_handler {
+//! #    ($($tt:tt)*) => {}
+//! # }
+//!
+//! init_command_handler!(
+//! {
+//!    MakeOrder: OrderHandler::make_order,
+//!    CancelOrder: OrderHandler::cancel_order
+//! }
+//! );
+//! ```
+//! In the example above, you see `MakeOrder` is mapped to `OrderHandler::make_order`, handler in application layer.
+//!
+//! At this point, imagine you want to handle both success/failure case of the `MakeOrder` command processing.
+//! Then you have to think about using event handlers.  
+//!
+//! ## Registering Event
+//!
+//! `Event` is a side effect of [Command] or yet another [Event] processing.
+//! You can register as many handlers as possible as long as they all consume same type of Event as follows:
+//!
+//! ### Example
+//!
+//! ```
+//! # macro_rules! init_event_handler {
+//! #    ($($tt:tt)*) => {}
+//! # }
+//! init_event_handler!(
+//! {
+//!    OrderFaild: [
+//!            NotificationHandler::send_mail,
+//!            ],
+//!    OrderSucceeded: [
+//!            DeliveryHandler::checkout_delivery_items,
+//!            InventoryHandler::change_inventory_count
+//!            ]
+//! }
+//! );
+//! ```
+//! In the `MakeOrder` Command Handling, we have either `OrderFailed` or `OrderSucceeded` event with their own processing handlers.
+//! Events are raised in the handlers that are thrown to [MessageBus] by [Context].
+//! [MessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
+//!
+//! ## Handler API Example
+//!
+//! Handlers can be located anywhere as long as they accept two argument:
+//!
+//! * msg - either [Command] or [Event]
+//! * context - [AtomicContextManager]
+//!
+//! ### Example
+//! ```
+//! pub async fn make_order(
+//!     cmd: MakeOrder,
+//!     context: AtomicContextManager,
+//! ) -> Result<ServiceResponse, ServiceError> {
+//!     let mut uow = UnitOfWork::<Repository<OrderAggregate>, TExecutor>::new(context).await;
+//!
+//!     let mut order_aggregate = OrderAggregate::new(cmd);
+//!     uow.repository().add(&mut task_aggregate).await?;
+//!
+//!     uow.commit::<ServiceOutBox>().await?;
+//!
+//!     Ok(().into())
+//! }
+//!
+//! ```
+//! But sometimes, you may want to add yet another dependencies. For that, Dependency Injection mechanism has been implemented.
+//! So, you can also do something along the lines of:
+//! ```
+//! pub async fn make_order(
+//!     cmd: MakeOrder,
+//!     context: AtomicContextManager,
+//!     payment_gateway_caller: Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> //injected dependency
+//! ) -> Result<ServiceResponse, ServiceError> {
+//!     let mut uow = UnitOfWork::<Repository<OrderAggregate>, TExecutor>::new(context).await;
+//!
+//!     let mut order_aggregate = OrderAggregate::new(cmd,payment_gateway_caller);
+//!     uow.repository().add(&mut task_aggregate).await?;
+//!
+//!     uow.commit::<ServiceOutBox>().await?;
+//!
+//!     Ok(().into())
+//! }
+//! ```
+//!
+//! How is this possible? because we preprocess handlers so it can allow for `DI container`.
+//!
+//! ## Dependency Injection
+//! You can simply register dependencies by putting attribute on top of free function.
+//!
+//! ### Example
+//!
+//! ```ignore
+//! #[dependency]
+//! pub fn payment_gateway_caller() -> Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> {
+//!     if cfg!(test) {
+//!         __test_payment_gateway_caller()  //Dependency For Test
+//!     } else {
+//!         __actual_payment_gateway_caller() //Real Dependency
+//!     }
+//! }
+//! ```
+//!
+//! This is great as you can take your mind off static nature of the language.
 //!
 //!
 //!
-//! ### MessageBus
-//! `MessageBus`[MessageBus] is central pillar which gets command and gets raised event from
+//! ## MessageBus
+//! At the core is event driven library is [MessageBus], which gets command and gets raised event from
 //! `UnitOfWork` and dispatch the event to the right handlers.
 //! As this is done only in framework side, the only way you can 'feel' the presence of messagebus is
 //! when you invoke it. Everything else is done magically.
 //!
-//! #### Example
 //!
+//!
+//! ### Example
 //! ```ignore
 //! #[derive(Command)]
-//! pub struct TestCommand { // Test Command
-//!     pub id: i64,
-//!     pub name: String,
+//! pub struct MakeOrder { // Test Command
+//!     pub user_id: i64,
+//!     pub items: Vec<String>
 //! }
 //!
 //! async fn test_func(){
-//!     let bus = MessageBus::new(command_handler().await, event_handler().await)
-//!     let command = TestCommand{id:1,name:"Migo".into()}
-//!     let _ = bus.handle(command).await // Use of command
+//!     let bus = MessageBus::new(command_handler(), event_handler())
+//!     let command = MakeOrder{user_id:1, items:vec!["shirts","jeans"]}
+//!     match bus.handle(command).await{
+//!         Err(err)=> { // test for error case }
+//!         Ok(val)=> { // test for happy case }
+//!     }
+//!     }
+//!     }
 //! }
 //! ```
+//!
+//!
 //!
 //! #### Error from MessageBus
 //! When command has not yet been regitered, it returns an error - `BaseError::CommandNotFound`
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
 //!
-//! [MessageBus]: crate::event_driven_core::messagebus::MessageBus
+//!
 
 extern crate event_driven_core;
 extern crate event_driven_macro;
