@@ -3,7 +3,6 @@ name = "event-driven-library"
 version = "0.1.27"
 edition = "2021"
 license = "MIT"
-license-file = "LICENSE"
 description = "Rust Library For Event Driven Message Handling"
 repository = "https://github.com/BeringLab/event-driven-library"
 
