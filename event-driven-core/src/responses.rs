@@ -1,4 +1,4 @@
-use std::{error, fmt::Display};
+use std::error;
 
 use crate::prelude::Message;
 
@@ -15,24 +15,9 @@ pub enum BaseError {
 	ServiceError(Box<AnyError>),
 }
 
-impl std::error::Error for BaseError {}
-impl Display for BaseError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			BaseError::CommandNotFound => write!(f, "CommandNotFound"),
-			BaseError::EventNotFound => write!(f, "EventNotFound"),
-			BaseError::StopSentinel => write!(f, "StopSentinel"),
-			BaseError::StopSentinelWithEvent(_message) => write!(f, "StopSentinel"),
-			BaseError::DatabaseError(res) => write!(f, "{}", res),
-			BaseError::ServiceError(_) => write!(f, "ServiceError"),
-			BaseError::TransactionError => write!(f, "TransactionError"),
-		}
-	}
-}
-
 pub trait ApplicationResponse: 'static {}
 
-pub trait ApplicationError: std::error::Error + 'static {}
+pub trait ApplicationError: 'static + std::fmt::Debug {}
 impl ApplicationError for BaseError {}
 
 impl From<BaseError> for Box<dyn ApplicationError> {
