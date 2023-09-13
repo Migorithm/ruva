@@ -29,8 +29,13 @@
 //!
 //! #### Example
 //!
-//! ```text
-//! use event_driven_library::prelude::{init_command_handler,init_event_handler};
+//! ```
+//! # const IGNORE_1: &str = stringify! {
+//! use event_driven_library::prelude::{init_command_handler, init_event_handler};
+//! # };
+//! # macro_rules! init_command_handler {
+//! #    ($($tt:tt)*) => {}
+//! # }
 //! init_command_handler!(
 //! {
 //!    Command1: CommandHandler1,
@@ -38,6 +43,7 @@
 //!    Command3: CommandHandler3,
 //!    Command4: CommandHandler4,
 //! }
+//! );
 //! ```
 //!
 //!
@@ -48,7 +54,10 @@
 //!
 //! #### Example
 //!
-//! ```text
+//! ```
+//! # macro_rules! init_event_handler {
+//! #    ($($tt:tt)*) => {}
+//! # }
 //! init_event_handler!(
 //! {
 //!    Event1: [
@@ -60,6 +69,7 @@
 //!            EventHandler4 => (mail_sender)
 //!            ]
 //! }
+//! );
 //! ```
 //!
 //! ### Dependency Injection
@@ -69,7 +79,7 @@
 //!
 //! #### Example
 //!
-//! ```rust
+//! ```ignore
 //! #[dependency]
 //! pub fn mail_sender() -> Box<dyn std::any::Any> {
 //!    ...
@@ -81,7 +91,7 @@
 //!
 //! ### Command & Event
 //! You can register any general struct with `Command`[Command] Derive Macro as follows:
-//! ```rust
+//! ```ignore
 //! #[derive(Command)]
 //! pub struct CustomCommand {
 //!     pub id: i64,
@@ -90,7 +100,7 @@
 //! ```
 //!
 //! Likewise, you can do the same thing for Event:
-//! ```rust
+//! ```ignore
 //! #[derive(Serialize, Deserialize, Clone, Message)]
 //! #[internally_notifiable]
 //! pub struct YourCustomEvent {
@@ -119,7 +129,7 @@
 //!
 //! #### Example
 //!
-//! ```rust
+//! ```ignore
 //! #[derive(Command)]
 //! pub struct TestCommand { // Test Command
 //!     pub id: i64,
