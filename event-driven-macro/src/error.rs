@@ -23,7 +23,6 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	let service_error = ast.attrs.iter().find(|x| x.path().is_ident("service_error"));
 
 	quote!(
-		impl ::std::error::Error for #name {}
 		impl #crates::event_driven_core::responses::ApplicationError for #name {}
 		impl ::std::convert::From<#crates::event_driven_core::responses::BaseError> for #name {
 			fn from(value: #crates::event_driven_core::responses::BaseError) -> Self {

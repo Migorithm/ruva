@@ -29,7 +29,7 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 
 /// Define a Application Error type that can be used in the event-driven-library.
 ///
-/// Before deriving this, you must impl `Debug` and `Display` traits.
+/// Before deriving this, you must impl `Debug`traits.
 ///
 /// This macro can be only used in enum.
 ///

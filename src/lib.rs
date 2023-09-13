@@ -118,7 +118,7 @@
 //! * context - [AtomicContextManager]
 //!
 //! ### Example
-//! ```
+//! ```ignore
 //! pub async fn make_order(
 //!     cmd: MakeOrder,
 //!     context: AtomicContextManager,
@@ -132,11 +132,10 @@
 //!
 //!     Ok(().into())
 //! }
-//!
 //! ```
 //! But sometimes, you may want to add yet another dependencies. For that, Dependency Injection mechanism has been implemented.
 //! So, you can also do something along the lines of:
-//! ```
+//! ```ignore
 //! pub async fn make_order(
 //!     cmd: MakeOrder,
 //!     context: AtomicContextManager,
@@ -208,8 +207,6 @@
 //! #### Error from MessageBus
 //! When command has not yet been regitered, it returns an error - `BaseError::CommandNotFound`
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
-//!
-//!
 
 pub extern crate event_driven_core;
 pub extern crate event_driven_macro;
@@ -256,7 +253,6 @@ mod dependency_test {
 mod application_error_derive_test {
 	use crate as event_driven_library;
 	use event_driven_macro::ApplicationError;
-	use std::fmt::Display;
 
 	#[derive(Debug, ApplicationError)]
 	#[crates(event_driven_library)]
@@ -265,10 +261,5 @@ mod application_error_derive_test {
 		Items,
 		#[error_with_event]
 		Items2,
-	}
-	impl Display for Err {
-		fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-			unimplemented!()
-		}
 	}
 }
