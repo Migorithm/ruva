@@ -15,21 +15,21 @@
 //!
 //! #### Usage Pattern 1
 //!
-//! ```rust
-//!    // Intialize Uow, start transaction
-//!    let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
-//!   
-//!    // Fetch data
-//!    let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
-//!   
-//!    // Process business logic
-//!    aggregate.process_business_logic(cmd)?;
-//!   
-//!    // Apply changes
-//!    uow.repository().update(&mut aggregate).await?;
-//!   
-//!    // Commit transaction
-//!    uow.commit::<ServiceOutBox>().await?;
+//! ```ignore
+//! // Intialize Uow, start transaction
+//! let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
+//!
+//! // Fetch data
+//! let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+//!
+//! // Process business logic
+//! aggregate.process_business_logic(cmd)?;
+//!
+//! // Apply changes
+//! uow.repository().update(&mut aggregate).await?;
+//!
+//! // Commit transaction
+//! uow.commit::<ServiceOutBox>().await?;
 //! ```
 //!
 //!
@@ -37,24 +37,24 @@
 //! Sometimes, you have to get the data from different aggregate and apply changes to
 //! different aggregates. For that, you can switch repository and use the following pattern.
 //!
-//! ```rust
-//!    // Intialize Uow, start transaction
-//!    let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
-//!   
-//!    // Fetch data
-//!    let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
-//!   
-//!    // Switch repo
-//!    let mut uow = uow.switch_repository::<Repository<DifferentTaskAggregate>>();
-//!   
-//!    // Process business logic
-//!    aggregate.process_business_logic(cmd)?;
-//!   
-//!    // Apply changes
-//!    uow.repository().update(&mut aggregate).await?;
+//! ```ignore
+//! // Intialize Uow, start transaction
+//! let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
 //!
-//!    // Commit transaction
-//!    uow.commit::<ServiceOutBox>().await?;
+//! // Fetch data
+//! let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+//!
+//! // Switch repo
+//! let mut uow = uow.switch_repository::<Repository<DifferentTaskAggregate>>();
+//!
+//! // Process business logic
+//! aggregate.process_business_logic(cmd)?;
+//!
+//! // Apply changes
+//! uow.repository().update(&mut aggregate).await?;
+//!
+//! // Commit transaction
+//! uow.commit::<ServiceOutBox>().await?;
 //! ```
 
 use std::sync::Arc;

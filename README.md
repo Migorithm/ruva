@@ -1,13 +1,12 @@
-This is event-driven library(I should've named it as framework though) for writing reliable and scalable system.<br>
-
+This is event-driven library(I should've named it as framework though) for writing reliable and scalable system.
 
 At a high level, it provides a few major components.
-- Tools for [core components with traits][event-driven-core],
+
+- Tools for [core components with traits][event-driven-core]
 - [Macros][event-driven-macro] for processing events and commands
 
-[event-driven-core]: crate::event_driven_core
-[event-driven-macro]: crate::event_driven_macro
-
+[event-driven-core]: https://docs.rs/event-driven-core
+[event-driven-macro]: https://docs.rs/event-driven-macro
 
 # A Tour of Event-Driven-Library
 
@@ -16,16 +15,19 @@ essential for implementing messagebus-like applications in Rust. In this
 section, we will take a brief tour, summarizing the major APIs and
 their uses.
 
+## Registering Command
 
-### Registering Command
-Event-Driven-Library is great for writing applications and handlers that are extensible, and modularic.<br>
-In Event-Drieven Achitecture, `Command` is a request you are given from enduser whereby user<br>
-expects to get a return as a result of its processing. Handling `Command` may or may not result in `event`,<br>
-the result of which is not be directly seen by end user as it is side effect.<br>
-Therefore, you don't want to string along more than one handler for each `Command`.<br>
+Event-Driven-Library is great for writing applications and handlers that are extensible, and modularic.
 
+In Event-Drieven Achitecture, `Command` is a request you are given from enduser whereby user
 
-#### Example
+expects to get a return as a result of its processing. Handling `Command` may or may not result in `event`,
+
+the result of which is not be directly seen by end user as it is side effect.
+
+Therefore, you don't want to string along more than one handler for each `Command`.
+
+### Example
 
 ```rust
 use event_driven_library::prelude::{init_command_handler,init_event_handler};
@@ -36,16 +38,16 @@ init_command_handler!(
    Command3: CommandHandler3,
    Command4: CommandHandler4,
 }
-)
+);
 ```
 
-
-### Registering Event
+## Registering Event
 
 `Event` on the other hand, is a side effect of command processing. You can't predict how many
 transactions should be processed; for that reason, you have vector of events for each event.
 
-#### Example
+### Example
+
 ```rust
 init_event_handler!(
 {
@@ -61,22 +63,27 @@ init_event_handler!(
 )
 ```
 
-### Dependency Injection
+## Dependency Injection
+
 As you may have noticed in the example above command handler or event handler may have
 other dependencies other than message and `Context`(which will be covered later). In this case,
 You can simply register dependencies by putting attribute on top of free function.
 
-#### Example
+### Example
+
 ```rust
 #[dependency]
-pub fn mail_sender() {
+pub fn mail_sender() -> Box<dyn std::any::Any> {
    ...
 }
 ```
+
 This is great as you can take your mind off static nature of the language.
 
-### Command & Event
+## Command & Event
+
 You can register any general struct with `Command`[Command] Derive Macro as follows:
+
 ```rust
 #[derive(Command)]
 pub struct CustomCommand {
@@ -86,6 +93,7 @@ pub struct CustomCommand {
 ```
 
 Likewise, you can do the same thing for Event:
+
 ```rust
 #[derive(Serialize, Deserialize, Clone, Message)]
 #[internally_notifiable]
@@ -95,25 +103,24 @@ pub struct YourCustomEvent {
     pub random_uuid: Uuid,
 }
 ```
+
 Note that use of `internally_notifiable`(or `externally_notifiable`) and `identifier` is MUST.
 
-* `internally_notifiable` is marker to let the system know that the event should be handled
+- `internally_notifiable` is marker to let the system know that the event should be handled
 within the application
-* `externally_notifiable` is to leave `OutBox`.
-* `identifier` is to record aggregate id.
+- `externally_notifiable` is to leave `OutBox`.
+- `identifier` is to record aggregate id.
 
-[Command]: crate::event_driven_core::message::Command
-[Message]: crate::event_driven_core::message::Message
+[Command]: https://docs.rs/event-driven-core/latest/event_driven_core/message/trait.Command.html
 
+## MessageBus
 
-
-### MessageBus
 `MessageBus`[MessageBus] is central pillar which gets command and gets raised event from
 `UnitOfWork` and dispatch the event to the right handlers.
 As this is done only in framework side, the only way you can 'feel' the presence of messagebus is
 when you invoke it. Everything else is done magically.
 
-#### Example
+### Example
 
 ```rust
 #[derive(Command)]
@@ -129,15 +136,14 @@ async fn test_func(){
 }
 ```
 
-#### Error from MessageBus
+### Error from MessageBus
+
 When command has not yet been regitered, it returns an error - `BaseError::CommandNotFound`
 Be mindful that bus does NOT return the result of event processing as in distributed event processing.
 
 [MessageBus]: crate::event_driven_core::messagebus::MessageBus
 
-
-
-### UnitOfWork
+## UnitOfWork
 
 `UnitOfWork` is to a unit that manages atomic transaction.
 
@@ -149,47 +155,46 @@ When events are collected in `Repository`, you can collect them
 
 automatically thanks to `_commit_hook` method.
 
-
-#### Usage Pattern 1
+### Usage Pattern 1
 
 ```rust
-   // Intialize Uow, start transaction
-   let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
-  
-   // Fetch data
-   let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
-  
-   // Process business logic
-   aggregate.process_business_logic(cmd)?;
-  
-   // Apply changes
-   uow.repository().update(&mut aggregate).await?;
-  
-   // Commit transaction
-   uow.commit::<ServiceOutBox>().await?;
+// Intialize Uow, start transaction
+let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
+
+// Fetch data
+let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+
+// Process business logic
+aggregate.process_business_logic(cmd)?;
+
+// Apply changes
+uow.repository().update(&mut aggregate).await?;
+
+// Commit transaction
+uow.commit::<ServiceOutBox>().await?;
 ```
 
+### Usage Pattern 2
 
-#### Usage Pattern 2
 Sometimes, you have to get the data from different aggregate and apply changes to
 different aggregates. For that, you can switch repository and use the following pattern.
 
 ```rust
-   // Intialize Uow, start transaction
-   let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
-  
-   // Fetch data
-   let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
-  
-   // Switch repo
-   let mut uow = uow.switch_repository::<Repository<DifferentTaskAggregate>>();
-  
-   // Process business logic
-   aggregate.process_business_logic(cmd)?;
-  
-   // Apply changes
-   uow.repository().update(&mut aggregate).await?;
+// Intialize Uow, start transaction
+let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor>::new(context).await;
 
-   // Commit transaction
-   uow.commit::<ServiceOutBox>().await?;
+// Fetch data
+let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
+
+// Switch repo
+let mut uow = uow.switch_repository::<Repository<DifferentTaskAggregate>>();
+
+// Process business logic
+aggregate.process_business_logic(cmd)?;
+
+// Apply changes
+uow.repository().update(&mut aggregate).await?;
+
+// Commit transaction
+uow.commit::<ServiceOutBox>().await?;
 ```
