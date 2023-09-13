@@ -60,13 +60,9 @@ within the application
 Command handlers are responsible for handling commands in an application, the response of which is sent directly to
 clients. Commands are imperative in nature, meaning they specify what should be done.
 
-```
-# const IGNORE_1: &str = stringify! {
+```rust
 use event_driven_library::prelude::{init_command_handler, init_event_handler};
-# };
-# macro_rules! init_command_handler {
-#    ($($tt:tt)*) => {}
-# }
+
 
 init_command_handler!(
 {
@@ -87,10 +83,7 @@ You can register as many handlers as possible as long as they all consume same t
 
 ### Example
 
-```
-# macro_rules! init_event_handler {
-#    ($($tt:tt)*) => {}
-# }
+```rust
 init_event_handler!(
 {
    OrderFaild: [
