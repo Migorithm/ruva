@@ -68,9 +68,7 @@ where
 
 					if let Err(err) = self.handle_event(msg, context_manager.clone()).await {
 						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-						if let "EventNotFound" = err.to_string().as_str() {
-							continue;
-						}
+						eprintln!("{:?}", err);
 					}
 				}
 				Err(TryRecvError::Empty) => {
