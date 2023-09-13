@@ -39,8 +39,21 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 /// - `#[error]` - Specify the error matching for `BaseError::StopSentinel`.
 /// - `#[error_with_event]` - Specify the error matching for `BaseError::StopSentinelWithEvent`.
 /// - `#[database_error]` - Specify the error matching for `BaseError::DatabaseError`.
-/// - `#[service_error]` - Specify the error matching for `BaseError::ServiceError`.
-#[proc_macro_derive(ApplicationError, attributes(error, error_with_event, database_error, service_error, crates))]
+///
+/// ## Example
+/// ```ignore
+/// #[derive(Debug, ApplicationError)]
+/// #[crates(crate::imports::event_driven_library)]
+/// enum TestError {
+///   #[error]
+///   Stop,
+///   #[error_with_event]
+///   StopWithEvent(Box<AnyError>),
+///   #[database_error]
+///   DatabaseError(Box<AnyError>),
+/// }
+/// ```
+#[proc_macro_derive(ApplicationError, attributes(error, error_with_event, database_error, crates))]
 pub fn error_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr).unwrap();
 
