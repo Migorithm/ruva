@@ -4,6 +4,7 @@ version = "0.1.13"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
+repository = "https://github.com/BeringLab/event-driven-library"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
