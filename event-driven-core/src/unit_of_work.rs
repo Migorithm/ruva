@@ -57,14 +57,12 @@
 //! uow.commit::<ServiceOutBox>().await?;
 //! ```
 
-use std::sync::Arc;
-
 use crate::{
 	outbox::IOutBox,
 	prelude::{AtomicContextManager, BaseError, TRepository},
 };
-
 use async_trait::async_trait;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[async_trait]
@@ -81,25 +79,28 @@ where
 	R: TRepository<E>,
 	E: Executor,
 {
+	/// real transaction executor
 	executor: Arc<RwLock<E>>,
+	/// global event sender
 	context: AtomicContextManager,
 
+	/// event local repository for Executor
 	pub repository: R,
 }
 
 impl<R, E> UnitOfWork<R, E>
 where
 	R: TRepository<E>,
-
 	E: Executor,
 {
-	/// Creating Uow means to begin transaction.
+	// Creating Uow means to begin transaction.
 
+	/// Creeate UOW object with context manager.
 	pub async fn new(context: AtomicContextManager) -> Self {
 		let executor: Arc<RwLock<E>> = E::new().await;
 
 		let mut uow = Self {
-			repository: R::new(executor.clone()),
+			repository: R::new(Arc::clone(&executor)),
 			context,
 			executor,
 		};
@@ -107,42 +108,58 @@ where
 		uow
 	}
 
+	/// Switch repository to different type.
+	///
+	/// \#\#\# Example
+	/// ```ignore
+	/// let mut uow = UnitOfWork::<A<Executer>, Executor>::new(context).await;
+	/// let new_uow = uow.switch_repository::<B<Executor>>(); // origin uow was deleted.
+	/// ```
 	pub fn switch_repository<DR: TRepository<E>>(mut self) -> UnitOfWork<DR, E> {
-		let mut repo = DR::new(self.executor.clone());
+		let mut repo = DR::new(Arc::clone(&self.executor));
 		repo.set_events(self.repository().get_events());
 
 		UnitOfWork {
-			executor: self.executor.clone(),
+			executor: Arc::clone(&self.executor),
 			context: self.context,
 			repository: repo,
 		}
 	}
 
+	/// Get local event repository.
 	pub fn repository(&mut self) -> &mut R {
 		&mut self.repository
 	}
+
+	/// Begin transaction.
 	pub async fn begin(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 		executor.begin().await
 	}
 
+	/// Get inner executor.
 	pub fn executor(&self) -> Arc<RwLock<E>> {
-		self.executor.clone()
+		Arc::clone(&self.executor)
 	}
 
+	/// Commit transaction.
 	pub async fn commit<O: IOutBox<E>>(mut self) -> Result<(), BaseError> {
 		// To drop uow itself!
 
+		// run commit hook
 		self._commit_hook::<O>().await?;
 
+		// commit
 		self._commit().await
 	}
+
 	async fn _commit(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 
 		executor.commit().await
 	}
 
+	/// Rollback transaction.
 	pub async fn rollback(self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 		executor.rollback().await
