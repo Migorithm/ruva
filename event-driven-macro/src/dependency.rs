@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
-use syn::{ItemFn, ReturnType, Signature};
+use syn::{Ident, ItemFn, ReturnType, Signature};
 
-pub fn register_dependency(ast: ItemFn) -> TokenStream {
+pub fn register_dependency(ast: ItemFn, dependency_ident: Ident) -> TokenStream {
 	const OUTPUT_TYPE_NOT_VALID: &str = "#[dependency] fn must have valid output type";
 
 	let ItemFn {
@@ -28,7 +28,7 @@ pub fn register_dependency(ast: ItemFn) -> TokenStream {
 	}
 
 	quote!(
-	impl Dependency{
+	impl #dependency_ident{
 		pub #asyncness fn #ident #generics(&self,#inputs)-> #var{
 			#block
 		}

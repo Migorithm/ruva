@@ -5,6 +5,7 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 
 use proc_macro::TokenStream;
 use syn::{DeriveInput, ItemFn};
+use utils::locate_crate_on_derive_macro;
 
 #[macro_use]
 extern crate quote;
@@ -73,16 +74,26 @@ pub fn entity_derive(attr: TokenStream) -> TokenStream {
 #[proc_macro_derive(Command)]
 pub fn command_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	let crates = locate_crate_on_derive_macro(&ast);
 	let name = ast.ident;
 
 	quote!(
-		impl Command for #name{}
+		impl #crates::prelude::Command for #name{}
 	)
 	.into()
 }
 
 #[proc_macro_attribute]
-pub fn dependency(_: TokenStream, input: TokenStream) -> TokenStream {
+pub fn dependency(attr: TokenStream, input: TokenStream) -> TokenStream {
+	let dependency_ident = if !attr.is_empty() {
+		let meta = syn::parse_macro_input!(attr as syn::Meta);
+		let segement = meta.path().segments.first().expect("Must be!");
+		segement.ident.clone()
+	} else {
+		syn::Ident::new("Dependency", proc_macro2::Span::call_site())
+	};
+
 	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
-	dependency::register_dependency(ast)
+
+	dependency::register_dependency(ast, dependency_ident)
 }

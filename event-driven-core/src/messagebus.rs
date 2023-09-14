@@ -132,6 +132,13 @@ where
 /// Whatever dependency container you want.
 #[macro_export]
 macro_rules! create_dependency {
+	($dependency:tt) => {
+		pub struct $dependency;
+		pub fn dependency() -> &'static $dependency {
+			static DEPENDENCY: ::std::sync::OnceLock<$dependency> = ::std::sync::OnceLock::new();
+			DEPENDENCY.get_or_init(|| $dependency)
+		}
+	};
 	() => {
 		pub struct Dependency;
 		pub fn dependency() -> &'static Dependency {
