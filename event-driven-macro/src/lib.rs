@@ -2,6 +2,7 @@ use aggregate::{render_aggregate_token, render_entity_token};
 
 use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
+
 use proc_macro::TokenStream;
 use syn::{DeriveInput, ItemFn};
 
@@ -11,13 +12,15 @@ mod aggregate;
 mod dependency;
 mod error;
 mod message;
+mod utils;
+
 #[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable, identifier))]
 pub fn message_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 	let propagatability = render_event_visibility(&ast);
 	let identifier = find_identifier(&ast);
 
-	render_message_token(&ast, propagatability, identifier)
+	render_message_token(&ast, propagatability, identifier).into()
 }
 
 #[proc_macro_derive(Aggregate)]

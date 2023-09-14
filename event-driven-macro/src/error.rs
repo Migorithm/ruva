@@ -1,9 +1,11 @@
 use proc_macro::TokenStream;
 use syn::DeriveInput;
 
+use crate::utils::{find_enum_variant, locate_crate_on_derive_macro};
+
 pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	// Forcing target to be enum
-	let data = match &ast.data {
+	let data_enum = match &ast.data {
 		syn::Data::Enum(data) => data,
 		_ => {
 			panic!("Only Enum type is supported by #[derive(ApplicationError)].")
@@ -11,16 +13,11 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 
 	let name = &ast.ident;
-	let find_variant = |name: &str| data.variants.iter().find(|x| x.attrs.iter().any(|x| x.path().is_ident(name)));
+
+	let find_variant = find_enum_variant(data_enum);
 
 	/* \#\[crates(...)\] */
-	let crates = ast.attrs.iter().find(|x| x.path().is_ident("crates"));
-	let crates = if let Some(crates) = crates {
-		crates.parse_args::<syn::ExprPath>().unwrap().path.get_ident().expect("#[crates(...)] expects path.").to_string()
-	} else {
-		"event_driven_library".to_owned()
-	};
-	let crates = syn::Ident::new(&crates, proc_macro2::Span::call_site());
+	let crates = locate_crate_on_derive_macro(ast);
 
 	/* \#\[stop_sentinel\] */
 	let stop_sentinel = find_variant("stop_sentinel");
@@ -49,7 +46,7 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	} else {
 		syn::Ident::new("StopSentinelWithEvent", proc_macro2::Span::call_site())
 	};
-	let stop_sentinel_with_event_type = if let syn::Fields::Unnamed(field) = &data
+	let stop_sentinel_with_event_type = if let syn::Fields::Unnamed(field) = &data_enum
 		.variants
 		.iter()
 		.find(|x| x.ident == stop_sentinel_with_event)
