@@ -11,7 +11,7 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 
 	let name = &ast.ident;
-	let find_variant = |name: &str| data.variants.iter().find(|x| x.attrs.iter().find(|x| x.path().is_ident(name)).is_some());
+	let find_variant = |name: &str| data.variants.iter().find(|x| x.attrs.iter().any(|x| x.path().is_ident(name)));
 
 	/* \#\[crates(...)\] */
 	let crates = ast.attrs.iter().find(|x| x.path().is_ident("crates"));
@@ -80,7 +80,9 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 
 	quote!(
+		impl ::std::error::Error for #name {}
 		impl #crates::event_driven_core::responses::ApplicationError for #name {}
+
 		impl ::std::convert::From<#crates::event_driven_core::responses::BaseError> for #name {
 			fn from(value: #crates::event_driven_core::responses::BaseError) -> Self {
 				match value {
@@ -91,18 +93,19 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 				}
 			}
 		}
-		impl ::std::convert::Into<::std::boxed::Box<dyn  #crates::event_driven_core::responses::BaseError>> for #name {
-			fn into(self) -> ::std::boxed::Box<dyn  #crates::event_driven_core::responses::BaseError> {
+		impl ::std::convert::Into<#crates::event_driven_core::responses::BaseError> for #name {
+			fn into(self) -> #crates::event_driven_core::responses::BaseError {
 				let data = match self {
 					#name::#stop_sentinel => #crates::event_driven_core::responses::BaseError::StopSentinel,
 					#name::#stop_sentinel_with_event(event) => #crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event),
 					#name::#database_error(error) => #crates::event_driven_core::responses::BaseError::DatabaseError(error),
-					_ => #crates::event_driven_core::responses::BaseError::ServiceError(error),
+					_ => #crates::event_driven_core::responses::BaseError::ServiceError(::std::boxed::Box::new(self)),
 				};
-				::std::boxed::Box::new(data)
+				data
 			}
 		}
-		#crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: #crates::message::Message);
+		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: Box<dyn #crates::prelude::Message>);
+		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, Box<dyn #crates::prelude::Message>);
 	)
 	.into()
 }

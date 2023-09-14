@@ -252,7 +252,11 @@ mod dependency_test {
 
 #[cfg(test)]
 mod application_error_derive_test {
+	use std::fmt::Display;
+
 	use crate as event_driven_library;
+	use event_driven_core::message::Message;
+	use event_driven_core::responses::AnyError;
 	use event_driven_macro::ApplicationError;
 
 	#[derive(Debug, ApplicationError)]
@@ -260,5 +264,19 @@ mod application_error_derive_test {
 	enum Err {
 		#[stop_sentinel]
 		Items,
+		#[stop_sentinel_with_event]
+		StopSentinelWithEvent(Box<dyn Message>),
+		#[database_error]
+		DatabaseError(Box<AnyError>),
+	}
+
+	impl Display for Err {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			match self {
+				Self::Items => write!(f, "items"),
+				Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
+				Self::DatabaseError(err) => write!(f, "{}", err),
+			}
+		}
 	}
 }
