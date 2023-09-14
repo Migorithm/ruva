@@ -3,17 +3,20 @@ use proc_macro::TokenStream;
 use quote::ToTokens;
 use syn::{Data, DeriveInput, Field};
 
+use crate::utils::locate_crate_on_derive_macro;
+
 pub(crate) fn render_aggregate_token(ast: &DeriveInput) -> TokenStream {
 	let name = &ast.ident;
+	let crates = locate_crate_on_derive_macro(ast);
 
 	quote!(
-		impl Aggregate for #name{
+		impl #crates::prelude::Aggregate for #name{
 
-			fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>> {
+			fn events(&self) -> &::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
 				&self.events
 			}
-			fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>> {
-				std::mem::take(&mut self.events)
+			fn take_events(&mut self) -> ::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
+				::std::mem::take(&mut self.events)
 			}
 			fn raise_event(&mut self, event: Box<dyn Message>) {
 				self.events.push_back(event)

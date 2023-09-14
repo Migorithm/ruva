@@ -1,40 +1,39 @@
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use syn::{Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, Ident, Meta, Path};
 
-pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<&'static str>, identifier: String) -> TokenStream {
-	let name = &ast.ident;
+use crate::utils::locate_crate_on_derive_macro;
 
-	let identifier: proc_macro2::TokenStream = identifier.parse().unwrap();
-	let joined: proc_macro2::TokenStream = propagatability.join(" ").parse().unwrap();
+pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<TokenStream>, identifier: TokenStream) -> TokenStream {
+	let name = &ast.ident;
+	let crates = locate_crate_on_derive_macro(ast);
 
 	quote! {
-		impl Message for #name {
+		impl #crates::prelude::Message for #name {
 
 			#identifier
 
-			fn message_clone(&self) -> Box<dyn Message> {
-				Box::new(self.clone())
+			fn message_clone(&self) -> ::std::boxed::Box<dyn #crates::prelude::Message> {
+				::std::boxed::Box::new(self.clone())
 			}
-			fn state(&self) -> String {
+			fn state(&self) -> ::std::string::String {
 				serde_json::to_string(&self).expect("Failed to serialize")
 			}
-			fn to_message(self)-> Box<dyn Message+'static>{
-				Box::new(self)
+			fn to_message(self)-> ::std::boxed::Box<dyn #crates::prelude::Message+'static>{
+				::std::boxed::Box::new(self)
 			}
 
-			#joined
+			#(#propagatability)*
 		}
-		impl MailSendable for #name {
-			fn template_name(&self) -> String {
+		impl #crates::prelude::MailSendable for #name {
+			fn template_name(&self) -> ::std::string::String {
 				// * subject to change
 				stringify!($name).into()
 			}
 		}
 	}
-	.into()
 }
 
-pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<&'static str> {
+pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<TokenStream> {
 	let propagatability = ast
 		.attrs
 		.iter()
@@ -44,9 +43,17 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<&'static str> {
 					.iter()
 					.filter_map(|s| {
 						if s.ident.to_string().as_str() == "internally_notifiable" {
-							Some("fn internally_notifiable(&self)->bool{true}")
+							Some(quote!(
+								fn internally_notifiable(&self) -> bool {
+									true
+								}
+							))
 						} else if s.ident.to_string().as_str() == "externally_notifiable" {
-							Some("fn externally_notifiable(&self)->bool{true}")
+							Some(quote!(
+								fn externally_notifiable(&self) -> bool {
+									true
+								}
+							))
 						} else {
 							None
 						}
@@ -63,8 +70,9 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<&'static str> {
 	propagatability
 }
 
-pub(crate) fn find_identifier(ast: &DeriveInput) -> String {
+pub(crate) fn find_identifier(ast: &DeriveInput) -> TokenStream {
 	let name = &ast.ident;
+	let crates = locate_crate_on_derive_macro(ast);
 	match &ast.data {
 		Data::Struct(DataStruct {
 			fields: Fields::Named(FieldsNamed { named, .. }),
@@ -74,19 +82,16 @@ pub(crate) fn find_identifier(ast: &DeriveInput) -> String {
 			if identifier.len() != 1 {
 				panic!("One identifier Must Be Given To Message!")
 			}
-
 			let ident = identifier.first().unwrap().ident.clone().unwrap().clone();
 
-			format!(
-				"
-				fn metadata(&self) -> MessageMetadata {{
-					MessageMetadata{{
-					aggregate_id: self.{}.to_string(),
-					topic: stringify!({}).into()
+			quote!(
+				fn metadata(&self) -> #crates::prelude::MessageMetadata {
+					#crates::prelude::MessageMetadata{
+					aggregate_id: self.#ident.to_string(),
+					topic: stringify!(#name).into()
 
-				}}
-			}}",
-				ident, name
+				}
+			}
 			)
 		}
 		_ => panic!("Only Struct Allowed!"),
