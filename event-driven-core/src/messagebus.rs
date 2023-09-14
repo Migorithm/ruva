@@ -34,7 +34,7 @@ pub struct MessageBus<R: ApplicationResponse, E: ApplicationError> {
 	command_handler: &'static TCommandHandler<R, E>,
 	event_handler: &'static TEventHandler<R, E>,
 }
-// BaseError: From<services::response::ServiceError>`
+
 impl<R, E> MessageBus<R, E>
 where
 	R: ApplicationResponse,
