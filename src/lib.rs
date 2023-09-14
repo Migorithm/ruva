@@ -210,6 +210,7 @@
 
 pub extern crate event_driven_core;
 pub extern crate event_driven_macro;
+pub extern crate static_assertions;
 
 pub mod prelude {
 	pub use event_driven_core::convert_event;
@@ -257,9 +258,7 @@ mod application_error_derive_test {
 	#[derive(Debug, ApplicationError)]
 	#[crates(event_driven_library)]
 	enum Err {
-		#[error]
+		#[stop_sentinel]
 		Items,
-		#[error_with_event]
-		Items2,
 	}
 }

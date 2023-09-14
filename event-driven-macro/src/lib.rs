@@ -53,7 +53,7 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 ///   DatabaseError(Box<AnyError>),
 /// }
 /// ```
-#[proc_macro_derive(ApplicationError, attributes(error, error_with_event, database_error, crates))]
+#[proc_macro_derive(ApplicationError, attributes(stop_sentinel, stop_sentinel_with_event, database_error, crates))]
 pub fn error_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr).unwrap();
 

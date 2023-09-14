@@ -12,3 +12,4 @@ repository = "https://github.com/BeringLab/event-driven-library"
 [dependencies]
 event-driven-core= {version="0.1.13", path="./event-driven-core"}
 event-driven-macro= {version="0.1.10", path="./event-driven-macro"}
+static_assertions="1.1.0"

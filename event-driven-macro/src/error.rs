@@ -6,7 +6,7 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	let data = match &ast.data {
 		syn::Data::Enum(data) => data,
 		_ => {
-			panic!("#[derive(ApplicationError)] is only support enum.")
+			panic!("Only Enum type is supported by #[derive(ApplicationError)].")
 		}
 	};
 
@@ -22,32 +22,47 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 	let crates = syn::Ident::new(&crates, proc_macro2::Span::call_site());
 
-	/* \#\[error\] */
-	let error = find_variant("error");
-	if let Some(error) = error {
-		if let syn::Fields::Unit = error.fields {
+	/* \#\[stop_sentinel\] */
+	let stop_sentinel = find_variant("stop_sentinel");
+	if let Some(stop_sentinel) = stop_sentinel {
+		if let syn::Fields::Unit = stop_sentinel.fields {
 		} else {
-			panic!("#[error] expects unit.")
+			panic!("#[stop_sentinel] expects unit.")
 		}
 	}
-	let error = if let Some(error) = error {
-		error.ident.clone()
+	let stop_sentinel = if let Some(stop_sentinel) = stop_sentinel {
+		stop_sentinel.ident.clone()
 	} else {
 		syn::Ident::new("StopSentinel", proc_macro2::Span::call_site())
 	};
 
-	/* \#\[error_with_event\] */
-	let error_with_event = find_variant("error_with_event");
-	if let Some(error_with_event) = error_with_event {
-		if let syn::Fields::Unnamed(_) = error_with_event.fields {
+	/* \#\[stop_sentinel_with_event\] */
+	let stop_sentinel_with_event = find_variant("stop_sentinel_with_event");
+	if let Some(stop_sentinel_with_event) = stop_sentinel_with_event {
+		if let syn::Fields::Unnamed(_) = stop_sentinel_with_event.fields {
 		} else {
-			panic!("#[error_with_event] expects Field(Box<AnyError>).")
+			panic!("#[stop_sentinel_with_event] expects Field(Message).")
 		}
 	}
-	let error_with_event = if let Some(error_with_event) = error_with_event {
-		error_with_event.ident.clone()
+	let stop_sentinel_with_event = if let Some(stop_sentinel_with_event) = stop_sentinel_with_event {
+		stop_sentinel_with_event.ident.clone()
 	} else {
 		syn::Ident::new("StopSentinelWithEvent", proc_macro2::Span::call_site())
+	};
+	let stop_sentinel_with_event_type = if let syn::Fields::Unnamed(field) = &data
+		.variants
+		.iter()
+		.find(|x| x.ident == stop_sentinel_with_event)
+		.expect("#[stop_sentinel_with_event] and StopSentinelWithEvent field not found.")
+		.fields
+	{
+		if field.unnamed.len() == 1 {
+			field.unnamed[0].ty.clone()
+		} else {
+			panic!("#[stop_sentinel_with_event] expects Field(Message).");
+		}
+	} else {
+		panic!("StopSentinelWithEvent field expects Field(Message).")
 	};
 
 	/* \#\[database_error\] */
@@ -69,8 +84,8 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 		impl ::std::convert::From<#crates::event_driven_core::responses::BaseError> for #name {
 			fn from(value: #crates::event_driven_core::responses::BaseError) -> Self {
 				match value {
-					#crates::event_driven_core::responses::BaseError::StopSentinel => Self::#error,
-					#crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event) => Self::#error_with_event(event),
+					#crates::event_driven_core::responses::BaseError::StopSentinel => Self::#stop_sentinel,
+					#crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event) => Self::#stop_sentinel_with_event(event),
 					#crates::event_driven_core::responses::BaseError::DatabaseError(error) => Self::#database_error(error),
 					_ => unimplemented!("BaseError to #name is only support for StopSentinel, StopSentinelWithEvent, DatabaseError."),
 				}
@@ -79,14 +94,15 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 		impl ::std::convert::Into<::std::boxed::Box<dyn  #crates::event_driven_core::responses::BaseError>> for #name {
 			fn into(self) -> ::std::boxed::Box<dyn  #crates::event_driven_core::responses::BaseError> {
 				let data = match self {
-					#name::#error => #crates::event_driven_core::responses::BaseError::StopSentinel,
-					#name::#error_with_event(event) => #crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event),
+					#name::#stop_sentinel => #crates::event_driven_core::responses::BaseError::StopSentinel,
+					#name::#stop_sentinel_with_event(event) => #crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event),
 					#name::#database_error(error) => #crates::event_driven_core::responses::BaseError::DatabaseError(error),
 					_ => #crates::event_driven_core::responses::BaseError::ServiceError(error),
 				};
 				::std::boxed::Box::new(data)
 			}
 		}
+		#crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: #crates::message::Message);
 	)
 	.into()
 }
