@@ -70,10 +70,7 @@ pub(crate) fn find_identifier(ast: &DeriveInput) -> String {
 			fields: Fields::Named(FieldsNamed { named, .. }),
 			..
 		}) => {
-			let identifier = named
-				.iter()
-				.filter(|f| get_attributes(f).into_iter().any(|ident| ident == *"identifier"))
-				.collect::<Vec<_>>();
+			let identifier = named.iter().filter(|f| get_attributes(f).into_iter().any(|ident| ident == *"identifier")).collect::<Vec<_>>();
 			if identifier.len() != 1 {
 				panic!("One identifier Must Be Given To Message!")
 			}
