@@ -36,8 +36,8 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 /// ## Attributes
 ///
 /// - `#[crates(...)]` - Specify the name of root of event-driven-library crate. (Default is `event_driven_library`)
-/// - `#[error]` - Specify the error matching for `BaseError::StopSentinel`.
-/// - `#[error_with_event]` - Specify the error matching for `BaseError::StopSentinelWithEvent`.
+/// - `#[stop_sentinel]` - Specify the error matching for `BaseError::StopSentinel`.
+/// - `#[stop_sentinel_with_event]` - Specify the error matching for `BaseError::StopSentinelWithEvent`.
 /// - `#[database_error]` - Specify the error matching for `BaseError::DatabaseError`.
 ///
 /// ## Example
