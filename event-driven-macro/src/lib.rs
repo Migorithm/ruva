@@ -45,9 +45,9 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 /// #[derive(Debug, ApplicationError)]
 /// #[crates(crate::imports::event_driven_library)]
 /// enum TestError {
-///   #[error]
+///   #[stop_sentinel]
 ///   Stop,
-///   #[error_with_event]
+///   #[stop_sentinel_with_event]
 ///   StopWithEvent(Box<AnyError>),
 ///   #[database_error]
 ///   DatabaseError(Box<AnyError>),
