@@ -34,12 +34,11 @@ pub struct MessageBus<R: ApplicationResponse, E: ApplicationError> {
 	command_handler: &'static TCommandHandler<R, E>,
 	event_handler: &'static TEventHandler<R, E>,
 }
-
+// BaseError: From<services::response::ServiceError>`
 impl<R, E> MessageBus<R, E>
 where
 	R: ApplicationResponse,
-	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
-	BaseError: std::convert::From<E>,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::Into<crate::responses::BaseError>,
 {
 	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<R, E>) -> Arc<Self> {
 		Self { command_handler, event_handler }.into()

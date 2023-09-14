@@ -118,7 +118,7 @@
 //! * context - [AtomicContextManager]
 //!
 //! ### Example
-//! ```
+//! ```ignore
 //! pub async fn make_order(
 //!     cmd: MakeOrder,
 //!     context: AtomicContextManager,
@@ -132,11 +132,10 @@
 //!
 //!     Ok(().into())
 //! }
-//!
 //! ```
 //! But sometimes, you may want to add yet another dependencies. For that, Dependency Injection mechanism has been implemented.
 //! So, you can also do something along the lines of:
-//! ```
+//! ```ignore
 //! pub async fn make_order(
 //!     cmd: MakeOrder,
 //!     context: AtomicContextManager,
@@ -208,11 +207,10 @@
 //! #### Error from MessageBus
 //! When command has not yet been regitered, it returns an error - `BaseError::CommandNotFound`
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
-//!
-//!
 
-extern crate event_driven_core;
-extern crate event_driven_macro;
+pub extern crate event_driven_core;
+pub extern crate event_driven_macro;
+pub extern crate static_assertions;
 
 pub mod prelude {
 	pub use event_driven_core::convert_event;
@@ -249,5 +247,36 @@ mod dependency_test {
 	fn test() -> i32 {
 		let _ = "hello";
 		0
+	}
+}
+
+#[cfg(test)]
+mod application_error_derive_test {
+	use std::fmt::Display;
+
+	use crate as event_driven_library;
+	use event_driven_core::message::Message;
+	use event_driven_core::responses::AnyError;
+	use event_driven_macro::ApplicationError;
+
+	#[derive(Debug, ApplicationError)]
+	#[crates(event_driven_library)]
+	enum Err {
+		#[stop_sentinel]
+		Items,
+		#[stop_sentinel_with_event]
+		StopSentinelWithEvent(Box<dyn Message>),
+		#[database_error]
+		DatabaseError(Box<AnyError>),
+	}
+
+	impl Display for Err {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			match self {
+				Self::Items => write!(f, "items"),
+				Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
+				Self::DatabaseError(err) => write!(f, "{}", err),
+			}
+		}
 	}
 }
