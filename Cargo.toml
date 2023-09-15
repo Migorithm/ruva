@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-library"
-version = "0.1.32"
+version = "0.1.33"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
@@ -11,5 +11,5 @@ repository = "https://github.com/BeringLab/event-driven-library"
 
 [dependencies]
 event-driven-core= {version="0.1.14", path="./event-driven-core"}
-event-driven-macro= {version="0.1.12", path="./event-driven-macro"}
+event-driven-macro= {version="0.1.13", path="./event-driven-macro"}
 static_assertions="1.1.0"
