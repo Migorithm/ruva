@@ -27,7 +27,7 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<Token
 		impl #crates::prelude::MailSendable for #name {
 			fn template_name(&self) -> ::std::string::String {
 				// * subject to change
-				stringify!($name).into()
+				stringify!(#name).into()
 			}
 		}
 	}
