@@ -12,6 +12,7 @@
 //! [UOW]: crate::unit_of_work::UnitOfWork
 //! [TRepository]: crate::repository::TRepository
 //! [Exec]: crate::unit_of_work::Executor
+//! [Handler]: crate::unit_of_work::Handler
 //!
 //! #### Usage Pattern 1
 //!
@@ -56,6 +57,27 @@
 //! // Commit transaction
 //! uow.commit::<ServiceOutBox>().await?;
 //! ```
+//!
+//! ### Handler
+//! [Handler] is what orchestrates operations from data fetching, business logic operation and store
+//! changes back to db. This is where tranasction occurs.
+//!
+//! ### Example
+//! ```ignore
+//! struct ApplicationHandler;
+//! impl Handler for ApplicationHandler{
+//!     type E = ApplicationExecutor;
+//!     type R = ApplicationRepository<Aggregate>
+//! }
+//!
+//! impl ApplicationHandler{
+//!     pub async fn serve_request(
+//!         cmd: Command1,
+//!         context: AtomicContextManager,
+//! ) -> Result<(),ServiceError> {
+//!     let mut uow = TaskHandler::uow(context).await;
+//! }
+//! ```
 
 use crate::{
 	outbox::IOutBox,
@@ -64,6 +86,16 @@ use crate::{
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+#[async_trait]
+pub trait Handler {
+	type R: TRepository<Self::E> + Send + Sync;
+	type E: Executor + Send + Sync;
+
+	async fn uow(context: AtomicContextManager) -> UnitOfWork<Self::R, Self::E> {
+		UnitOfWork::<Self::R, Self::E>::new(context).await
+	}
+}
 
 #[async_trait]
 pub trait Executor {
