@@ -1,10 +1,8 @@
+use crate::prelude::OutBox;
 use downcast_rs::{impl_downcast, Downcast};
-
 use serde::Serialize;
 use serde_json::Value;
 use std::{any::Any, collections::VecDeque, fmt::Debug};
-
-use crate::prelude::OutBox;
 
 pub trait Message: Sync + Send + Any + Downcast {
 	fn externally_notifiable(&self) -> bool {

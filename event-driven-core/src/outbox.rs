@@ -1,11 +1,9 @@
-use std::sync::Arc;
-
+use crate::{prelude::BaseError, unit_of_work::Executor};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-
-use crate::{prelude::BaseError, unit_of_work::Executor};
 
 #[derive(Debug, Clone)]
 pub struct OutBox {

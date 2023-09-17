@@ -1,19 +1,19 @@
 use crate::prelude::{Command, Message};
 use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
-use tokio::sync::{
-	mpsc::{channel, error::TryRecvError, Receiver, Sender},
-	RwLock,
-};
-
 use std::{
 	any::{Any, TypeId},
 	collections::HashMap,
 	pin::Pin,
 	sync::Arc,
 };
+use tokio::sync::{
+	mpsc::{channel, error::TryRecvError, Receiver, Sender},
+	RwLock,
+};
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
+pub type EventReceiver = Receiver<Box<dyn Message>>;
 pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 /// Task Local Context Manager
@@ -25,7 +25,7 @@ pub struct ContextManager {
 
 impl ContextManager {
 	/// Creation of context manager returns context manager AND event receiver
-	pub fn new() -> (Arc<RwLock<Self>>, Receiver<Box<dyn Message>>) {
+	pub fn new() -> (AtomicContextManager, EventReceiver) {
 		let (sender, receiver) = channel(20);
 		(Arc::new(RwLock::new(Self { sender })), receiver)
 	}

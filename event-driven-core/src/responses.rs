@@ -1,6 +1,5 @@
-use std::error;
-
 use crate::prelude::Message;
+use std::error;
 
 pub type AnyError = dyn error::Error + Send + Sync;
 
