@@ -97,6 +97,8 @@ pub trait Handler {
 	}
 }
 
+/// Executor is abstract implementation of whatever storage layer you use.
+/// Among examples are RDBMS, Queue, NoSQLs.
 #[async_trait]
 pub trait Executor {
 	async fn new() -> Arc<RwLock<Self>>;
@@ -164,13 +166,13 @@ where
 	}
 
 	/// Begin transaction.
-	pub async fn begin(&mut self) -> Result<(), BaseError> {
+	async fn begin(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 		executor.begin().await
 	}
 
 	/// Get inner executor.
-	pub fn executor(&self) -> Arc<RwLock<E>> {
+	fn executor(&self) -> Arc<RwLock<E>> {
 		Arc::clone(&self.executor)
 	}
 
