@@ -1,9 +1,11 @@
-use crate::prelude::{Executor, Message};
+use crate::prelude::{Aggregate, Executor, Message};
 
+use async_trait::async_trait;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 
-pub trait TRepository<E: Executor> {
+#[async_trait]
+pub trait TRepository<E: Executor, A: Aggregate> {
 	fn new(executor: Arc<RwLock<E>>) -> Self;
 	fn get_events(&mut self) -> VecDeque<Box<dyn Message>>;
 	fn set_events(&mut self, events: VecDeque<Box<dyn Message>>);

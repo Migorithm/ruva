@@ -81,19 +81,20 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{AtomicContextManager, BaseError, TRepository},
+	prelude::{Aggregate, AtomicContextManager, BaseError, TRepository},
 };
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::RwLock;
 
 #[async_trait]
 pub trait Handler {
-	type R: TRepository<Self::E> + Send + Sync;
+	type R: TRepository<Self::E, Self::A> + Send + Sync;
 	type E: Executor + Send + Sync;
+	type A: Aggregate;
 
-	async fn uow(context: AtomicContextManager) -> UnitOfWork<Self::R, Self::E> {
-		UnitOfWork::<Self::R, Self::E>::new(context).await
+	async fn uow(context: AtomicContextManager) -> UnitOfWork<Self::R, Self::E, Self::A> {
+		UnitOfWork::<Self::R, Self::E, Self::A>::new(context).await
 	}
 }
 
@@ -108,24 +109,27 @@ pub trait Executor {
 }
 
 #[derive(Clone)]
-pub struct UnitOfWork<R, E>
+pub struct UnitOfWork<R, E, A>
 where
-	R: TRepository<E>,
+	R: TRepository<E, A>,
 	E: Executor,
+	A: Aggregate,
 {
 	/// real transaction executor
 	executor: Arc<RwLock<E>>,
 	/// global event sender
 	context: AtomicContextManager,
+	_aggregate: PhantomData<A>,
 
 	/// event local repository for Executor
 	pub repository: R,
 }
 
-impl<R, E> UnitOfWork<R, E>
+impl<R, E, A> UnitOfWork<R, E, A>
 where
-	R: TRepository<E>,
+	R: TRepository<E, A>,
 	E: Executor,
+	A: Aggregate,
 {
 	// Creating Uow means to begin transaction.
 
@@ -137,6 +141,7 @@ where
 			repository: R::new(Arc::clone(&executor)),
 			context,
 			executor,
+			_aggregate: Default::default(),
 		};
 		uow.begin().await.unwrap();
 		uow
@@ -149,7 +154,7 @@ where
 	/// let mut uow = UnitOfWork::<A<Executer>, Executor>::new(context).await;
 	/// let new_uow = uow.switch_repository::<B<Executor>>(); // origin uow was deleted.
 	/// ```
-	pub fn switch_repository<DR: TRepository<E>>(mut self) -> UnitOfWork<DR, E> {
+	pub fn switch_repository<DR: TRepository<E, DA>, DA: Aggregate>(mut self) -> UnitOfWork<DR, E, DA> {
 		let mut repo = DR::new(Arc::clone(&self.executor));
 		repo.set_events(self.repository().get_events());
 
@@ -157,6 +162,7 @@ where
 			executor: Arc::clone(&self.executor),
 			context: self.context,
 			repository: repo,
+			_aggregate: Default::default(),
 		}
 	}
 
