@@ -10,7 +10,7 @@ pub mod prelude {
 	pub use crate::message::*;
 	pub use crate::messagebus::*;
 	pub use crate::outbox::{IOutBox, OutBox};
-	pub use crate::repository::TRepository;
+	pub use crate::repository::REventManager;
 	pub use crate::responses::*;
 	pub use crate::unit_of_work::{Executor, Handler, UnitOfWork};
 	pub use async_trait::async_trait;

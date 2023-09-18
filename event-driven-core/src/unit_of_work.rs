@@ -81,7 +81,8 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{Aggregate, AtomicContextManager, BaseError, TRepository},
+	prelude::{Aggregate, AtomicContextManager, BaseError},
+	repository::TRepository,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc};
@@ -154,7 +155,11 @@ where
 	/// let mut uow = UnitOfWork::<A<Executer>, Executor>::new(context).await;
 	/// let new_uow = uow.switch_repository::<B<Executor>>(); // origin uow was deleted.
 	/// ```
-	pub fn switch_repository<DR: TRepository<E, DA>, DA: Aggregate>(mut self) -> UnitOfWork<DR, E, DA> {
+	pub fn switch_repository<DR, DA>(mut self) -> UnitOfWork<DR, E, DA>
+	where
+		DR: TRepository<E, DA>,
+		DA: Aggregate,
+	{
 		let mut repo = DR::new(Arc::clone(&self.executor));
 		repo.set_events(self.repository().get_events());
 
