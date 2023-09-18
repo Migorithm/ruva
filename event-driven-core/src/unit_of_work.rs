@@ -1,16 +1,16 @@
 //! ### UnitOfWork
 //! [UnitOfWork][UOW] is to a unit that manages atomic transaction.
 //!
-//! Its [executor][Exec] is supposed to be shared with its sub type [Repository][TRepository].
+//! Its [executor][Exec] is supposed to be shared with its sub type [Repository][REventManager].
 //!
 //! `commit`, and `rollback`, is governed by this implementation.
 //!
-//! When events are collected in `Repository`[TRepository], you can collect them
+//! When events are collected in `Repository`[REventManager], you can collect them
 //!
 //! automatically thanks to `_commit_hook` method.
 //!
 //! [UOW]: crate::unit_of_work::UnitOfWork
-//! [TRepository]: crate::repository::TRepository
+//! [REventManager]: crate::repository::REventManager
 //! [Exec]: crate::unit_of_work::Executor
 //! [Handler]: crate::unit_of_work::Handler
 //!
@@ -81,7 +81,8 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{Aggregate, AtomicContextManager, BaseError, TRepository},
+	prelude::{Aggregate, AtomicContextManager, BaseError},
+	repository::TRepository,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc};
@@ -154,7 +155,11 @@ where
 	/// let mut uow = UnitOfWork::<A<Executer>, Executor>::new(context).await;
 	/// let new_uow = uow.switch_repository::<B<Executor>>(); // origin uow was deleted.
 	/// ```
-	pub fn switch_repository<DR: TRepository<E, DA>, DA: Aggregate>(mut self) -> UnitOfWork<DR, E, DA> {
+	pub fn switch_repository<DR, DA>(mut self) -> UnitOfWork<DR, E, DA>
+	where
+		DR: TRepository<E, DA>,
+		DA: Aggregate,
+	{
 		let mut repo = DR::new(Arc::clone(&self.executor));
 		repo.set_events(self.repository().get_events());
 
