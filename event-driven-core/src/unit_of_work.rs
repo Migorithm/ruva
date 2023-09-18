@@ -1,16 +1,16 @@
 //! ### UnitOfWork
 //! [UnitOfWork][UOW] is to a unit that manages atomic transaction.
 //!
-//! Its [executor][Exec] is supposed to be shared with its sub type [Repository][REventManager].
+//! Its [executor][Exec] is supposed to be shared with its sub type [Repository][TRepository].
 //!
 //! `commit`, and `rollback`, is governed by this implementation.
 //!
-//! When events are collected in `Repository`[REventManager], you can collect them
+//! When events are collected in `Repository`[TRepository], you can collect them
 //!
 //! automatically thanks to `_commit_hook` method.
 //!
 //! [UOW]: crate::unit_of_work::UnitOfWork
-//! [REventManager]: crate::repository::REventManager
+//! [TRepository]: crate::repository::TRepository
 //! [Exec]: crate::unit_of_work::Executor
 //! [Handler]: crate::unit_of_work::Handler
 //!
