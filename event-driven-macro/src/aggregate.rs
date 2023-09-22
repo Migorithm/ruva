@@ -36,7 +36,16 @@ pub(crate) fn render_entity_token(input: TokenStream) -> TokenStream {
 		..
 	}) = &mut ast.data
 	{
-		fields.named.push(syn::Field::parse_named.parse2(quote! { is_new: bool }).unwrap());
+		fields.named.push(
+			syn::Field::parse_named
+				.parse2(quote! {
+
+				   #[serde(skip_deserializing, skip_serializing)]
+				   pub(crate) is_new: bool
+
+				})
+				.unwrap(),
+		);
 	} else {
 		panic!("[entity] can be attached only to struct")
 	}

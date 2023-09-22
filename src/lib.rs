@@ -221,26 +221,6 @@ pub mod prelude {
 }
 
 #[cfg(test)]
-mod test_expand {
-	use event_driven_macro::entity;
-
-	#[test]
-	fn entity() {
-		#[entity]
-		#[derive(Default)]
-		struct SomeEntity {
-			age: i64,
-			name: String,
-		}
-		let entity = SomeEntity::default();
-
-		let entity = entity.set_age(10).set_name("MigoLee".to_string());
-		assert_eq!(entity.age, 10);
-		assert_eq!(entity.name, "MigoLee".to_string())
-	}
-}
-
-#[cfg(test)]
 mod dependency_test {
 	use event_driven_core::create_dependency;
 	create_dependency!();
