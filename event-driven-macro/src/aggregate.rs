@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 
 use quote::ToTokens;
-use syn::{Data, DeriveInput, Field};
+use syn::{parse::Parser, parse_macro_input, Data, DataStruct, DeriveInput, Field};
 
 use crate::utils::locate_crate_on_derive_macro;
 
@@ -27,35 +27,45 @@ pub(crate) fn render_aggregate_token(ast: &DeriveInput) -> TokenStream {
 	.into()
 }
 
-pub(crate) fn render_entity_token(ast: &DeriveInput) -> TokenStream {
+pub(crate) fn render_entity_token(input: TokenStream) -> TokenStream {
+	let mut ast = parse_macro_input!(input as DeriveInput);
 	let name = &ast.ident;
 
-	let field_idents: Vec<Field> = match &ast.data {
+	if let syn::Data::Struct(DataStruct {
+		fields: syn::Fields::Named(ref mut fields),
+		..
+	}) = &mut ast.data
+	{
+		fields.named.push(syn::Field::parse_named.parse2(quote! { is_new: bool }).unwrap());
+	} else {
+		panic!("[entity] can be attached only to struct")
+	}
+
+	let setters = get_setters(&ast.data);
+	quote!(
+		#ast
+		impl #name{
+			#setters
+		}
+	)
+	.into()
+}
+
+fn get_setters(data: &Data) -> proc_macro2::TokenStream {
+	let field_idents: Vec<Field> = match data {
 		Data::Struct(data) => data.fields.clone().into_iter().filter_map(Some).collect(),
 		_ => panic!("Only Struct Is supported"),
 	};
-
 	let mut quotes = vec![];
-
 	for f in field_idents {
 		let ident = f.ident.unwrap();
 		let ty = f.ty.to_token_stream().to_string();
-
 		let code = format!(
 			"pub fn set_{}(mut self, {}:impl core::convert::Into<{}>)->Self{{self.{}={}.into(); self }}",
 			ident, ident, ty, ident, ident
 		);
-
 		quotes.push(code);
 	}
-
 	let joined: proc_macro2::TokenStream = quotes.join(" ").parse().unwrap();
-
-	quote!(
-		impl #name{
-			#joined
-		}
-
-	)
-	.into()
+	joined
 }
