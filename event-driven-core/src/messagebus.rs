@@ -158,7 +158,7 @@ macro_rules! init_command_handler {
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
 						TypeId::of::<$command>(),
 
-							|c:Box<dyn Any+Send+Sync>, context_manager: AtomicContextManager|->Future<ServiceResponse,ServiceError> {
+							|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
 								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								Box::pin($handler(
@@ -200,7 +200,7 @@ macro_rules! init_event_handler {
                     vec![
                         $(
                             Box::new(
-                                |e:Box<dyn Message>, context_manager:AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
+                                |e:Box<dyn Message>, context_manager:event_driven_library::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
                                     Box::pin($handler(
                                         // * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name
