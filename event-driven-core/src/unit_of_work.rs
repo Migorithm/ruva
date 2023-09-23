@@ -118,7 +118,7 @@ where
 {
 	/// real transaction executor
 	executor: Arc<RwLock<E>>,
-	/// global event sender
+	/// global event event_queue
 	context: AtomicContextManager,
 	_aggregate: PhantomData<A>,
 
@@ -213,7 +213,7 @@ where
 	/// commit_hook is invoked right before the calling for commit
 	/// which sorts out and processes outboxes and internally processable events.
 	async fn _commit_hook<O: IOutBox<E>>(&mut self) -> Result<(), BaseError> {
-		let event_sender = &mut self.context.write().await.sender;
+		let event_queue = &mut self.context.write().await;
 		let mut outboxes = vec![];
 
 		for e in self.repository.get_events() {
@@ -221,7 +221,7 @@ where
 				outboxes.push(e.outbox());
 			};
 			if e.internally_notifiable() {
-				event_sender.send(e.message_clone()).await.expect("Event Collecting failed!")
+				event_queue.push_back(e.message_clone());
 			}
 		}
 		O::add(self.executor(), outboxes).await

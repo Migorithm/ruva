@@ -1,35 +1,46 @@
 use crate::prelude::{Command, Message};
 use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
+use std::collections::VecDeque;
+use std::ops::{Deref, DerefMut};
 use std::{
 	any::{Any, TypeId},
 	collections::HashMap,
 	pin::Pin,
 	sync::Arc,
 };
-use tokio::sync::{
-	mpsc::{channel, error::TryRecvError, Receiver, Sender},
-	RwLock,
-};
+use tokio::sync::RwLock;
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
-pub type EventReceiver = Receiver<Box<dyn Message>>;
+
 pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 /// Task Local Context Manager
 /// This is called for every time Messagebus.handle is invoked within which it manages events raised in service.
 /// It spawns out Executor that manages transaction.
 pub struct ContextManager {
-	pub sender: Sender<Box<dyn Message>>,
+	pub event_queue: VecDeque<Box<dyn Message>>,
 }
 
 impl ContextManager {
 	/// Creation of context manager returns context manager AND event receiver
-	pub fn new() -> (AtomicContextManager, EventReceiver) {
-		let (sender, receiver) = channel(20);
-		(Arc::new(RwLock::new(Self { sender })), receiver)
+	pub fn new() -> AtomicContextManager {
+		Arc::new(RwLock::new(Self { event_queue: VecDeque::new() }))
 	}
 }
+
+impl Deref for ContextManager {
+	type Target = VecDeque<Box<dyn Message>>;
+	fn deref(&self) -> &Self::Target {
+		&self.event_queue
+	}
+}
+impl DerefMut for ContextManager {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.event_queue
+	}
+}
+
 pub struct MessageBus<R: ApplicationResponse, E: ApplicationError> {
 	command_handler: &'static TCommandHandler<R, E>,
 	event_handler: &'static TEventHandler<R, E>,
@@ -49,7 +60,7 @@ where
 		C: Command,
 	{
 		println!("Handle Command {:?}", message);
-		let (context_manager, mut event_receiver) = ContextManager::new();
+		let context_manager = ContextManager::new();
 
 		let res = self.command_handler.get(&message.type_id()).ok_or_else(|| {
 			eprintln!("Unprocessable Command Given!");
@@ -58,34 +69,17 @@ where
 		.await?;
 
 		'event_handling_loop: loop {
-			// * use of try_recv is to stop blocking it when all events are drained.
+			let event = context_manager.write().await.event_queue.pop_front();
 
-			match event_receiver.try_recv() {
-				// * Logging!
-				Ok(msg) => {
-					tracing::info!("BreakPoint on OK");
-
-					if let Err(err) = self.handle_event(msg, context_manager.clone()).await {
-						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-						eprintln!("{:?}", err);
-					}
+			if let Some(msg) = event {
+				if let Err(err) = self.handle_event(msg, context_manager.clone()).await {
+					// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+					eprintln!("{:?}", err);
 				}
-				Err(TryRecvError::Empty) => {
-					tracing::info!("BreakPoint on Empty");
-
-					if Arc::strong_count(&context_manager) == 1 {
-						break 'event_handling_loop;
-					} else {
-						continue;
-					}
-				}
-				Err(TryRecvError::Disconnected) => {
-					tracing::error!("BreakPoint on Disconnected");
-					break 'event_handling_loop;
-				}
-			};
+			} else {
+				break 'event_handling_loop;
+			}
 		}
-		drop(context_manager);
 		Ok(res)
 	}
 
@@ -113,7 +107,7 @@ where
 					}
 					BaseError::StopSentinelWithEvent(event) => {
 						eprintln!("Stop Sentinel With Event Arrived!");
-						context_manager.write().await.sender.send(event).await.expect("Event Collecting failed!");
+						context_manager.write().await.push_back(event);
 						break;
 					}
 					err => {
@@ -164,7 +158,7 @@ macro_rules! init_command_handler {
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
 						TypeId::of::<$command>(),
 
-							|c:Box<dyn Any+Send+Sync>, context_manager: AtomicContextManager|->Future<ServiceResponse,ServiceError> {
+							|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
 								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								Box::pin($handler(
@@ -206,7 +200,7 @@ macro_rules! init_event_handler {
                     vec![
                         $(
                             Box::new(
-                                |e:Box<dyn Message>, context_manager:AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
+                                |e:Box<dyn Message>, context_manager:event_driven_library::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
                                     Box::pin($handler(
                                         // * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name

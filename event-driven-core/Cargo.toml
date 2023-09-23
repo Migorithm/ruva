@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-core"
-version = "0.1.38"
+version = "0.1.39"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
