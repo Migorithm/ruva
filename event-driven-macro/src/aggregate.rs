@@ -41,7 +41,7 @@ pub(crate) fn render_entity_token(input: TokenStream) -> TokenStream {
 				.parse2(quote! {
 
 				   #[serde(skip_deserializing, skip_serializing)]
-				   pub(crate) is_new: bool
+				   pub(crate) is_existing: bool
 
 				})
 				.unwrap(),
