@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
-
+pub type TCommandHandler<R, E> = HashMap<TypeId, Box<dyn Fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E> + Send + Sync>>;
 pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(Box<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 /// Task Local Context Manager
@@ -137,7 +137,6 @@ macro_rules! create_dependency {
 
 /// init_command_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
-pub type TCommandHandler<R, E> = HashMap<TypeId, fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E>>;
 
 #[macro_export]
 macro_rules! init_command_handler {
@@ -158,7 +157,7 @@ macro_rules! init_command_handler {
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
 						TypeId::of::<$command>(),
 
-							|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
+							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
 								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								Box::pin($handler(
@@ -168,9 +167,9 @@ macro_rules! init_command_handler {
 									// * Injectable functions are added here.
 									$(dependency.$injectable(),)*
 								)?
-							))
+								))
 							},
-					);
+					));
 				)*
 				_map
 			})

@@ -88,17 +88,6 @@ use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::RwLock;
 
-#[async_trait]
-pub trait Handler {
-	type R: TRepository<Self::E, Self::A> + Send + Sync;
-	type E: Executor + Send + Sync;
-	type A: Aggregate;
-
-	async fn uow(context: AtomicContextManager) -> UnitOfWork<Self::R, Self::E, Self::A> {
-		UnitOfWork::<Self::R, Self::E, Self::A>::new(context).await
-	}
-}
-
 /// Executor is abstract implementation of whatever storage layer you use.
 /// Among examples are RDBMS, Queue, NoSQLs.
 #[async_trait]

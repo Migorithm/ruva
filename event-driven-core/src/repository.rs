@@ -1,10 +1,16 @@
-use crate::prelude::{Aggregate, Executor, Message};
+use crate::prelude::{Aggregate, BaseError, Executor, Message};
 
+use async_trait::async_trait;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 
+#[async_trait]
 pub trait TRepository<E: Executor, A: Aggregate>: REventManager<A> {
 	fn new(executor: Arc<RwLock<E>>) -> Self;
+	async fn get(&self, aggregate_id: &str) -> Result<A, BaseError>;
+	async fn update(&mut self, aggregate: &mut A) -> Result<(), BaseError>;
+	async fn add(&mut self, aggregate: &mut A) -> Result<String, BaseError>;
+	async fn delete(&self, _aggregate_id: &str) -> Result<(), BaseError>;
 }
 
 pub trait REventManager<A: Aggregate> {
