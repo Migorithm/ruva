@@ -1,7 +1,7 @@
 use crate::prelude::Message;
-use std::error;
+use std::any::Any;
 
-pub type AnyError = dyn error::Error + Send + Sync;
+pub type AnyError = dyn Any + Send + Sync;
 
 #[derive(Debug)]
 pub enum BaseError {

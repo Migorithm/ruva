@@ -257,7 +257,7 @@ mod application_error_derive_test {
 			match self {
 				Self::Items => write!(f, "items"),
 				Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
-				Self::DatabaseError(err) => write!(f, "{}", err),
+				Self::DatabaseError(err) => write!(f, "{:?}", err),
 			}
 		}
 	}
