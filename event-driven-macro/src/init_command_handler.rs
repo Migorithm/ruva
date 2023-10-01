@@ -34,13 +34,14 @@ fn remove_space(input: impl AsRef<str>) -> String {
 fn generate_code(data: Vec<MacroDataSingle>) -> String {
 	let mut result = String::new();
 	result.push_str(
-		"		pub fn command_handler() -> &'static TCommandHandler<ServiceResponse, ServiceError> {
+		"
+		pub fn command_handler() -> &'static TCommandHandler<ServiceResponse, ServiceError> {
 			extern crate self as current_crate;
 			static COMMAND_HANDLER: ::std::sync::OnceLock<TCommandHandler<ServiceResponse, ServiceError>> = OnceLock::new();
 
 			COMMAND_HANDLER.get_or_init(||{
 				let dependency= current_crate::dependencies::dependency();
-				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= HashMap::new();",
+				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= event_driven_library::prelude::HandlerMapper::new();",
 	);
 	for data in data.into_iter() {
 		let command = data.command;
@@ -73,7 +74,8 @@ fn generate_code(data: Vec<MacroDataSingle>) -> String {
 	}
 
 	result.push_str(
-		"				_map
+		"
+				_map
 			})
 
 		}",

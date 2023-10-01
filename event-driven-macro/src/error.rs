@@ -77,7 +77,6 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 
 	quote!(
-		impl ::std::error::Error for #name {}
 		impl #crates::event_driven_core::responses::ApplicationError for #name {}
 
 		impl ::std::convert::From<#crates::event_driven_core::responses::BaseError> for #name {

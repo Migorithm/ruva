@@ -213,10 +213,10 @@ pub extern crate event_driven_macro;
 pub extern crate static_assertions;
 
 pub mod prelude {
-	pub use event_driven_core::convert_event;
 	pub use event_driven_core::event_macros::*;
 	pub use event_driven_core::message::{Aggregate, Command, Message, MessageMetadata};
 	pub use event_driven_core::prelude::*;
+
 	pub use event_driven_macro::{dependency, entity, Aggregate, ApplicationError, Command, Message};
 }
 
@@ -257,7 +257,7 @@ mod application_error_derive_test {
 			match self {
 				Self::Items => write!(f, "items"),
 				Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
-				Self::DatabaseError(err) => write!(f, "{}", err),
+				Self::DatabaseError(err) => write!(f, "{:?}", err),
 			}
 		}
 	}
