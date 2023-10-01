@@ -11,6 +11,7 @@ extern crate quote;
 mod aggregate;
 mod dependency;
 mod error;
+mod init_command_handler;
 mod message;
 mod utils;
 
@@ -83,4 +84,9 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 pub fn dependency(_: TokenStream, input: TokenStream) -> TokenStream {
 	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
 	dependency::register_dependency(ast)
+}
+
+#[proc_macro]
+pub fn init_command_handler(tokens: TokenStream) -> TokenStream {
+	init_command_handler::init_command_handler(tokens)
 }
