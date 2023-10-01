@@ -26,11 +26,7 @@ impl OutBox {
 			create_dt: Default::default(),
 		}
 	}
-	// fn convert_event(&self) -> Box<dyn Message> {
-	// 	// convert event. it takes outbox reference and target type that is to be deserialized.
-	// 	// you can insert any number of desired type as long as it is outboxable type.
-	// 	convert_event!(self,)
-	// }
+
 	pub fn tag_processed(&mut self) {
 		self.processed = true
 	}
@@ -57,8 +53,7 @@ impl OutBox {
 
 #[async_trait]
 pub trait IOutBox<E: Executor> {
-	fn new(aggregate_id: String, topic: String, state: String) -> Self;
 	async fn add(executor: Arc<RwLock<E>>, outboxes: Vec<OutBox>) -> Result<(), BaseError>;
-	async fn get(executor: Arc<RwLock<E>>) -> Result<Vec<OutBox>, BaseError>;
+	async fn get() -> Result<Vec<Box<Self>>, BaseError>;
 	async fn update(&self, executor: Arc<RwLock<E>>) -> Result<(), BaseError>;
 }

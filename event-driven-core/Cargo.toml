@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-core"
-version = "0.1.42"
+version = "0.1.43"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
@@ -21,3 +21,4 @@ futures="0.3"
 macro_rules_attribute="0.2"
 paste="1.0.14"
 tracing="0.1.37"
+async-recursion = "1.0.5"

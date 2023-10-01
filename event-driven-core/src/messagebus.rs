@@ -1,5 +1,6 @@
 use crate::prelude::{Command, Message};
 use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
+use async_recursion::async_recursion;
 use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut};
 use std::{
@@ -48,8 +49,8 @@ pub struct MessageBus<R: ApplicationResponse, E: ApplicationError> {
 
 impl<R, E> MessageBus<R, E>
 where
-	R: ApplicationResponse,
-	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::Into<crate::responses::BaseError>,
+	R: ApplicationResponse + std::marker::Send,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::Into<crate::responses::BaseError> + std::marker::Send,
 {
 	pub fn new(command_handler: &'static TCommandHandler<R, E>, event_handler: &'static TEventHandler<R, E>) -> Arc<Self> {
 		Self { command_handler, event_handler }.into()
@@ -68,30 +69,32 @@ where
 		})?(Box::new(message), context_manager.clone())
 		.await?;
 
-		'event_handling_loop: loop {
+		// Trigger event
+		if !context_manager.read().await.event_queue.is_empty() {
 			let event = context_manager.write().await.event_queue.pop_front();
-
-			if let Some(msg) = event {
-				if let Err(err) = self.handle_event(msg, context_manager.clone()).await {
-					// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-					eprintln!("{:?}", err);
-				}
-			} else {
-				break 'event_handling_loop;
-			}
+			let _ = self._handle_event(event.unwrap(), context_manager.clone()).await;
 		}
+
 		Ok(res)
 	}
 
-	async fn handle_event(&self, msg: Box<dyn Message>, context_manager: AtomicContextManager) -> Result<(), E> {
+	// Thin Wrapper
+	pub async fn handle_event(&self, msg: Box<dyn Message>) -> Result<(), E> {
+		let context_manager = ContextManager::new();
+		self._handle_event(msg, context_manager.clone()).await
+	}
+
+	#[async_recursion]
+	async fn _handle_event(&self, msg: Box<dyn Message>, context_manager: AtomicContextManager) -> Result<(), E> {
 		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
+
+		println!("Handle Event : {:?}", msg);
 
 		let handlers = self.event_handler.get(&msg.metadata().topic).ok_or_else(|| {
 			eprintln!("Unprocessable Event Given! {:?}", msg);
 			BaseError::EventNotFound
 		})?;
 
-		println!("Handle Event : {:?}", msg);
 		for handler in handlers.iter() {
 			match handler(msg.message_clone(), context_manager.clone()).await {
 				Ok(_val) => {
@@ -116,7 +119,16 @@ where
 				},
 			};
 		}
-		drop(context_manager);
+
+		// Resursive case
+		let event = context_manager.write().await.event_queue.pop_front();
+		if event.is_some() {
+			if let Err(err) = self._handle_event(event.unwrap(), context_manager.clone()).await {
+				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+				eprintln!("{:?}", err);
+			}
+		}
+
 		Ok(())
 	}
 }

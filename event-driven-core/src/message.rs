@@ -59,15 +59,3 @@ pub trait Aggregate: Send + Sync + Default {
 	fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
 	fn raise_event(&mut self, event: Box<dyn Message>);
 }
-
-#[macro_export]
-macro_rules! convert_event {
-    ( $obj:expr, $( $type: ty ), * ) => {
-        match $obj.topic.as_str() {
-          $(stringify!($type)=> serde_json::from_str::<$type>($obj.state.as_str()).expect("Given type not deserializable!").message_clone() ,)*
-          _ => {
-                panic!("Such event not allowed to process through outbox.");
-          }
-        }
-    };
-}
