@@ -14,6 +14,7 @@ pub mod prelude {
 	pub use crate::responses::*;
 	pub use crate::unit_of_work::{Executor, UnitOfWork};
 	pub use async_trait::async_trait;
+	pub use hashbrown::HashMap as HandlerMapper;
 	pub use paste::paste;
 	pub use serde::{Deserialize, Serialize};
 }

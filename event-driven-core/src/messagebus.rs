@@ -1,16 +1,15 @@
 use crate::prelude::{Command, Message};
 use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
 use async_recursion::async_recursion;
+use hashbrown::HashMap;
 use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut};
 use std::{
 	any::{Any, TypeId},
-	collections::HashMap,
 	pin::Pin,
 	sync::Arc,
 };
 use tokio::sync::RwLock;
-
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 pub type TCommandHandler<R, E> = HashMap<TypeId, Box<dyn Fn(Box<dyn Any + Send + Sync>, AtomicContextManager) -> Future<R, E> + Send + Sync>>;
@@ -163,7 +162,7 @@ macro_rules! init_command_handler {
 
 			COMMAND_HANDLER.get_or_init(||{
 				let dependency= current_crate::dependencies::dependency();
-				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= HashMap::new();
+				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= event_driven_library::prelude::HandlerMapper::new();
 				$(
 					_map.insert(
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
@@ -204,7 +203,7 @@ macro_rules! init_event_handler {
 			EVENT_HANDLER.get_or_init(||{
             let dependency= current_crate::dependencies::dependency();
 
-            let mut _map : TEventHandler<ServiceResponse, ServiceError> = HashMap::new();
+            let mut _map : TEventHandler<ServiceResponse, ServiceError> = event_driven_library::prelude::HandlerMapper::new();
             $(
                 _map.insert(
                     stringify!($event).into(),

@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-core"
-version = "0.1.43"
+version = "0.1.44"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
@@ -10,7 +10,6 @@ repository = "https://github.com/BeringLab/event-driven-library"
 
 [dependencies]
 downcast-rs ="1"
-
 tokio = { version = "1", features = ["sync"] }
 serde = {version="1.0.179",features=["derive"]}
 serde_json = "1"
@@ -22,3 +21,4 @@ macro_rules_attribute="0.2"
 paste="1.0.14"
 tracing="0.1.37"
 async-recursion = "1.0.5"
+hashbrown = "0.14"
