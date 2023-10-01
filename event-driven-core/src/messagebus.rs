@@ -137,46 +137,7 @@ macro_rules! create_dependency {
 
 /// init_command_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
-
-#[macro_export]
-macro_rules! init_command_handler {
-    (
-        {$($command:ty:$handler:expr $(=>($($injectable:ident),*))? ),* $(,)?}
-    )
-        => {
-
-		pub fn command_handler() -> &'static TCommandHandler<ServiceResponse, ServiceError> {
-			extern crate self as current_crate;
-			static COMMAND_HANDLER: ::std::sync::OnceLock<TCommandHandler<ServiceResponse, ServiceError>> = OnceLock::new();
-
-			COMMAND_HANDLER.get_or_init(||{
-				let dependency= current_crate::dependencies::dependency();
-				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= HashMap::new();
-				$(
-					_map.insert(
-						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
-						TypeId::of::<$command>(),
-
-							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
-								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
-								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
-								Box::pin($handler(
-									*c.downcast::<$command>().unwrap(),
-									context_manager,
-								$(
-									// * Injectable functions are added here.
-									$(dependency.$injectable(),)*
-								)?
-								))
-							},
-					));
-				)*
-				_map
-			})
-
-		}
-    };
-}
+pub use event_driven_macro::init_command_handler;
 
 /// init_event_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
