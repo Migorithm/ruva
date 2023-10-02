@@ -13,7 +13,7 @@ pub(super) fn init_command_handler(tokens: TokenStream) -> TokenStream {
 	let data = remove_space(data);
 	let data = ignore_brace(&data);
 
-	let parsed_data = parse_macro_data(&data);
+	let parsed_data = parse_macro_data(data);
 
 	generate_code(parsed_data).parse().expect("잘못된 문법입니다.")
 }
@@ -28,7 +28,8 @@ fn ignore_brace(input: &str) -> &str {
 
 #[inline]
 fn remove_space(input: impl AsRef<str>) -> String {
-	input.as_ref().replace(" ", "").replace("\n", "")
+	// Multi replacement
+	input.as_ref().replace([' ', '\n'], "")
 }
 
 fn generate_code(data: Vec<MacroDataSingle>) -> String {

@@ -81,7 +81,7 @@ fn get_injectables(input: &str) -> Vec<&str> {
 fn get_injectable(input: &str) -> (&str, &str) {
 	let result: IResult<_, _> = nom::bytes::streaming::take_while(|c| c != ',')(input);
 	if let Ok(result) = result {
-		if result.0.starts_with(",") {
+		if result.0.starts_with(',') {
 			(&result.0[1..], result.1)
 		} else {
 			(result.0, result.1)
