@@ -7,7 +7,7 @@ pub(super) fn parse_macro_data(data: &str) -> Vec<MacroDataSingle> {
 	let mut remain = data;
 	loop {
 		let result = get_one_stream(remain);
-		if result.is_err() {
+		if result.is_none() {
 			// 다음 ,가 없다는 뜻으로, 끝났다는 것
 			break;
 		}
@@ -16,16 +16,26 @@ pub(super) fn parse_macro_data(data: &str) -> Vec<MacroDataSingle> {
 
 		output.push(parse(line));
 
-		remain = &result.0[1..];
+		remain = result.0;
 	}
 	output.push(parse(remain));
 
 	output
 }
 
-/// (",etc", line)
-fn get_one_stream(input: &str) -> IResult<&str, &str> {
-	nom::bytes::streaming::take_while(|c| c != ',')(input)
+/// (etc, line) (, 없음) (,가 없으면 None)
+fn get_one_stream(input: &str) -> Option<(&str, &str)> {
+	let mut in_brace = false;
+	for (i, c) in input.chars().enumerate() {
+		if c == '(' {
+			in_brace = true;
+		} else if c == ')' {
+			in_brace = false;
+		} else if c == ',' && !in_brace {
+			return Some((&input[i + 1..], &input[..i]));
+		}
+	}
+	None
 }
 
 fn parse(line: &str) -> MacroDataSingle {
@@ -64,6 +74,14 @@ fn get_handler(input: &str) -> (&str, &str) {
 }
 
 fn get_injectables(input: &str) -> Vec<&str> {
+	if input.chars().nth(0).expect("init_command_handler => 이후 아무 글자가 없습니다.") != '(' {
+		panic!("init_command_handler => 이후 (가 없습니다.")
+	}
+	if input.chars().last().unwrap() != ')' {
+		panic!("init_command_handler => 이후 )가 없습니다.")
+	}
+	let input = &input[1..input.len() - 1];
+
 	let mut output = vec![];
 	let mut remain = input;
 	loop {
