@@ -65,7 +65,7 @@ fn generate_code(data: Vec<MacroDataSingle>) -> String {
 								Box::pin({handler}(
 									*c.downcast::<{command}>().unwrap(),
 									context_manager,
-									{injectable}
+									{injectable}()
 								))
 							}},
 					));"
