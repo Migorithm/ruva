@@ -7,8 +7,9 @@ pub(super) fn parse_macro_data(data: &str) -> Vec<MacroDataSingle> {
 	let mut remain = data;
 	loop {
 		let result = get_one_stream(remain);
-		if result.is_none() {
-			// 다음 ,가 없다는 뜻으로, 끝났다는 것
+		if result.is_none()/* 다음 ,가 없다는 뜻으로, 끝났다는 것 */ || remain.is_empty()
+		/* ,다음 문자가 없다는 것으로, 끝났다는 것 */
+		{
 			break;
 		}
 		let result = result.unwrap();
@@ -24,14 +25,19 @@ pub(super) fn parse_macro_data(data: &str) -> Vec<MacroDataSingle> {
 }
 
 /// (etc, line) (, 없음) (,가 없으면 None)
+///
+/// one stream form is like this:
+/// ```ignore
+/// CommandName: module::handler<generic, generic> => (dependency, dependency),
+/// ```
 fn get_one_stream(input: &str) -> Option<(&str, &str)> {
-	let mut in_brace = false;
+	let mut depth = 0;
 	for (i, c) in input.chars().enumerate() {
-		if c == '(' {
-			in_brace = true;
-		} else if c == ')' {
-			in_brace = false;
-		} else if c == ',' && !in_brace {
+		if matches!(c, '(' | '<') {
+			depth += 1;
+		} else if matches!(c, ')' | '>') {
+			depth -= 1;
+		} else if c == ',' && depth == 0 {
 			return Some((&input[i + 1..], &input[..i]));
 		}
 	}
