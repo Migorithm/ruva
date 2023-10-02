@@ -51,7 +51,7 @@ fn generate_code(data: Vec<MacroDataSingle>) -> String {
 		let injectable = if injectables.is_empty() {
 			"".to_string()
 		} else {
-			injectables.into_iter().map(|injectable| format!("dependency.{}", injectable)).collect::<Vec<String>>().join(",")
+			injectables.into_iter().map(|injectable| format!("dependency.{}()", injectable)).collect::<Vec<String>>().join(",")
 		};
 		result.push_str(
 			format!(
@@ -65,7 +65,7 @@ fn generate_code(data: Vec<MacroDataSingle>) -> String {
 								Box::pin({handler}(
 									*c.downcast::<{command}>().unwrap(),
 									context_manager,
-									{injectable}()
+									{injectable}
 								))
 							}},
 					));"
