@@ -87,6 +87,6 @@ pub fn dependency(_: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn init_command_handler(tokens: TokenStream) -> TokenStream {
+pub fn init_command_handler_impl(tokens: TokenStream) -> TokenStream {
 	init_command_handler::init_command_handler(tokens)
 }

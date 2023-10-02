@@ -21,7 +21,7 @@ pub mod prelude {
 
 pub mod event_macros {
 	pub use crate::create_dependency;
+	pub use crate::init_command_handler;
 	pub use crate::init_event_handler;
-	pub use crate::messagebus::init_command_handler;
 	pub use crate::prepare_bulk_insert;
 }

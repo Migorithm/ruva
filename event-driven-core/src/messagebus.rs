@@ -148,7 +148,17 @@ macro_rules! create_dependency {
 
 /// init_command_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
-pub use event_driven_macro::init_command_handler;
+#[macro_export]
+macro_rules! init_command_handler {
+	(
+        {$($command:ty:$handler:expr $(=>($($injectable:ident),*))? ),* $(,)?}
+    ) => {
+			$crate::messagebus::init_command_handler_impl!(
+				{$($command:$handler $(=>($($injectable),*))? ),*}
+			);
+		};
+}
+pub use event_driven_macro::init_command_handler_impl;
 
 /// init_event_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
