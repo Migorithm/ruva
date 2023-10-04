@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Meta, Pat, PatIdent, PatType, Path, ReturnType, Signature};
+use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature};
 
 pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	const OUTPUT_TYPE_NOT_VALID: &str = "#[handler] fn must have valid output type";
@@ -8,10 +8,9 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 			ident,
 			output: ReturnType::Type(_, var),
 			inputs,
-			mut generics,
+			generics,
 			asyncness,
 			..
-			
 		},
 		block,
 		..
@@ -24,9 +23,11 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 		panic!("There must be message argument!");
 	}
 
-	// TODO Check if the first argument is of either Command or Message
-
 	let message = inputs.first().unwrap();
+	let messsage_type = match message.clone() {
+		FnArg::Typed(PatType { ty, .. }) => *ty,
+		_ => panic!(""),
+	};
 
 	let mut args = inputs.iter().skip(1).cloned().collect::<Punctuated<FnArg, Comma>>();
 	let flagged_args: Vec<(FnArg, bool)> = flag_context(&mut args);
@@ -37,13 +38,17 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	// injectables
 	let injectables = take_injectables(flagged_args);
 
-
-
 	let generic_where = &generics.where_clause;
 
 	quote!(
+		// * Check if the first argument is of either Command or Message
+		::event_driven_library::static_assertions::assert_impl_any!(
+			#messsage_type:
+			::event_driven_library::prelude::Message,
+			::event_driven_library::prelude::Command
+		);
 
-		pub #asyncness fn #ident #generics (#message,context:event_driven_library::prelude::AtomicContextManager)-> #var #generic_where {
+		pub #asyncness fn #ident (#message,context:event_driven_library::prelude::AtomicContextManager)-> #var {
 
 
 			#asyncness fn inner #generics (#message,#args)->#var #generic_where{
@@ -125,25 +130,3 @@ fn take_injectables(inputs: Vec<(FnArg, bool)>) -> Vec<proc_macro2::TokenStream>
 		})
 		.collect::<Vec<_>>()
 }
-
-
-
-// #[message_handler]
-//	pub async fn create_task2<R: TRepository<E, TaskAggregate>, E: Executor + Sync + Send>(
-//		cmd: CreateTask,
-//		#[context] task_uow2: UnitOfWork<R, E, TaskAggregate>,
-//	) -> Result<ServiceResponse, ServiceError>
-//	where
-//		ServiceOutBox: IOutBox<TExecutor>,
-//		ServiceOutBox: IOutBox<E>,
-//	{
-//		let mut uow = task_uow2;
-//
-//		let mut task_aggregate = TaskAggregate::default();
-//		task_aggregate.create_task(cmd);
-//		let res = uow.repository().add(&mut task_aggregate).await?;
-//
-//		uow.commit::<ServiceOutBox>().await?;
-//		Ok(res.into())
-//	}
-
