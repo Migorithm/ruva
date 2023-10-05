@@ -4,13 +4,14 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, ItemFn};
+use syn::{DeriveInput, ImplItemFn, ItemFn};
 
 #[macro_use]
 extern crate quote;
 mod aggregate;
 mod dependency;
 mod error;
+mod handler;
 mod message;
 mod utils;
 
@@ -83,4 +84,11 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 pub fn dependency(_: TokenStream, input: TokenStream) -> TokenStream {
 	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
 	dependency::register_dependency(ast)
+}
+
+#[proc_macro_attribute]
+pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
+	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
+
+	handler::parse_handler(ast)
 }

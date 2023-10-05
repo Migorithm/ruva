@@ -217,7 +217,7 @@ pub mod prelude {
 	pub use event_driven_core::message::{Aggregate, Command, Message, MessageMetadata};
 	pub use event_driven_core::prelude::*;
 
-	pub use event_driven_macro::{dependency, entity, Aggregate, ApplicationError, Command, Message};
+	pub use event_driven_macro::{dependency, entity, message_handler, Aggregate, ApplicationError, Command, Message};
 }
 
 #[cfg(test)]
