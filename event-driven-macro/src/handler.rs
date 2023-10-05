@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature};
+use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
 
 pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	const OUTPUT_TYPE_NOT_VALID: &str = "#[handler] fn must have valid output type";
@@ -24,6 +24,8 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	}
 
 	let message = inputs.first().unwrap();
+
+	//TODO Restrict message to type that implements either Command or Message OR impl Trait
 	let messsage_type = match message.clone() {
 		FnArg::Typed(PatType { ty, .. }) => *ty,
 		_ => panic!(""),
@@ -42,16 +44,17 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 
 	quote!(
 		// * Check if the first argument is of either Command or Message
-		::event_driven_library::static_assertions::assert_impl_any!(
-			#messsage_type:
-			::event_driven_library::prelude::Message,
-			::event_driven_library::prelude::Command
-		);
 
-		pub #asyncness fn #ident (#message,context:event_driven_library::prelude::AtomicContextManager)-> #var {
 
+		// ::event_driven_library::static_assertions::assert_impl_any!(
+		// 	#messsage_type:
+		// 	::event_driven_library::prelude::Message,
+		// 	::event_driven_library::prelude::Command
+		// );
+		pub #asyncness fn #ident (#message,context: ::event_driven_library::prelude::AtomicContextManager)-> #var {
 
 			#asyncness fn inner #generics (#message,#args)->#var #generic_where{
+
 				#block
 			};
 			let dependency= crate::dependencies::dependency();
@@ -121,7 +124,7 @@ fn take_injectables(inputs: Vec<(FnArg, bool)>) -> Vec<proc_macro2::TokenStream>
 				(FnArg::Typed(PatType { pat, .. }), true) => match *pat {
 					Pat::Ident(PatIdent { ident, .. }) => Some(quote!(
 
-						let #ident = dependency.#ident(context).await;
+						let #ident = dependency.#ident(context.clone()).await;
 					)),
 					_ => panic!("Not Allowed!"),
 				},

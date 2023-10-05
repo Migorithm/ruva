@@ -81,7 +81,7 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{Aggregate, AtomicContextManager, BaseError},
+	prelude::{Aggregate, AtomicContextManager, BaseError, ContextManager},
 	repository::TRepository,
 };
 use async_trait::async_trait;
@@ -121,7 +121,9 @@ where
 	E: Executor,
 	A: Aggregate,
 {
-	// Creating Uow means to begin transaction.
+	pub fn clone_context(&self) -> AtomicContextManager {
+		Arc::clone(&self.context)
+	}
 
 	/// Creeate UOW object with context manager.
 	pub async fn new(context: AtomicContextManager) -> Self {
