@@ -4,7 +4,7 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, ImplItemFn, ItemFn};
+use syn::{DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;

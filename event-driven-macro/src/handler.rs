@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature, Type};
+use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature};
 
 pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	const OUTPUT_TYPE_NOT_VALID: &str = "#[handler] fn must have valid output type";

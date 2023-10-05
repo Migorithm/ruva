@@ -151,11 +151,8 @@ macro_rules! create_dependency {
 #[macro_export]
 macro_rules! init_command_handler {
     (
-        {$($command:ty:$handler:expr
-			// $(=>($($injectable:ident),*))?
-
-		 ),* $(,)?}
-    )
+        {$($command:ty:$handler:expr ),* $(,)?}
+	)
         => {
 
 		pub fn command_handler() -> &'static TCommandHandler<ServiceResponse, ServiceError> {
@@ -163,7 +160,6 @@ macro_rules! init_command_handler {
 			static COMMAND_HANDLER: ::std::sync::OnceLock<TCommandHandler<ServiceResponse, ServiceError>> = OnceLock::new();
 
 			COMMAND_HANDLER.get_or_init(||{
-				// let dependency= current_crate::dependencies::dependency();
 				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= event_driven_library::prelude::HandlerMapper::new();
 				$(
 					_map.insert(
@@ -176,10 +172,7 @@ macro_rules! init_command_handler {
 								Box::pin($handler(
 									*c.downcast::<$command>().unwrap(),
 									context_manager,
-								// $(
-								// 	// * Injectable functions are added here.
-								// 	$(dependency.$injectable(),)*
-								// )?
+
 								))
 							},
 					));
@@ -196,18 +189,12 @@ macro_rules! init_command_handler {
 #[macro_export]
 macro_rules! init_event_handler {
     (
-        {$($event:ty: [$($handler:expr
-			// $(=>($($injectable:ident),*))?
-
-		),* $(,)? ]),* $(,)?}
+        {$($event:ty: [$($handler:expr),* $(,)? ]),* $(,)?}
     ) =>{
 		pub fn event_handler() -> &'static TEventHandler<ServiceResponse, ServiceError>  {
 			extern crate self as current_crate;
 			static EVENT_HANDLER: ::std::sync::OnceLock<TEventHandler<ServiceResponse, ServiceError>> = OnceLock::new();
-
 			EVENT_HANDLER.get_or_init(||{
-            // let dependency= current_crate::dependencies::dependency();
-
             let mut _map : TEventHandler<ServiceResponse, ServiceError> = event_driven_library::prelude::HandlerMapper::new();
             $(
                 _map.insert(
@@ -221,10 +208,6 @@ macro_rules! init_event_handler {
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name
                                         // So, when it is followed, it logically doesn't make sense to cause an error.
                                         *e.downcast::<$event>().expect("Not Convertible!"), context_manager,
-                                    // $(
-                                    //     // * Injectable functions are added here.
-                                    //     $(dependency.$injectable(),)*
-                                    // )?
                                     ))
                                 }
                                 ),

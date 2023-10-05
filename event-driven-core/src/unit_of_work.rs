@@ -81,7 +81,7 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{Aggregate, AtomicContextManager, BaseError, ContextManager},
+	prelude::{Aggregate, AtomicContextManager, BaseError},
 	repository::TRepository,
 };
 use async_trait::async_trait;
