@@ -1,6 +1,6 @@
 [package]
 name = "event-driven-macro"
-version = "0.1.45"
+version = "0.1.46"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"

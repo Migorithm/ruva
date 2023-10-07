@@ -238,7 +238,7 @@ mod application_error_derive_test {
 
 	use crate as event_driven_library;
 	use event_driven_core::message::Message;
-	use event_driven_core::responses::AnyError;
+	use event_driven_core::responses::{AnyError, BaseError};
 	use event_driven_macro::ApplicationError;
 
 	#[derive(Debug, ApplicationError)]
@@ -250,6 +250,7 @@ mod application_error_derive_test {
 		StopSentinelWithEvent(Box<dyn Message>),
 		#[database_error]
 		DatabaseError(Box<AnyError>),
+		BaseError(BaseError),
 	}
 
 	impl Display for Err {
@@ -258,6 +259,7 @@ mod application_error_derive_test {
 				Self::Items => write!(f, "items"),
 				Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
 				Self::DatabaseError(err) => write!(f, "{:?}", err),
+				Self::BaseError(err) => write!(f, "{:?}", err),
 			}
 		}
 	}

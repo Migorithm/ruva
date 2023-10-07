@@ -85,7 +85,7 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 					#crates::event_driven_core::responses::BaseError::StopSentinel => Self::#stop_sentinel,
 					#crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event) => Self::#stop_sentinel_with_event(event),
 					#crates::event_driven_core::responses::BaseError::DatabaseError(error) => Self::#database_error(error),
-					_ => unimplemented!("BaseError to #name is only support for StopSentinel, StopSentinelWithEvent, DatabaseError."),
+					err => Self::BaseError(err),
 				}
 			}
 		}
