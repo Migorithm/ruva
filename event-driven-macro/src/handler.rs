@@ -57,7 +57,7 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 
 				#block
 			};
-			let dependency= crate::dependencies::dependency();
+			// let dependency= crate::dependencies::dependency();
 			#(
 				#injectables
 			)*
@@ -117,14 +117,15 @@ fn take_injectables(inputs: Vec<(FnArg, bool)>) -> Vec<proc_macro2::TokenStream>
 				(FnArg::Typed(PatType { pat, .. }), false) => match *pat {
 					Pat::Ident(PatIdent { ident, .. }) => Some(quote!(
 
-						let #ident = dependency.#ident();
+						let #ident = crate::dependencies::#ident();
 					)),
 					_ => panic!("Not Allowed!"),
 				},
 				(FnArg::Typed(PatType { pat, .. }), true) => match *pat {
 					Pat::Ident(PatIdent { ident, .. }) => Some(quote!(
 
-						let #ident = dependency.#ident(context.clone()).await;
+
+						let #ident = crate::dependencies::#ident(context.clone()).await;
 					)),
 					_ => panic!("Not Allowed!"),
 				},

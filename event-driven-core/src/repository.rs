@@ -5,7 +5,7 @@ use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 
 #[async_trait]
-pub trait TRepository<E: Executor, A: Aggregate>: REventManager<A> {
+pub trait TRepository<E: Executor, A: Aggregate>: REventManager<A> + Sync + Send {
 	fn new(executor: Arc<RwLock<E>>) -> Self;
 	async fn get(&self, aggregate_id: &str) -> Result<A, BaseError>;
 	async fn update(&mut self, aggregate: &mut A) -> Result<(), BaseError>;

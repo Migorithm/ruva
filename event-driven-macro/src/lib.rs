@@ -9,7 +9,7 @@ use syn::{DeriveInput, ItemFn};
 #[macro_use]
 extern crate quote;
 mod aggregate;
-mod dependency;
+
 mod error;
 mod handler;
 mod message;
@@ -78,12 +78,6 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 		impl Command for #name{}
 	)
 	.into()
-}
-
-#[proc_macro_attribute]
-pub fn dependency(_: TokenStream, input: TokenStream) -> TokenStream {
-	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
-	dependency::register_dependency(ast)
 }
 
 #[proc_macro_attribute]

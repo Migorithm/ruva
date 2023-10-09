@@ -160,7 +160,7 @@
 //! ### Example
 //!
 //! ```ignore
-//! #[dependency]
+//! // crate::dependencies
 //! pub fn payment_gateway_caller() -> Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> {
 //!     if cfg!(test) {
 //!         __test_payment_gateway_caller()  //Dependency For Test
@@ -202,8 +202,6 @@
 //! }
 //! ```
 //!
-//!
-//!
 //! #### Error from MessageBus
 //! When command has not yet been regitered, it returns an error - `BaseError::CommandNotFound`
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
@@ -217,19 +215,7 @@ pub mod prelude {
 	pub use event_driven_core::message::{Aggregate, Command, Message, MessageMetadata};
 	pub use event_driven_core::prelude::*;
 
-	pub use event_driven_macro::{dependency, entity, message_handler, Aggregate, ApplicationError, Command, Message};
-}
-
-#[cfg(test)]
-mod dependency_test {
-	use event_driven_core::create_dependency;
-	create_dependency!();
-
-	#[event_driven_macro::dependency]
-	fn test() -> i32 {
-		let _ = "hello";
-		0
-	}
+	pub use event_driven_macro::{entity, message_handler, Aggregate, ApplicationError, Command, Message};
 }
 
 #[cfg(test)]
