@@ -132,20 +132,6 @@ where
 	}
 }
 
-/// Dependency Initializer
-/// You must initialize this in crate::dependencies with
-/// Whatever dependency container you want.
-#[macro_export]
-macro_rules! create_dependency {
-	() => {
-		pub struct Dependency;
-		pub fn dependency() -> &'static Dependency {
-			static DEPENDENCY: ::std::sync::OnceLock<Dependency> = ::std::sync::OnceLock::new();
-			DEPENDENCY.get_or_init(|| Dependency)
-		}
-	};
-}
-
 /// init_command_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
 #[macro_export]
