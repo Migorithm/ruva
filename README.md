@@ -192,5 +192,5 @@ async fn test_func(){
 ```
 
 #### Error from MessageBus
-When command has not yet been regitered, it returns an error - `BaseError::CommandNotFound`
+When command has not yet been regitered, it returns an error - `BaseError::NotFound`
 Be mindful that bus does NOT return the result of event processing as in distributed event processing.

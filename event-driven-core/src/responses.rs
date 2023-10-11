@@ -5,8 +5,7 @@ pub type AnyError = dyn Any + Send + Sync;
 
 #[derive(Debug)]
 pub enum BaseError {
-	EventNotFound,
-	CommandNotFound,
+	NotFound,
 	StopSentinel,
 	TransactionError,
 	StopSentinelWithEvent(Box<dyn Message>),

@@ -64,7 +64,7 @@ where
 
 		let res = self.command_handler.get(&message.type_id()).ok_or_else(|| {
 			eprintln!("Unprocessable Command Given!");
-			BaseError::CommandNotFound
+			BaseError::NotFound
 		})?(Box::new(message), context_manager.clone())
 		.await?;
 
@@ -91,7 +91,7 @@ where
 
 		let handlers = self.event_handler.get(&msg.metadata().topic).ok_or_else(|| {
 			eprintln!("Unprocessable Event Given! {:?}", msg);
-			BaseError::EventNotFound
+			BaseError::NotFound
 		})?;
 
 		for handler in handlers.iter() {
