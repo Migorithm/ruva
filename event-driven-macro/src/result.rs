@@ -3,6 +3,20 @@ use syn::DeriveInput;
 
 use crate::utils::{find_enum_variant, locate_crate_on_derive_macro};
 
+pub(crate) fn render_response_token(ast: &DeriveInput) -> TokenStream {
+	let syn::Data::Enum(_data) = &ast.data else {
+		panic!("Only Enum type is supported by #[derive(ApplicationError)].")
+	};
+	let name = &ast.ident;
+	let crates = locate_crate_on_derive_macro(ast);
+
+	quote! {
+		impl #crates::event_driven_core::responses::ApplicationResponse for #name{}
+
+	}
+	.into()
+}
+
 pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	// Forcing target to be enum
 	let data_enum = match &ast.data {
