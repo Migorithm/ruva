@@ -146,13 +146,13 @@ macro_rules! init_command_handler {
 			static COMMAND_HANDLER: ::std::sync::OnceLock<TCommandHandler<ServiceResponse, ServiceError>> = OnceLock::new();
 
 			COMMAND_HANDLER.get_or_init(||{
-				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= event_driven_library::prelude::HandlerMapper::new();
+				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= ruva::prelude::HandlerMapper::new();
 				$(
 					_map.insert(
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
 						TypeId::of::<$command>(),
 
-							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
+							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: ruva::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
 								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								Box::pin($handler(
@@ -181,14 +181,14 @@ macro_rules! init_event_handler {
 			extern crate self as current_crate;
 			static EVENT_HANDLER: ::std::sync::OnceLock<TEventHandler<ServiceResponse, ServiceError>> = OnceLock::new();
 			EVENT_HANDLER.get_or_init(||{
-            let mut _map : TEventHandler<ServiceResponse, ServiceError> = event_driven_library::prelude::HandlerMapper::new();
+            let mut _map : TEventHandler<ServiceResponse, ServiceError> = ruva::prelude::HandlerMapper::new();
             $(
                 _map.insert(
                     stringify!($event).into(),
                     vec![
                         $(
                             Box::new(
-                                |e:Box<dyn Message>, context_manager:event_driven_library::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
+                                |e:Box<dyn Message>, context_manager:ruva::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
                                     Box::pin($handler(
                                         // * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name

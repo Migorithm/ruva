@@ -1,22 +1,22 @@
-//! [event-driven-core]: https://docs.rs/event-driven-core
-//! [event-driven-macro]: https://docs.rs/event-driven-macro
-//! [Command]: https://docs.rs/event-driven-core/latest/event_driven_core/message/trait.Command.html
-//! [Event]: https://docs.rs/event-driven-core/latest/event_driven_core/message/trait.Message.html
-//! [MessageBus]: https://docs.rs/event-driven-core/latest/event_driven_core/messagebus/index.html
-//! [Context]: https://docs.rs/event-driven-core/latest/event_driven_core/messagebus/struct.ContextManager.html
-//! [AtomicContextManager]: https://docs.rs/event-driven-core/latest/event_driven_core/messagebus/type.AtomicContextManager.html
+//! [ruva-core]: https://docs.rs/ruva-core
+//! [ruva-macro]: https://docs.rs/ruva-macro
+//! [Command]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.Command.html
+//! [Event]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.Message.html
+//! [MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/index.html
+//! [Context]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
+//! [AtomicContextManager]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/type.AtomicContextManager.html
 //!
 //! A event-driven framework for writing reliable and scalable system.
 //!
 //! At a high level, it provides a few major components:
 //!
-//! * Tools for [core components with traits][event-driven-core],
-//! * [Macros][event-driven-macro] for processing events and commands
+//! * Tools for [core components with traits][ruva-core],
+//! * [Macros][ruva-macro] for processing events and commands
 //!
 //!
-//! # A Tour of Event-Driven-Library
+//! # A Tour of Ruva
 //!
-//! Event-Driven-Library consists of a number of modules that provide a range of functionality
+//! Ruva consists of a number of modules that provide a range of functionality
 //! essential for implementing messagebus-like applications in Rust. In this
 //! section, we will take a brief tour, summarizing the major APIs and
 //! their uses.
@@ -65,7 +65,7 @@
 //!
 //! ```
 //! # const IGNORE_1: &str = stringify! {
-//! use event_driven_library::prelude::{init_command_handler, init_event_handler};
+//! use ruva::prelude::{init_command_handler, init_event_handler};
 //! # };
 //! # macro_rules! init_command_handler {
 //! #    ($($tt:tt)*) => {}
@@ -206,29 +206,29 @@
 //! When command has not yet been regitered, it returns an error - `BaseError::NotFound`
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
 
-pub extern crate event_driven_core;
-pub extern crate event_driven_macro;
+pub extern crate ruva_core;
+pub extern crate ruva_macro;
 pub extern crate static_assertions;
 
 pub mod prelude {
-	pub use event_driven_core::event_macros::*;
-	pub use event_driven_core::message::{Aggregate, Command, Message, MessageMetadata};
-	pub use event_driven_core::prelude::*;
+	pub use ruva_core::event_macros::*;
+	pub use ruva_core::message::{Aggregate, Command, Message, MessageMetadata};
+	pub use ruva_core::prelude::*;
 
-	pub use event_driven_macro::{entity, message_handler, Aggregate, ApplicationError, ApplicationResponse, Command, Message};
+	pub use ruva_macro::{entity, message_handler, Aggregate, ApplicationError, ApplicationResponse, Command, Message};
 }
 
 #[cfg(test)]
 mod application_error_derive_test {
 	use std::fmt::Display;
 
-	use crate as event_driven_library;
-	use event_driven_core::message::Message;
-	use event_driven_core::responses::{AnyError, BaseError};
-	use event_driven_macro::ApplicationError;
+	use crate as ruva;
+	use ruva_core::message::Message;
+	use ruva_core::responses::{AnyError, BaseError};
+	use ruva_macro::ApplicationError;
 
 	#[derive(Debug, ApplicationError)]
-	#[crates(event_driven_library)]
+	#[crates(ruva)]
 	enum Err {
 		#[stop_sentinel]
 		Items,

@@ -46,7 +46,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 	result::render_response_token(&ast)
 }
 
-/// Define a Application Error type that can be used in the event-driven-library.
+/// Define a Application Error type that can be used in the ruva.
 ///
 /// Before deriving this, you must impl `Debug`traits.
 ///
@@ -54,7 +54,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 ///
 /// ## Attributes
 ///
-/// - `#[crates(...)]` - Specify the name of root of event-driven-library crate. (Default is `event_driven_library`)
+/// - `#[crates(...)]` - Specify the name of root of ruva crate. (Default is `ruva`)
 /// - `#[stop_sentinel]` - Specify the error matching for `BaseError::StopSentinel`.
 /// - `#[stop_sentinel_with_event]` - Specify the error matching for `BaseError::StopSentinelWithEvent`.
 /// - `#[database_error]` - Specify the error matching for `BaseError::DatabaseError`.
@@ -62,7 +62,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 /// ## Example
 /// ```ignore
 /// #[derive(Debug, ApplicationError)]
-/// #[crates(crate::imports::event_driven_library)]
+/// #[crates(crate::imports::ruva)]
 /// enum TestError {
 ///   #[stop_sentinel]
 ///   Stop,

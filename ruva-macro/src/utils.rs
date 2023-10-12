@@ -5,7 +5,7 @@ pub(crate) fn locate_crate_on_derive_macro(ast: &DeriveInput) -> Ident {
 	let crates = if let Some(crates) = crates {
 		crates.parse_args::<syn::ExprPath>().unwrap().path.get_ident().expect("#[crates(...)] expects path.").to_string()
 	} else {
-		"event_driven_library".to_owned()
+		"ruva".to_owned()
 	};
 	syn::Ident::new(&crates, proc_macro2::Span::call_site())
 }

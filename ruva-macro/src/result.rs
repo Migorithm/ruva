@@ -11,7 +11,7 @@ pub(crate) fn render_response_token(ast: &DeriveInput) -> TokenStream {
 	let crates = locate_crate_on_derive_macro(ast);
 
 	quote! {
-		impl #crates::event_driven_core::responses::ApplicationResponse for #name{}
+		impl #crates::ruva_core::responses::ApplicationResponse for #name{}
 
 	}
 	.into()
@@ -91,25 +91,25 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 
 	quote!(
-		impl #crates::event_driven_core::responses::ApplicationError for #name {}
+		impl #crates::ruva_core::responses::ApplicationError for #name {}
 
-		impl ::std::convert::From<#crates::event_driven_core::responses::BaseError> for #name {
-			fn from(value: #crates::event_driven_core::responses::BaseError) -> Self {
+		impl ::std::convert::From<#crates::ruva_core::responses::BaseError> for #name {
+			fn from(value: #crates::ruva_core::responses::BaseError) -> Self {
 				match value {
-					#crates::event_driven_core::responses::BaseError::StopSentinel => Self::#stop_sentinel,
-					#crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event) => Self::#stop_sentinel_with_event(event),
-					#crates::event_driven_core::responses::BaseError::DatabaseError(error) => Self::#database_error(error),
+					#crates::ruva_core::responses::BaseError::StopSentinel => Self::#stop_sentinel,
+					#crates::ruva_core::responses::BaseError::StopSentinelWithEvent(event) => Self::#stop_sentinel_with_event(event),
+					#crates::ruva_core::responses::BaseError::DatabaseError(error) => Self::#database_error(error),
 					err => Self::BaseError(err),
 				}
 			}
 		}
-		impl ::std::convert::Into<#crates::event_driven_core::responses::BaseError> for #name {
-			fn into(self) -> #crates::event_driven_core::responses::BaseError {
+		impl ::std::convert::Into<#crates::ruva_core::responses::BaseError> for #name {
+			fn into(self) -> #crates::ruva_core::responses::BaseError {
 				let data = match self {
-					#name::#stop_sentinel => #crates::event_driven_core::responses::BaseError::StopSentinel,
-					#name::#stop_sentinel_with_event(event) => #crates::event_driven_core::responses::BaseError::StopSentinelWithEvent(event),
-					#name::#database_error(error) => #crates::event_driven_core::responses::BaseError::DatabaseError(error),
-					_ => #crates::event_driven_core::responses::BaseError::ServiceError(::std::boxed::Box::new(self)),
+					#name::#stop_sentinel => #crates::ruva_core::responses::BaseError::StopSentinel,
+					#name::#stop_sentinel_with_event(event) => #crates::ruva_core::responses::BaseError::StopSentinelWithEvent(event),
+					#name::#database_error(error) => #crates::ruva_core::responses::BaseError::DatabaseError(error),
+					_ => #crates::ruva_core::responses::BaseError::ServiceError(::std::boxed::Box::new(self)),
 				};
 				data
 			}

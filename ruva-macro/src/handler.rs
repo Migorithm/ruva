@@ -46,12 +46,12 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 		// * Check if the first argument is of either Command or Message
 
 
-		// ::event_driven_library::static_assertions::assert_impl_any!(
+		// ::ruva::static_assertions::assert_impl_any!(
 		// 	#messsage_type:
-		// 	::event_driven_library::prelude::Message,
-		// 	::event_driven_library::prelude::Command
+		// 	::ruva::prelude::Message,
+		// 	::ruva::prelude::Command
 		// );
-		pub #asyncness fn #ident (#message,context: ::event_driven_library::prelude::AtomicContextManager)-> #var {
+		pub #asyncness fn #ident (#message,context: ::ruva::prelude::AtomicContextManager)-> #var {
 
 			#asyncness fn inner #generics (#message,#args)->#var #generic_where{
 
