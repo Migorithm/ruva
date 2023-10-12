@@ -10,9 +10,9 @@ use syn::{DeriveInput, ItemFn};
 extern crate quote;
 mod aggregate;
 
-mod error;
 mod handler;
 mod message;
+mod result;
 mod utils;
 
 #[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable, identifier))]
@@ -29,6 +29,21 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 
 	render_aggregate_token(&ast)
+}
+
+/// Define ApplicationResponse so that could be recognized by messagebus
+/// ## Example
+/// ```ignore
+/// #[derive(Debug, ApplicationResponse)]
+/// enum ServiceResponse{
+///     Response1
+///     Response2
+/// }
+/// ```
+#[proc_macro_derive(ApplicationResponse)]
+pub fn response_derive(attr: TokenStream) -> TokenStream {
+	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	result::render_response_token(&ast)
 }
 
 /// Define a Application Error type that can be used in the event-driven-library.
@@ -61,7 +76,7 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 pub fn error_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr).unwrap();
 
-	error::render_error_token(&ast)
+	result::render_error_token(&ast)
 }
 
 #[proc_macro_attribute]
