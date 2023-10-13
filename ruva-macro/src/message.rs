@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
-use syn::{Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, Ident, Meta, Path};
+use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg, ImplItemFn, ItemFn, Meta, Pat, PatIdent, PatType, Path, ReturnType, Signature, Stmt};
 
-use crate::utils::locate_crate_on_derive_macro;
+use crate::utils::{get_attributes, locate_crate_on_derive_macro};
 
 pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<TokenStream>, identifier: TokenStream) -> TokenStream {
 	let name = &ast.ident;
@@ -98,17 +98,65 @@ pub(crate) fn find_identifier(ast: &DeriveInput) -> TokenStream {
 	}
 }
 
-fn get_attributes(field: &Field) -> Vec<Ident> {
-	let Field { attrs, .. } = field;
-	{
-		let mut attributes = attrs
-			.iter()
-			.flat_map(|attr| match &attr.meta {
-				Meta::Path(Path { segments, .. }) => segments.iter().map(|segment| segment.ident.clone()).collect::<Vec<Ident>>(),
-				_ => panic!("Only Path"),
-			})
-			.collect::<Vec<_>>();
-		attributes.sort();
-		attributes
+///
+/// #[aggregate]
+/// #[derive(Default, Serialize, Deserialize)]
+/// struct MyAggregate {
+///     #[identifier]
+///     pub age: i64,
+/// }
+///
+/// #[async_trait]
+/// impl TRepository<TExecutor, MyAggregate> for SqlRepository<MyAggregate> {
+///     fn new(executor: Arc<RwLock<TExecutor>>) -> Self {
+///          todo!()
+///     }
+///     async fn get(
+///         &self,
+///         aggregate_id: i64,
+///     ) -> Result<MyAggregate, BaseError> {
+///         todo!()
+///     }
+///
+///     #[event_hook]
+///     async fn update(
+///         &mut self,
+///         aggregate: &mut MyAggregate,
+///     ) -> Result<(), BaseError> {
+///         Ok(())
+///     }
+///     async fn add(
+///         &mut self,
+///         aggregate: &mut MyAggregate,
+///     ) -> Result<i64, BaseError> {
+///         todo!()
+///     }
+///     async fn delete(
+///         &self,
+///         _aggregate_id: i64,
+///     ) -> Result<(), BaseError> {
+///         todo!()
+///     }
+/// }
+pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
+	if ast.sig.inputs.is_empty() {
+		panic!("There must be message argument!");
+	};
+
+	let aggregate = &ast.sig.inputs[1];
+
+	if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate.clone() {
+		if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
+			let mut stmts = vec![parse_quote!(
+				self.event_hook(#ident);
+			)];
+			stmts.extend(std::mem::take(&mut ast.block.stmts));
+
+			ast.block.stmts = stmts;
+			return quote!(
+				#ast
+			);
+		}
 	}
+	panic!("Not Processable!")
 }
