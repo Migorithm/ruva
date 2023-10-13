@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use quote::ToTokens;
 use syn::{parse::Parser, parse_macro_input, Data, DataStruct, DeriveInput, Field};
 
-use crate::utils::locate_crate_on_derive_macro;
+use crate::utils::{find_attr_and_locate_its_type_from_field, locate_crate_on_derive_macro};
 
 pub(crate) fn render_aggregate_token(ast: &DeriveInput) -> TokenStream {
 	let name = &ast.ident;
@@ -32,11 +32,17 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 	let name = &ast.ident;
 	let crates = locate_crate_on_derive_macro(&ast);
 
+	let mut identifier_types = vec![];
 	if let syn::Data::Struct(DataStruct {
 		fields: syn::Fields::Named(ref mut fields),
 		..
 	}) = &mut ast.data
 	{
+		fields.named.iter_mut().for_each(|f| {
+			identifier_types.extend(find_attr_and_locate_its_type_from_field(f, "identifier"));
+			f.attrs.clear();
+		});
+
 		fields.named.extend([
 			syn::Field::parse_named
 				.parse2(quote! {
@@ -60,11 +66,21 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 	} else {
 		panic!("[entity] can be attached only to struct")
 	}
+
+	if identifier_types.is_empty() {
+		panic!("identifer must be speicified!")
+	} else if identifier_types.len() > 1 {
+		panic!("identifer is specified only once!")
+	}
+	let aggregate_identifier_type = identifier_types.first().unwrap();
+
 	let setters = get_setters(&ast.data);
 
 	quote!(
 		#ast
 		impl #crates::prelude::Aggregate for #name{
+			type Identifier = #aggregate_identifier_type;
+
 			fn events(&self) -> &::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
 				&self.events
 			}
