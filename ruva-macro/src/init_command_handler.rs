@@ -42,7 +42,7 @@ fn generate_code(data: Vec<MacroDataSingle>) -> String {
 
 			COMMAND_HANDLER.get_or_init(||{
 				let dependency= current_crate::dependencies::dependency();
-				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= event_driven_library::prelude::HandlerMapper::new();",
+				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= ruva::prelude::HandlerMapper::new();",
 	);
 	for data in data.into_iter() {
 		let command = data.command;
@@ -59,7 +59,7 @@ fn generate_code(data: Vec<MacroDataSingle>) -> String {
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
 						TypeId::of::<{command}>(),
 
-							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: event_driven_library::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {{
+							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: ruva::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {{
 								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								Box::pin({handler}(

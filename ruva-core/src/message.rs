@@ -47,6 +47,7 @@ pub trait MailSendable: Message + Serialize + Send + Sync + 'static {
 pub trait Command: 'static + Send + Any + Sync + Debug {}
 
 pub trait Aggregate: Send + Sync + Default {
+	type Identifier: Send + Sync;
 	fn collect_events(&mut self) -> VecDeque<Box<dyn Message>> {
 		if !self.events().is_empty() {
 			self.take_events()

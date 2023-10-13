@@ -64,7 +64,7 @@ where
 
 		let res = self.command_handler.get(&message.type_id()).ok_or_else(|| {
 			eprintln!("Unprocessable Command Given!");
-			BaseError::CommandNotFound
+			BaseError::NotFound
 		})?(Box::new(message), context_manager.clone())
 		.await?;
 
@@ -91,7 +91,7 @@ where
 
 		let handlers = self.event_handler.get(&msg.metadata().topic).ok_or_else(|| {
 			eprintln!("Unprocessable Event Given! {:?}", msg);
-			BaseError::EventNotFound
+			BaseError::NotFound
 		})?;
 
 		for handler in handlers.iter() {
@@ -132,20 +132,6 @@ where
 	}
 }
 
-/// Dependency Initializer
-/// You must initialize this in crate::dependencies with
-/// Whatever dependency container you want.
-#[macro_export]
-macro_rules! create_dependency {
-	() => {
-		pub struct Dependency;
-		pub fn dependency() -> &'static Dependency {
-			static DEPENDENCY: ::std::sync::OnceLock<Dependency> = ::std::sync::OnceLock::new();
-			DEPENDENCY.get_or_init(|| Dependency)
-		}
-	};
-}
-
 /// init_command_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
 #[macro_export]
@@ -158,39 +144,32 @@ macro_rules! init_command_handler {
 			);
 		};
 }
-pub use event_driven_macro::init_command_handler_impl;
+pub use ruva_macro::init_command_handler_impl;
 
 /// init_event_handler creating macro
 /// Not that crate must have `Dependency` struct with its own implementation
 #[macro_export]
 macro_rules! init_event_handler {
     (
-        {$($event:ty: [$($handler:expr $(=>($($injectable:ident),*))? ),* $(,)? ]),* $(,)?}
+        {$($event:ty: [$($handler:expr),* $(,)? ]),* $(,)?}
     ) =>{
 		pub fn event_handler() -> &'static TEventHandler<ServiceResponse, ServiceError>  {
 			extern crate self as current_crate;
 			static EVENT_HANDLER: ::std::sync::OnceLock<TEventHandler<ServiceResponse, ServiceError>> = OnceLock::new();
-
 			EVENT_HANDLER.get_or_init(||{
-            let dependency= current_crate::dependencies::dependency();
-
-            let mut _map : TEventHandler<ServiceResponse, ServiceError> = event_driven_library::prelude::HandlerMapper::new();
+            let mut _map : TEventHandler<ServiceResponse, ServiceError> = ruva::prelude::HandlerMapper::new();
             $(
                 _map.insert(
                     stringify!($event).into(),
                     vec![
                         $(
                             Box::new(
-                                |e:Box<dyn Message>, context_manager:event_driven_library::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
+                                |e:Box<dyn Message>, context_manager:ruva::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
                                     Box::pin($handler(
                                         // * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name
                                         // So, when it is followed, it logically doesn't make sense to cause an error.
                                         *e.downcast::<$event>().expect("Not Convertible!"), context_manager,
-                                    $(
-                                        // * Injectable functions are added here.
-                                        $(dependency.$injectable(),)*
-                                    )?
                                     ))
                                 }
                                 ),
