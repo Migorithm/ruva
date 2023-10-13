@@ -1,4 +1,4 @@
-use aggregate::render_aggregate_token;
+use domain::render_aggregate_token;
 
 use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
@@ -8,7 +8,7 @@ use syn::{DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
-mod aggregate;
+mod domain;
 
 mod handler;
 mod message;
@@ -29,6 +29,11 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 
 	render_aggregate_token(&ast)
+}
+
+#[proc_macro_attribute]
+pub fn aggregate(_: TokenStream, input: TokenStream) -> TokenStream {
+	domain::render_aggregate(input)
 }
 
 /// Define ApplicationResponse so that could be recognized by messagebus
@@ -81,7 +86,7 @@ pub fn error_derive(attr: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn entity(_: TokenStream, input: TokenStream) -> TokenStream {
-	aggregate::render_entity_token(input)
+	domain::render_entity_token(input)
 }
 
 #[proc_macro_derive(Command)]
