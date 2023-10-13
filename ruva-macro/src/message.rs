@@ -143,20 +143,27 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 		panic!("There must be message argument!");
 	};
 
-	let aggregate = &ast.sig.inputs[1];
+	let is_aggregate = "trait IsAggregateNotImplemented {const IS_AGGREGATE: bool = false;}impl<T> IsAggregateNotImplemented for T {}struct IsAggregate<T>(::core::marker::PhantomData<T>);#[allow(unused)]impl<T: ?Sized + ::ruva::prelude::Aggregate> IsAggregate<T> {const IS_AGGREGATE: bool = true;}";
+	let get_aggregate = "trait GetAggregateNotImplemented {fn get_aggregate(_: &impl ::core::any::Any) -> &dyn ::ruva::prelude::Aggregate {unreachable!()}}impl<T> GetAggregateNotImplemented for T {}struct GetAggregate<T>(::core::marker::PhantomData<T>);#[allow(unused)]impl<T: ?Sized + ::ruva::prelude::Aggregate> GetAggregate<T> {fn get_aggregate(data: &T) -> &T {data}}";
 
-	if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate.clone() {
-		if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
-			let mut stmts = vec![parse_quote!(
-				self.event_hook(#ident);
-			)];
-			stmts.extend(std::mem::take(&mut ast.block.stmts));
+	let mut stmts = Vec::new();
+	stmts.push(parse_quote! (#is_aggregate));
+	stmts.push(parse_quote! (#get_aggregate));
 
-			ast.block.stmts = stmts;
-			return quote!(
-				#ast
-			);
+	for aggregate in &ast.sig.inputs {
+		if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate {
+			if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
+				stmts.push(parse_quote!(
+					if <IsAggregate<#ty>>::IS_AGGREGATE {
+						self.event_hook(<GetAggregate<#ty>>::get_aggregate(&#ident));
+					}
+				));
+			}
 		}
 	}
-	panic!("Not Processable!")
+	stmts.extend(std::mem::take(&mut ast.block.stmts));
+	ast.block.stmts = stmts;
+	quote!(
+		#ast
+	)
 }
