@@ -1,4 +1,4 @@
-use syn::{DataEnum, DeriveInput, Field, Ident, Type, Variant};
+use syn::{DataEnum, DeriveInput, Field, Ident, Meta, Path, Type, Variant};
 
 pub(crate) fn locate_crate_on_derive_macro(ast: &DeriveInput) -> Ident {
 	let crates = ast.attrs.iter().find(|x| x.path().is_ident("crates"));
@@ -14,6 +14,7 @@ pub(crate) fn find_enum_variant<'a>(data_enum: &'a DataEnum) -> impl Fn(&'a str)
 	|name: &str| data_enum.variants.iter().find(|x| x.attrs.iter().any(|x| x.path().is_ident(name)))
 }
 
+// tell if a field is annotated with specific attribute name and get its Types
 pub(crate) fn find_attr_and_locate_its_type_from_field(field: &mut Field, attribute_name: &str) -> Vec<Type> {
 	let mut identifier_types = vec![];
 	for attr in field.attrs.iter_mut() {
@@ -22,4 +23,20 @@ pub(crate) fn find_attr_and_locate_its_type_from_field(field: &mut Field, attrib
 		}
 	}
 	identifier_types
+}
+
+// get attributes from field
+pub(crate) fn get_attributes(field: &Field) -> Vec<Ident> {
+	let Field { attrs, .. } = field;
+	{
+		let mut attributes = attrs
+			.iter()
+			.flat_map(|attr| match &attr.meta {
+				Meta::Path(Path { segments, .. }) => segments.iter().map(|segment| segment.ident.clone()).collect::<Vec<Ident>>(),
+				_ => panic!("Only Path"),
+			})
+			.collect::<Vec<_>>();
+		attributes.sort();
+		attributes
+	}
 }

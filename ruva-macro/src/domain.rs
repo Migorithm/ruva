@@ -5,28 +5,6 @@ use syn::{parse::Parser, parse_macro_input, Data, DataStruct, DeriveInput, Field
 
 use crate::utils::{find_attr_and_locate_its_type_from_field, locate_crate_on_derive_macro};
 
-pub(crate) fn render_aggregate_token(ast: &DeriveInput) -> TokenStream {
-	let name = &ast.ident;
-	let crates = locate_crate_on_derive_macro(ast);
-
-	quote!(
-		impl #crates::prelude::Aggregate for #name{
-
-			fn events(&self) -> &::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
-				&self.events
-			}
-			fn take_events(&mut self) -> ::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
-				::std::mem::take(&mut self.events)
-			}
-			fn raise_event(&mut self, event: Box<dyn Message>) {
-				self.events.push_back(event)
-			}
-
-		}
-	)
-	.into()
-}
-
 pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 	let mut ast = parse_macro_input!(input as DeriveInput);
 	let name = &ast.ident;
