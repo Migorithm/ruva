@@ -31,6 +31,45 @@ pub fn aggregate_derive(attr: TokenStream) -> TokenStream {
 	render_aggregate_token(&ast)
 }
 
+/// Define Aggregate root
+/// ## Example
+/// ```ignore
+/// #[aggregate]
+/// #[derive(Debug, Default, Serialize, Deserialize)]
+/// pub struct TestAggregate {
+///    #[identifier]
+///     pub(crate) age: i64,
+/// }
+///
+/// fn test_aggregate() {
+/// let aggregate = TestAggregate::default().set_age(1);
+/// assert_eq!(aggregate.version, 0);
+/// assert!(!aggregate.is_existing);
+/// assert_eq!(aggregate.events.len(), 0);
+/// assert_eq!(aggregate.age, 1)
+/// ```
+///
+/// the following will cause an error with saying "identifier is specified only once!"
+/// ```ignore
+/// #[aggregate]
+/// #[derive(Debug, Default, Serialize, Deserialize)]
+/// pub struct TestAggregate {
+///     #[identifier]
+///     pub(crate) age: i64,
+///      #[identifier]
+///     pub(crate) name: String,
+/// }
+/// ```
+///
+/// Likewise, not specifying `identifier` will also error out
+/// ```ignore
+/// #[aggregate]
+/// #[derive(Debug, Default, Serialize, Deserialize)]
+/// pub struct TestAggregate {
+///     pub(crate) age: i64,
+///     pub(crate) name: String,
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn aggregate(_: TokenStream, input: TokenStream) -> TokenStream {
 	domain::render_aggregate(input)
