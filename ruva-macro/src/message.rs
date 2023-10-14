@@ -108,6 +108,10 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 		parse_quote!(
 			trait IsAggregateNotImplemented {
 				const IS_AGGREGATE: bool = false;
+
+				fn get_aggregate<T>(_: impl std::any::Any) -> &'static mut T {
+					unreachable!()
+				}
 			}
 		),
 		parse_quote!(
@@ -121,24 +125,7 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 			#[allow(unused)]
 			impl<T: ::ruva::prelude::Aggregate> IsAggregate<T> {
 				const IS_AGGREGATE: bool = true;
-			}
-		),
-		parse_quote!(
-			trait GetAggregateNotImplemented {
-				fn get_aggregate<T>(_: impl std::any::Any) -> &'static mut T {
-					unreachable!()
-				}
-			}
-		),
-		parse_quote!(
-			impl<T> GetAggregateNotImplemented for T {}
-		),
-		parse_quote!(
-			struct GetAggregate<T>(::core::marker::PhantomData<T>);
-		),
-		parse_quote!(
-			#[allow(unused)]
-			impl<T: ::ruva::prelude::Aggregate> GetAggregate<T> {
+
 				fn get_aggregate(data: &mut T) -> &mut T {
 					data
 				}
@@ -156,7 +143,7 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 			if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
 				stmts.push(parse_quote!(
 					if <IsAggregate<#ty>>::IS_AGGREGATE {
-						self.event_hook(<GetAggregate<#ty>>::get_aggregate(#ident));
+						self.event_hook(<IsAggregate<#ty>>::get_aggregate(#ident));
 					}
 				));
 			}
