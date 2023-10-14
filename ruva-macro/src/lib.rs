@@ -2,7 +2,7 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, ImplItem, ImplItemFn, ItemFn};
+use syn::{DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
@@ -81,6 +81,49 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 	result::render_response_token(&ast)
 }
 
+/// Attribute macro for marking repository methods that collect events
+/// ## Example
+/// ```ignore
+///
+/// #[aggregate]
+/// #[derive(Default, Serialize, Deserialize)]
+/// struct TestAggregate {
+///     #[identifier]
+///     pub age: i64,
+/// }
+///
+/// #[async_trait]
+/// impl TRepository<TExecutor, TestAggregate> for SqlRepository<TestAggregate> {
+///     fn new(executor: Arc<RwLock<TExecutor>>) -> Self {
+///          ...
+///     }
+///
+///     #[event_hook]
+///     async fn update(
+///         &mut self,
+///         aggregate: &mut TestAggregate,
+///     ) -> Result<(), BaseError> {
+///         Ok(())
+///     }
+/// }
+///
+/// async fn test_event_hook() {
+///     '_given: {
+///         let mut repo = SqlRepository::new(TExecutor::new().await);
+///         let mut aggregate = TestAggregate::default().set_age(64);
+///         aggregate.raise_event(SomeEvent { id: aggregate.age }.to_message());
+///
+///         '_when: {
+///             let _ = repo.update(&mut aggregate).await;
+///             let events = repo.get_events();
+///
+///             '_then: {
+///                 assert!(!events.is_empty())
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn event_hook(_: TokenStream, input: TokenStream) -> TokenStream {
 	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);

@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg, ImplItemFn, ItemFn, Meta, Pat, PatIdent, PatType, Path, ReturnType, Signature, Stmt};
+use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg, ItemFn, Meta, Pat, PatIdent, PatType, Path, Type};
 
 use crate::utils::{get_attributes, locate_crate_on_derive_macro};
 
@@ -98,65 +98,60 @@ pub(crate) fn find_identifier(ast: &DeriveInput) -> TokenStream {
 	}
 }
 
-///
-/// #[aggregate]
-/// #[derive(Default, Serialize, Deserialize)]
-/// struct MyAggregate {
-///     #[identifier]
-///     pub age: i64,
-/// }
-///
-/// #[async_trait]
-/// impl TRepository<TExecutor, MyAggregate> for SqlRepository<MyAggregate> {
-///     fn new(executor: Arc<RwLock<TExecutor>>) -> Self {
-///          todo!()
-///     }
-///     async fn get(
-///         &self,
-///         aggregate_id: i64,
-///     ) -> Result<MyAggregate, BaseError> {
-///         todo!()
-///     }
-///
-///     #[event_hook]
-///     async fn update(
-///         &mut self,
-///         aggregate: &mut MyAggregate,
-///     ) -> Result<(), BaseError> {
-///         Ok(())
-///     }
-///     async fn add(
-///         &mut self,
-///         aggregate: &mut MyAggregate,
-///     ) -> Result<i64, BaseError> {
-///         todo!()
-///     }
-///     async fn delete(
-///         &self,
-///         _aggregate_id: i64,
-///     ) -> Result<(), BaseError> {
-///         todo!()
-///     }
-/// }
 pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 	if ast.sig.inputs.is_empty() {
 		panic!("There must be message argument!");
 	};
 
-	let aggregate = &ast.sig.inputs[1];
+	let mut stmts = vec![
+		// Blacket implementation for Type T
+		parse_quote!(
+			trait IsAggregateNotImplemented {
+				const IS_AGGREGATE: bool = false;
 
-	if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate.clone() {
-		if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
-			let mut stmts = vec![parse_quote!(
-				self.event_hook(#ident);
-			)];
-			stmts.extend(std::mem::take(&mut ast.block.stmts));
+				fn get_aggregate<T>(_: impl std::any::Any) -> &'static mut T {
+					unreachable!()
+				}
+			}
+		),
+		parse_quote!(
+			impl<T> IsAggregateNotImplemented for T {}
+		),
+		// Blacket implementation for Type T that implements Aggregate
+		parse_quote!(
+			struct IsAggregate<T>(::core::marker::PhantomData<T>);
+		),
+		parse_quote!(
+			#[allow(unused)]
+			impl<T: ::ruva::prelude::Aggregate> IsAggregate<T> {
+				const IS_AGGREGATE: bool = true;
 
-			ast.block.stmts = stmts;
-			return quote!(
-				#ast
-			);
+				fn get_aggregate(data: &mut T) -> &mut T {
+					data
+				}
+			}
+		),
+	];
+
+	for aggregate in &ast.sig.inputs.iter().skip(1).collect::<Vec<_>>() {
+		if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate {
+			let ty: Box<Type> = match *ty.clone() {
+				Type::Reference(a) => a.elem,
+				ty => Box::new(ty),
+			};
+
+			if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
+				stmts.push(parse_quote!(
+					if <IsAggregate<#ty>>::IS_AGGREGATE {
+						self.event_hook(<IsAggregate<#ty>>::get_aggregate(#ident));
+					}
+				));
+			}
 		}
 	}
-	panic!("Not Processable!")
+	stmts.extend(std::mem::take(&mut ast.block.stmts));
+	ast.block.stmts = stmts;
+	quote!(
+		#ast
+	)
 }
