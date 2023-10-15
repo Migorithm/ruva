@@ -1,4 +1,4 @@
-use syn::{DataEnum, DeriveInput, Field, Ident, Meta, Path, Type, Variant};
+use syn::{parse_quote, DataEnum, DeriveInput, Field, Ident, Meta, Path, Stmt, Type, Variant};
 
 pub(crate) fn locate_crate_on_derive_macro(ast: &DeriveInput) -> Ident {
 	let crates = ast.attrs.iter().find(|x| x.path().is_ident("crates"));
@@ -39,4 +39,38 @@ pub(crate) fn get_attributes(field: &Field) -> Vec<Ident> {
 		attributes.sort();
 		attributes
 	}
+}
+
+pub(crate) fn get_trait_checking_stmts(trait_name: &str) -> Vec<Stmt> {
+	let trait_ident = syn::Ident::new(trait_name, proc_macro2::Span::call_site());
+
+	vec![
+		// Blacket implementation for Type T
+		parse_quote!(
+			trait __IsTraitNotImplemented {
+				const IS_TRAIT: bool = false;
+
+				fn get_data<T>(_: impl std::any::Any) -> &'static mut T {
+					unreachable!()
+				}
+			}
+		),
+		parse_quote!(
+			impl<T> __IsTraitNotImplemented for T {}
+		),
+		// Blacket implementation for Type T that implements Aggregate
+		parse_quote!(
+			struct IsTrait<T>(::core::marker::PhantomData<T>);
+		),
+		parse_quote!(
+			#[allow(unused)]
+			impl<T: #trait_ident> IsTrait<T> {
+				const IS_TRAIT: bool = true;
+
+				fn get_data(data: &mut T) -> &mut T {
+					data
+				}
+			}
+		),
+	]
 }

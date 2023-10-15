@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg, ItemFn, Meta, Pat, PatIdent, PatType, Path, Type};
 
-use crate::utils::{get_attributes, locate_crate_on_derive_macro};
+use crate::utils::{get_attributes, get_trait_checking_stmts, locate_crate_on_derive_macro};
 
 pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<TokenStream>, identifier: TokenStream) -> TokenStream {
 	let name = &ast.ident;
@@ -103,35 +103,7 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 		panic!("There must be message argument!");
 	};
 
-	let mut stmts = vec![
-		// Blacket implementation for Type T
-		parse_quote!(
-			trait IsAggregateNotImplemented {
-				const IS_AGGREGATE: bool = false;
-
-				fn get_aggregate<T>(_: impl std::any::Any) -> &'static mut T {
-					unreachable!()
-				}
-			}
-		),
-		parse_quote!(
-			impl<T> IsAggregateNotImplemented for T {}
-		),
-		// Blacket implementation for Type T that implements Aggregate
-		parse_quote!(
-			struct IsAggregate<T>(::core::marker::PhantomData<T>);
-		),
-		parse_quote!(
-			#[allow(unused)]
-			impl<T: ::ruva::prelude::Aggregate> IsAggregate<T> {
-				const IS_AGGREGATE: bool = true;
-
-				fn get_aggregate(data: &mut T) -> &mut T {
-					data
-				}
-			}
-		),
-	];
+	let mut stmts = get_trait_checking_stmts("Aggregate");
 
 	for aggregate in &ast.sig.inputs.iter().skip(1).collect::<Vec<_>>() {
 		if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate {
@@ -142,8 +114,8 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 
 			if let Pat::Ident(PatIdent { ident, .. }) = *pat.clone() {
 				stmts.push(parse_quote!(
-					if <IsAggregate<#ty>>::IS_AGGREGATE {
-						self.event_hook(<IsAggregate<#ty>>::get_aggregate(#ident));
+					if <IsTrait<#ty>>::IS_TRAIT {
+						self.event_hook(<IsTrait<#ty>>::get_data(#ident));
 					}
 				));
 			}
