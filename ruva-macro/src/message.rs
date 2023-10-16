@@ -103,7 +103,7 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 		panic!("There must be message argument!");
 	};
 
-	let mut stmts = get_trait_checking_stmts("Aggregate");
+	let mut stmts = get_trait_checking_stmts("::ruva::prelude::Aggregate");
 
 	for aggregate in &ast.sig.inputs.iter().skip(1).collect::<Vec<_>>() {
 		if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate {

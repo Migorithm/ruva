@@ -41,8 +41,8 @@ pub(crate) fn get_attributes(field: &Field) -> Vec<Ident> {
 	}
 }
 
-pub(crate) fn get_trait_checking_stmts(trait_name: &str) -> Vec<Stmt> {
-	let trait_ident = syn::Ident::new(trait_name, proc_macro2::Span::call_site());
+pub(crate) fn get_trait_checking_stmts(trait_path: &str) -> Vec<Stmt> {
+	let path = syn::parse::<Path>(trait_path.parse().expect("Unqualified path")).expect("Parsing path for trait failed!");
 
 	vec![
 		// Blacket implementation for Type T
@@ -64,7 +64,7 @@ pub(crate) fn get_trait_checking_stmts(trait_name: &str) -> Vec<Stmt> {
 		),
 		parse_quote!(
 			#[allow(unused)]
-			impl<T: #trait_ident> IsTrait<T> {
+			impl<T: #path> IsTrait<T> {
 				const IS_TRAIT: bool = true;
 
 				fn get_data(data: &mut T) -> &mut T {
