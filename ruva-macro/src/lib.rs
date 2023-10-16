@@ -2,12 +2,12 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, ItemFn};
+use syn::{DeriveInput, ItemFn, Path};
 
 #[macro_use]
 extern crate quote;
-mod domain;
 
+mod domain;
 mod handler;
 mod message;
 mod result;
@@ -184,4 +184,21 @@ pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
 	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
 
 	handler::parse_handler(ast)
+}
+
+#[proc_macro]
+pub fn activator(token: TokenStream) -> TokenStream {
+	//* get env from .env
+	dotenvy::dotenv().ok();
+	//TODO Parsing logic
+	let var = token.to_string();
+
+	//* get env from env
+	let repo_str = std::env::var(&var).unwrap_or_else(|_| panic!("{} not exist!", var));
+	let age = std::env::var("AGE").unwrap_or_else(|_| panic!("{} not exist!", var)).parse::<i32>().unwrap();
+
+	//* locate path and initialize them
+	let repo_path = syn::parse::<Path>(repo_str.parse().expect("Unqualified path")).expect("Parsing path for trait failed!");
+
+	quote!(#repo_path{age:#age}).into()
 }
