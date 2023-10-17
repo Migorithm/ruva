@@ -13,9 +13,9 @@ pub enum BaseError {
 	ServiceError(Box<AnyError>),
 }
 
-pub trait ApplicationResponse: 'static {}
+pub trait ApplicationResponse: 'static + Send + Sync {}
 
-pub trait ApplicationError: 'static + std::fmt::Debug {}
+pub trait ApplicationError: 'static + std::fmt::Debug + Send + Sync {}
 impl ApplicationError for BaseError {}
 
 impl From<BaseError> for Box<dyn ApplicationError> {

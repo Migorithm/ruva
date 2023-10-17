@@ -103,13 +103,24 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 				}
 			}
 		}
-		impl ::std::convert::Into<#crates::ruva_core::responses::BaseError> for #name {
-			fn into(self) -> #crates::ruva_core::responses::BaseError {
-				let data = match self {
+		// impl ::std::convert::Into<#crates::ruva_core::responses::BaseError> for #name {
+		// 	fn into(self) -> #crates::ruva_core::responses::BaseError {
+		// 		let data = match self {
+		// 			#name::#stop_sentinel => #crates::ruva_core::responses::BaseError::StopSentinel,
+		// 			#name::#stop_sentinel_with_event(event) => #crates::ruva_core::responses::BaseError::StopSentinelWithEvent(event),
+		// 			#name::#database_error(error) => #crates::ruva_core::responses::BaseError::DatabaseError(error),
+		// 			_ => #crates::ruva_core::responses::BaseError::ServiceError(::std::boxed::Box::new(self)),
+		// 		};
+		// 		data
+		// 	}
+		// }
+		impl ::std::convert::From<#name> for #crates::ruva_core::responses::BaseError {
+			fn from(value: #name) -> Self {
+				let data = match value {
 					#name::#stop_sentinel => #crates::ruva_core::responses::BaseError::StopSentinel,
 					#name::#stop_sentinel_with_event(event) => #crates::ruva_core::responses::BaseError::StopSentinelWithEvent(event),
 					#name::#database_error(error) => #crates::ruva_core::responses::BaseError::DatabaseError(error),
-					_ => #crates::ruva_core::responses::BaseError::ServiceError(::std::boxed::Box::new(self)),
+					_ => #crates::ruva_core::responses::BaseError::ServiceError(::std::boxed::Box::new(value)),
 				};
 				data
 			}
