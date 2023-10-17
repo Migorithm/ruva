@@ -1,6 +1,6 @@
 [package]
 name = "ruva-core"
-version = "0.1.55"
+version = "0.1.56"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
@@ -20,5 +20,4 @@ futures="0.3"
 macro_rules_attribute="0.2"
 paste="1.0.14"
 tracing="0.1.37"
-async-recursion = "1.0.5"
 hashbrown = "0.14"
