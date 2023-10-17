@@ -82,19 +82,38 @@ where
 	E: Executor,
 	A: Aggregate,
 {
-	fn clone_context(&self) -> AtomicContextManager;
-	fn clone_executor(&self) -> Arc<RwLock<E>>;
+	fn context(&self) -> AtomicContextManager;
+	fn executor(&self) -> Arc<RwLock<E>>;
 
 	/// Creeate UOW object with context manager.
-	async fn new(context: AtomicContextManager) -> Self;
-
 	fn repository(&mut self) -> &mut R;
 
-	async fn begin(&mut self) -> Result<(), BaseError>;
+	async fn begin(&mut self) -> Result<(), BaseError> {
+		self.executor().write().await.begin().await
+	}
 
-	async fn commit<O: IOutBox<E>>(mut self) -> Result<(), BaseError>;
+	async fn commit<O: IOutBox<E>>(&mut self) -> Result<(), BaseError> {
+		//* Hook - sending event
+		let binding = self.context();
+		let event_queue = &mut binding.write().await;
+		let mut outboxes = vec![];
 
-	async fn rollback(self) -> Result<(), BaseError>;
+		for e in self.repository().get_events() {
+			if e.externally_notifiable() {
+				outboxes.push(e.outbox());
+			};
+			if e.internally_notifiable() {
+				event_queue.push_back(e.message_clone());
+			}
+		}
+		O::add(self.executor(), outboxes).await?;
+
+		//* */ commit operation
+		self.executor().write().await.commit().await
+	}
+	async fn rollback(&mut self) -> Result<(), BaseError> {
+		self.executor().write().await.rollback().await
+	}
 }
 
 #[derive(Clone)]
@@ -113,35 +132,8 @@ where
 	/// event local repository for Executor
 	pub repository: R,
 }
-impl<R, E, A> UnitOfWork<R, E, A>
-where
-	R: TRepository<E, A>,
-	E: Executor,
-	A: Aggregate,
-{
-	async fn _commit(&mut self) -> Result<(), BaseError> {
-		let mut executor = self.executor.write().await;
 
-		executor.commit().await
-	}
-	/// commit_hook is invoked right before the calling for commit
-	/// which sorts out and processes outboxes and internally processable events.
-	async fn _commit_hook<O: IOutBox<E>>(&mut self) -> Result<(), BaseError> {
-		let event_queue = &mut self.context.write().await;
-		let mut outboxes = vec![];
-
-		for e in self.repository.get_events() {
-			if e.externally_notifiable() {
-				outboxes.push(e.outbox());
-			};
-			if e.internally_notifiable() {
-				event_queue.push_back(e.message_clone());
-			}
-		}
-		O::add(self.executor.clone(), outboxes).await
-	}
-}
-
+// TODO new, begin sepration
 #[async_trait]
 impl<R, E, A> TUnitOfWork<R, E, A> for UnitOfWork<R, E, A>
 where
@@ -149,15 +141,26 @@ where
 	E: Executor,
 	A: Aggregate,
 {
-	fn clone_context(&self) -> AtomicContextManager {
+	fn context(&self) -> AtomicContextManager {
 		Arc::clone(&self.context)
 	}
-	fn clone_executor(&self) -> Arc<RwLock<E>> {
+	fn executor(&self) -> Arc<RwLock<E>> {
 		self.executor.clone()
 	}
 
-	/// Creeate UOW object with context manager.
-	async fn new(context: AtomicContextManager) -> Self {
+	/// Get local event repository.
+	fn repository(&mut self) -> &mut R {
+		&mut self.repository
+	}
+}
+
+impl<R, E, A> UnitOfWork<R, E, A>
+where
+	R: TRepository<E, A>,
+	E: Executor,
+	A: Aggregate,
+{
+	pub async fn new(context: AtomicContextManager) -> Self {
 		let executor: Arc<RwLock<E>> = E::new().await;
 
 		let mut uow = Self {
@@ -168,33 +171,5 @@ where
 		};
 		uow.begin().await.unwrap();
 		uow
-	}
-
-	/// Get local event repository.
-	fn repository(&mut self) -> &mut R {
-		&mut self.repository
-	}
-
-	/// Begin transaction.
-	async fn begin(&mut self) -> Result<(), BaseError> {
-		let mut executor = self.executor.write().await;
-		executor.begin().await
-	}
-
-	/// Commit transaction.
-	async fn commit<O: IOutBox<E>>(mut self) -> Result<(), BaseError> {
-		// To drop uow itself!
-
-		// run commit hook
-		self._commit_hook::<O>().await?;
-
-		// commit
-		self._commit().await
-	}
-
-	/// Rollback transaction.
-	async fn rollback(self) -> Result<(), BaseError> {
-		let mut executor = self.executor.write().await;
-		executor.rollback().await
 	}
 }
