@@ -79,47 +79,6 @@ macro_rules! init_command_handler {
     };
 }
 
-#[macro_export]
-macro_rules! init_command_handlers {
-    (
-        {$($command:ty:$handler:expr ),* $(,)?}
-	)
-        => {
-
-		pub fn command_handler() -> &'static ::ruva::prelude::TCommandHandler<ServiceResponse, ServiceError> {
-			extern crate self as current_crate;
-			static COMMAND_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TCommandHandler<ServiceResponse, ServiceError>> = std::sync::OnceLock::new();
-
-			COMMAND_HANDLER.get_or_init(||{
-				let mut _map: ::ruva::prelude::TCommandHandler<ServiceResponse,ServiceError>= ruva::prelude::HandlerMapper::new();
-				$(
-					_map.insert(
-						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
-						std::any::TypeId::of::<$command>(),
-
-							Box::new(|c:Box<dyn std::any::Any+Send+Sync>, context_manager: ruva::prelude::AtomicContextManager|-> ::std::pin::Pin<Box<dyn futures::Future<Output = Result<ServiceResponse, ServiceError>> + Send>>
-								{
-								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
-								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
-								let handler = ::ruva::ruva_macro::message_handler2!($handler);
-								let uow = crate::dependencies::uow::<TaskAggregate>(context_manager);
-								Box::pin(handler(
-									*c.downcast::<$command>().unwrap(),
-									uow
-
-
-
-								))
-							},
-					));
-				)*
-				_map
-			})
-
-		}
-    };
-}
-
 #[async_trait]
 pub trait TMessageBus<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::responses::BaseError>>
 where
@@ -237,3 +196,28 @@ macro_rules! init_event_handler {
         })
     }
 }}
+
+#[macro_export]
+macro_rules! init_command_handlers {
+    (
+        {$($command:ident:$handler:tt ),* $(,)?}
+	)
+        => {
+
+		struct Matcher<T>(::std::marker::PhantomData<T>);
+
+
+		extern crate self as current_crate;
+
+		$(
+			impl Matcher<$command> {
+				async fn func(
+					msg: $command,
+					context: AtomicContextManager
+				) -> Result<ServiceResponse,ServiceError>{
+					$handler
+				}
+			}
+		)*
+    };
+}
