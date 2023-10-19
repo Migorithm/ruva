@@ -69,7 +69,6 @@ use tokio::sync::RwLock;
 /// Among examples are RDBMS, Queue, NoSQLs.
 #[async_trait]
 pub trait Executor: Sync + Send {
-	async fn new() -> Arc<RwLock<Self>>;
 	async fn begin(&mut self) -> Result<(), BaseError>;
 	async fn commit(&mut self) -> Result<(), BaseError>;
 	async fn rollback(&mut self) -> Result<(), BaseError>;
@@ -147,9 +146,7 @@ where
 	E: Executor,
 	A: Aggregate,
 {
-	pub async fn new(context: AtomicContextManager) -> Self {
-		let executor: Arc<RwLock<E>> = E::new().await;
-
+	pub async fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>) -> Self {
 		let mut uow = Self {
 			repository: R::new(Arc::clone(&executor)),
 			context,
