@@ -146,15 +146,13 @@ where
 	E: Executor,
 	A: Aggregate,
 {
-	pub async fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>) -> Self {
-		let mut uow = Self {
+	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>) -> Self {
+		Self {
 			repository: R::new(Arc::clone(&executor)),
 			context,
 			executor,
 			_aggregate: PhantomData,
-		};
-		uow.begin().await.unwrap();
-		uow
+		}
 	}
 }
 

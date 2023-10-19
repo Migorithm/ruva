@@ -126,7 +126,7 @@ fn take_injectables(inputs: Vec<(FnArg, bool)>) -> Vec<proc_macro2::TokenStream>
 					Pat::Ident(PatIdent { ident, .. }) => Some(quote!(
 
 
-						let #ident = crate::dependencies::#ident(context.clone()).await;
+						let #ident = crate::dependencies::#ident(context.clone());
 					)),
 					_ => panic!("Not Allowed!"),
 				},
