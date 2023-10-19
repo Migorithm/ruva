@@ -50,23 +50,64 @@ macro_rules! init_command_handler {
 	)
         => {
 
-		pub fn command_handler() -> &'static TCommandHandler<ServiceResponse, ServiceError> {
+		pub fn command_handler() -> &'static ::ruva::prelude::TCommandHandler<ServiceResponse, ServiceError> {
 			extern crate self as current_crate;
-			static COMMAND_HANDLER: ::std::sync::OnceLock<TCommandHandler<ServiceResponse, ServiceError>> = OnceLock::new();
+			static COMMAND_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TCommandHandler<ServiceResponse, ServiceError>> = std::sync::OnceLock::new();
 
 			COMMAND_HANDLER.get_or_init(||{
-				let mut _map: TCommandHandler<ServiceResponse,ServiceError>= ruva::prelude::HandlerMapper::new();
+				let mut _map: ::ruva::prelude::TCommandHandler<ServiceResponse,ServiceError>= ruva::prelude::HandlerMapper::new();
 				$(
 					_map.insert(
 						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
-						TypeId::of::<$command>(),
+						std::any::TypeId::of::<$command>(),
 
-							Box::new(|c:Box<dyn Any+Send+Sync>, context_manager: ruva::prelude::AtomicContextManager|->Future<ServiceResponse,ServiceError> {
+							Box::new(|c:Box<dyn std::any::Any+Send+Sync>, context_manager: ruva::prelude::AtomicContextManager|->::std::pin::Pin<Box<dyn futures::Future<Output = Result<ServiceResponse, ServiceError>> + Send>>{
 								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								Box::pin($handler(
 									*c.downcast::<$command>().unwrap(),
 									context_manager,
+
+								))
+							},
+					));
+				)*
+				_map
+			})
+
+		}
+    };
+}
+
+#[macro_export]
+macro_rules! init_command_handlers {
+    (
+        {$($command:ty:$handler:expr ),* $(,)?}
+	)
+        => {
+
+		pub fn command_handler() -> &'static ::ruva::prelude::TCommandHandler<ServiceResponse, ServiceError> {
+			extern crate self as current_crate;
+			static COMMAND_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TCommandHandler<ServiceResponse, ServiceError>> = std::sync::OnceLock::new();
+
+			COMMAND_HANDLER.get_or_init(||{
+				let mut _map: ::ruva::prelude::TCommandHandler<ServiceResponse,ServiceError>= ruva::prelude::HandlerMapper::new();
+				$(
+					_map.insert(
+						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
+						std::any::TypeId::of::<$command>(),
+
+							Box::new(|c:Box<dyn std::any::Any+Send+Sync>, context_manager: ruva::prelude::AtomicContextManager|-> ::std::pin::Pin<Box<dyn futures::Future<Output = Result<ServiceResponse, ServiceError>> + Send>>
+								{
+								// * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
+								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
+								let handler = ::ruva::ruva_macro::message_handler2!($handler);
+								let uow = crate::dependencies::uow::<TaskAggregate>(context_manager);
+								Box::pin(handler(
+									*c.downcast::<$command>().unwrap(),
+									uow
+
+
 
 								))
 							},
@@ -168,18 +209,18 @@ macro_rules! init_event_handler {
     (
         {$($event:ty: [$($handler:expr),* $(,)? ]),* $(,)?}
     ) =>{
-		pub fn event_handler() -> &'static TEventHandler<ServiceResponse, ServiceError>  {
+		pub fn event_handler() -> &'static ::ruva::prelude::TEventHandler<ServiceResponse, ServiceError>  {
 			extern crate self as current_crate;
-			static EVENT_HANDLER: ::std::sync::OnceLock<TEventHandler<ServiceResponse, ServiceError>> = OnceLock::new();
+			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TEventHandler<ServiceResponse, ServiceError>> = std::sync::OnceLock::new();
 			EVENT_HANDLER.get_or_init(||{
-            let mut _map : TEventHandler<ServiceResponse, ServiceError> = ruva::prelude::HandlerMapper::new();
+            let mut _map : ::ruva::prelude::TEventHandler<ServiceResponse, ServiceError> = ::ruva::prelude::HandlerMapper::new();
             $(
                 _map.insert(
                     stringify!($event).into(),
                     vec![
                         $(
                             Box::new(
-                                |e:Box<dyn Message>, context_manager:ruva::prelude::AtomicContextManager| -> Future<ServiceResponse,ServiceError>{
+                                |e:Box<dyn Message>, context_manager:ruva::prelude::AtomicContextManager| -> std::pin::Pin<Box<dyn futures::Future<Output = Result<ServiceResponse, ServiceError>> + Send>>{
                                     Box::pin($handler(
                                         // * Convert event so event handler accepts not Box<dyn Message> but `event_happend` type of message.
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name

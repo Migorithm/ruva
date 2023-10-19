@@ -2,7 +2,7 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, ItemFn};
+use syn::{DeriveInput, Expr, ItemFn, Path};
 
 #[macro_use]
 extern crate quote;
@@ -109,7 +109,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 ///
 /// async fn test_event_hook() {
 ///     '_given: {
-///         let mut repo = SqlRepository::new(TExecutor::new().await);
+///         let mut repo = SqlRepository::new(TExecutor::new());
 ///         let mut aggregate = TestAggregate::default().set_age(64);
 ///         aggregate.raise_event(SomeEvent { id: aggregate.age }.to_message());
 ///
@@ -184,4 +184,11 @@ pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
 	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
 
 	handler::parse_handler(ast)
+}
+
+#[proc_macro]
+pub fn message_handler2(input: TokenStream) -> TokenStream {
+	let ast: Path = syn::parse_macro_input!(input as Path);
+
+	quote!(#ast).into()
 }

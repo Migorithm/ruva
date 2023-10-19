@@ -69,7 +69,6 @@ use tokio::sync::RwLock;
 /// Among examples are RDBMS, Queue, NoSQLs.
 #[async_trait]
 pub trait Executor: Sync + Send {
-	async fn new() -> Arc<RwLock<Self>>;
 	async fn begin(&mut self) -> Result<(), BaseError>;
 	async fn commit(&mut self) -> Result<(), BaseError>;
 	async fn rollback(&mut self) -> Result<(), BaseError>;
@@ -86,13 +85,12 @@ where
 	fn clone_executor(&self) -> Arc<RwLock<E>>;
 
 	/// Creeate UOW object with context manager.
-	async fn new(context: AtomicContextManager) -> Self;
 
 	fn repository(&mut self) -> &mut R;
 
 	async fn begin(&mut self) -> Result<(), BaseError>;
 
-	async fn commit<O: IOutBox<E>>(mut self) -> Result<(), BaseError>;
+	async fn commit<O: IOutBox<E>>(&mut self) -> Result<(), BaseError>;
 
 	async fn rollback(self) -> Result<(), BaseError>;
 }
@@ -142,6 +140,24 @@ where
 	}
 }
 
+impl<R, E, A> UnitOfWork<R, E, A>
+where
+	R: TRepository<E, A>,
+	E: Executor,
+	A: Aggregate,
+{
+	pub async fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>) -> Self {
+		let mut uow = Self {
+			repository: R::new(Arc::clone(&executor)),
+			context,
+			executor,
+			_aggregate: PhantomData,
+		};
+		uow.begin().await.unwrap();
+		uow
+	}
+}
+
 #[async_trait]
 impl<R, E, A> TUnitOfWork<R, E, A> for UnitOfWork<R, E, A>
 where
@@ -157,18 +173,6 @@ where
 	}
 
 	/// Creeate UOW object with context manager.
-	async fn new(context: AtomicContextManager) -> Self {
-		let executor: Arc<RwLock<E>> = E::new().await;
-
-		let mut uow = Self {
-			repository: R::new(Arc::clone(&executor)),
-			context,
-			executor,
-			_aggregate: PhantomData,
-		};
-		uow.begin().await.unwrap();
-		uow
-	}
 
 	/// Get local event repository.
 	fn repository(&mut self) -> &mut R {
@@ -182,7 +186,7 @@ where
 	}
 
 	/// Commit transaction.
-	async fn commit<O: IOutBox<E>>(mut self) -> Result<(), BaseError> {
+	async fn commit<O: IOutBox<E>>(&mut self) -> Result<(), BaseError> {
 		// To drop uow itself!
 
 		// run commit hook

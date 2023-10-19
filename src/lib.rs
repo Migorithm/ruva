@@ -215,7 +215,7 @@ pub mod prelude {
 	pub use ruva_core::message::{Aggregate, Command, Message, MessageMetadata};
 	pub use ruva_core::prelude::*;
 
-	pub use ruva_macro::{aggregate, entity, event_hook, message_handler, ApplicationError, ApplicationResponse, Command, Message};
+	pub use ruva_macro::{aggregate, entity, event_hook, message_handler, message_handler2, ApplicationError, ApplicationResponse, Command, Message};
 }
 
 #[cfg(test)]
