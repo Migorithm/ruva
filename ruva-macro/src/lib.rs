@@ -3,7 +3,7 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 
 use proc_macro::TokenStream;
 
-use syn::{DeriveInput, ImplItemFn, ItemFn};
+use syn::{DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
@@ -178,18 +178,4 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 		impl Command for #name{}
 	)
 	.into()
-}
-
-#[proc_macro_attribute]
-pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
-	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
-
-	handler::parse_handler(ast)
-}
-
-#[proc_macro_attribute]
-pub fn message_handler2(_: TokenStream, input: TokenStream) -> TokenStream {
-	let ast: ImplItemFn = syn::parse_macro_input!(input as ImplItemFn);
-
-	handler::parse_event_handler(ast)
 }
