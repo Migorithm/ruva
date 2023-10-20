@@ -52,7 +52,7 @@ impl OutBox {
 }
 
 #[async_trait]
-pub trait IOutBox<E: Executor> {
+pub trait IOutBox<E: Executor>: Send + Sync {
 	async fn add(executor: Arc<RwLock<E>>, outboxes: Vec<OutBox>) -> Result<(), BaseError>;
 	async fn get() -> Result<Vec<Box<Self>>, BaseError>;
 	async fn update(&self, executor: Arc<RwLock<E>>) -> Result<(), BaseError>;
