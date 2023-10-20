@@ -1,6 +1,8 @@
 use proc_macro::TokenStream;
-use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature};
 
+use syn::{punctuated::Punctuated, token::Comma, FnArg, Ident, ImplItemFn, ItemFn, Pat, PatIdent, PatType, ReturnType, Signature};
+
+#[allow(unused)]
 pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	const OUTPUT_TYPE_NOT_VALID: &str = "#[handler] fn must have valid output type";
 	let ItemFn {
@@ -26,7 +28,7 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	let message = inputs.first().unwrap();
 
 	//TODO Restrict message to type that implements either Command or Message OR impl Trait
-	let messsage_type = match message.clone() {
+	let message_type = match message.clone() {
 		FnArg::Typed(PatType { ty, .. }) => *ty,
 		_ => panic!(""),
 	};
@@ -47,7 +49,7 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 
 
 		// ::ruva::static_assertions::assert_impl_any!(
-		// 	#messsage_type:
+		// 	#message_type:
 		// 	::ruva::prelude::Message,
 		// 	::ruva::prelude::Command
 		// );
@@ -68,6 +70,7 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	.into()
 }
 
+#[allow(unused)]
 fn get_puntuated_idents(inputs: Punctuated<FnArg, Comma>) -> Punctuated<Ident, Comma> {
 	inputs
 		.into_iter()
@@ -84,6 +87,7 @@ fn get_puntuated_idents(inputs: Punctuated<FnArg, Comma>) -> Punctuated<Ident, C
 		.collect()
 }
 
+#[allow(unused)]
 fn flag_context(args: &mut Punctuated<FnArg, Comma>) -> Vec<(FnArg, bool)> {
 	let mut container = vec![];
 
@@ -125,7 +129,7 @@ fn take_injectables(inputs: Vec<(FnArg, bool)>) -> Vec<proc_macro2::TokenStream>
 					Pat::Ident(PatIdent { ident, .. }) => Some(quote!(
 
 
-						let #ident = crate::dependencies::#ident(context.clone()).await;
+						let #ident = crate::dependencies::#ident(context.clone());
 					)),
 					_ => panic!("Not Allowed!"),
 				},
@@ -133,4 +137,23 @@ fn take_injectables(inputs: Vec<(FnArg, bool)>) -> Vec<proc_macro2::TokenStream>
 			}
 		})
 		.collect::<Vec<_>>()
+}
+
+#[allow(unused)]
+pub fn parse_event_handler(ast: ImplItemFn) -> TokenStream {
+	const PREFIX: &str = "__";
+	let handler_name = syn::Ident::new((PREFIX.to_string() + ast.sig.ident.to_string().as_str()).as_str(), proc_macro2::Span::call_site());
+	let idents = get_puntuated_idents(ast.sig.inputs.clone()).iter().map(|i| i.to_string()).collect::<Vec<_>>().join(",");
+
+	let const_declaration = quote!(
+		pub const #handler_name: &str = #idents;
+	);
+
+	quote!(
+		#ast
+		#const_declaration
+
+
+	)
+	.into()
 }

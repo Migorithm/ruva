@@ -2,7 +2,8 @@ use message::{find_identifier, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, Expr, ItemFn, Path};
+
+use syn::{DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
@@ -177,18 +178,4 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 		impl Command for #name{}
 	)
 	.into()
-}
-
-#[proc_macro_attribute]
-pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
-	let ast: ItemFn = syn::parse_macro_input!(input as ItemFn);
-
-	handler::parse_handler(ast)
-}
-
-#[proc_macro]
-pub fn message_handler2(input: TokenStream) -> TokenStream {
-	let ast: Path = syn::parse_macro_input!(input as Path);
-
-	quote!(#ast).into()
 }
