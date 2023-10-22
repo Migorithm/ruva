@@ -58,7 +58,7 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{Aggregate, AtomicContextManager, BaseError, OutBox},
+	prelude::{Aggregate, AtomicContextManager, BaseError},
 	repository::TRepository,
 };
 use async_trait::async_trait;
@@ -82,7 +82,6 @@ where
 	A: Aggregate,
 {
 	fn clone_context(&self) -> AtomicContextManager;
-	fn clone_executor(&self) -> Arc<RwLock<E>>;
 
 	/// Creeate UOW object with context manager.
 
@@ -120,9 +119,9 @@ where
 	A: Aggregate,
 	O: IOutBox<E>,
 {
-	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>) -> Self {
+	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>, repository: R) -> Self {
 		Self {
-			repository: R::new(Arc::clone(&executor)),
+			repository,
 			context,
 			executor,
 			_aggregate: PhantomData,
@@ -162,9 +161,6 @@ where
 {
 	fn clone_context(&self) -> AtomicContextManager {
 		Arc::clone(&self.context)
-	}
-	fn clone_executor(&self) -> Arc<RwLock<E>> {
-		self.executor.clone()
 	}
 
 	/// Creeate UOW object with context manager.
