@@ -219,33 +219,37 @@ pub mod prelude {
 }
 
 #[cfg(test)]
-mod application_error_derive_test {
-	use std::fmt::Display;
+mod test {
 
-	use crate as ruva;
-	use ruva_core::message::Message;
-	use ruva_core::responses::{AnyError, BaseError};
-	use ruva_macro::ApplicationError;
+	#[test]
+	fn application_error_derive_test() {
+		use std::fmt::Display;
 
-	#[derive(Debug, ApplicationError)]
-	#[crates(ruva)]
-	enum Err {
-		#[stop_sentinel]
-		Items,
-		#[stop_sentinel_with_event]
-		StopSentinelWithEvent(Box<dyn Message>),
-		#[database_error]
-		DatabaseError(Box<AnyError>),
-		BaseError(BaseError),
-	}
+		use crate as ruva;
+		use ruva_core::message::Message;
+		use ruva_core::responses::{AnyError, BaseError};
+		use ruva_macro::ApplicationError;
 
-	impl Display for Err {
-		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-			match self {
-				Self::Items => write!(f, "items"),
-				Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
-				Self::DatabaseError(err) => write!(f, "{:?}", err),
-				Self::BaseError(err) => write!(f, "{:?}", err),
+		#[derive(Debug, ApplicationError)]
+		#[crates(ruva)]
+		enum Err {
+			#[stop_sentinel]
+			Items,
+			#[stop_sentinel_with_event]
+			StopSentinelWithEvent(Box<dyn Message>),
+			#[database_error]
+			DatabaseError(Box<AnyError>),
+			BaseError(BaseError),
+		}
+
+		impl Display for Err {
+			fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+				match self {
+					Self::Items => write!(f, "items"),
+					Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
+					Self::DatabaseError(err) => write!(f, "{:?}", err),
+					Self::BaseError(err) => write!(f, "{:?}", err),
+				}
 			}
 		}
 	}

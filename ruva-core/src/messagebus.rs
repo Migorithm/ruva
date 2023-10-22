@@ -129,21 +129,28 @@ where
 #[macro_export]
 macro_rules! init_event_handler {
     (
-        {$($event:ty: [$($handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]),* $(,)?}
+		R: $response:ty,
+		E: $error:ty $(,)?
+        {
+			$(
+				$event:ty: [$($handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]
+			),*
+			$(,)?
+		}
     ) =>{
-		pub fn event_handler() -> &'static ::ruva::prelude::TEventHandler<ServiceResponse, ServiceError>  {
+		pub fn event_handler() -> &'static ::ruva::prelude::TEventHandler<$response, $error>  {
 			extern crate self as current_crate;
-			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TEventHandler<ServiceResponse, ServiceError>> = std::sync::OnceLock::new();
+			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TEventHandler<$response, $error>> = std::sync::OnceLock::new();
 			EVENT_HANDLER.get_or_init(||{
 			use current_crate::dependencies;
-            let mut _map : ::ruva::prelude::TEventHandler<ServiceResponse, ServiceError> = ::ruva::prelude::HandlerMapper::new();
+            let mut _map : ::ruva::prelude::TEventHandler<$response, $error> = ::ruva::prelude::HandlerMapper::new();
             $(
                 _map.insert(
                     stringify!($event).into(),
                     vec![
                         $(
                             Box::new(
-                                |e:Box<dyn Message>, context_manager: ::ruva::prelude::AtomicContextManager| -> std::pin::Pin<Box<dyn futures::Future<Output = Result<ServiceResponse, ServiceError>> + Send>>{
+                                |e:Box<dyn Message>, context_manager: ::ruva::prelude::AtomicContextManager| -> std::pin::Pin<Box<dyn futures::Future<Output = Result<$response, $error>> + Send>>{
 
 
 									#[allow(unused)]
@@ -172,7 +179,27 @@ macro_rules! init_event_handler {
             _map
         })
     }
-}}
+};
+	(
+		E: $error:ty,
+		R: $response:ty $(,)?
+		{
+			$(
+				$event:ty: [$($handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]
+			),*
+			$(,)?
+		}
+	) =>{
+		init_event_handler!(
+			R:$response,E:$error,
+			{
+				$(
+					$event: [$($handler $(=>($($injectable $(( $($arg),* ))? ),*))?),* ]
+				),*
+			}
+		)
+	}
+}
 
 /// init_command_handler creating macro
 /// Note that crate must have `crate::dependencies` must exist
