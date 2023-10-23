@@ -94,8 +94,8 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[async_trait]
-/// impl TRepository<TExecutor, TestAggregate> for SqlRepository<TestAggregate> {
-///     fn new(executor: Arc<RwLock<TExecutor>>) -> Self {
+/// impl TRepository<SQLExecutor, TestAggregate> for SqlRepository<TestAggregate> {
+///     fn new(executor: Arc<RwLock<SQLExecutor>>) -> Self {
 ///          ...
 ///     }
 ///
@@ -110,7 +110,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 ///
 /// async fn test_event_hook() {
 ///     '_given: {
-///         let mut repo = SqlRepository::new(TExecutor::new());
+///         let mut repo = SqlRepository::new(SQLExecutor::new());
 ///         let mut aggregate = TestAggregate::default().set_age(64);
 ///         aggregate.raise_event(SomeEvent { id: aggregate.age }.to_message());
 ///

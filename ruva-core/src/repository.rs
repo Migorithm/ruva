@@ -52,3 +52,8 @@ macro_rules! prepare_bulk_insert {
         )
     }
 }
+
+#[async_trait]
+pub trait TQueueProducer {
+	async fn add(&self, payload: Box<dyn Message>) -> Result<(), BaseError>;
+}

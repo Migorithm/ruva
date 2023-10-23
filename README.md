@@ -113,7 +113,7 @@ pub async fn make_order(
     cmd: MakeOrder,
     context: AtomicContextManager,
 ) -> Result<ServiceResponse, ServiceError> {
-    let mut uow = UnitOfWork::<Repository<OrderAggregate>, TExecutor>::new(context).await;
+    let mut uow = UnitOfWork::<Repository<OrderAggregate>, SQLExecutor>::new(context).await;
 
     let mut order_aggregate = OrderAggregate::new(cmd);
     uow.repository().add(&mut task_aggregate).await?;
@@ -133,7 +133,7 @@ pub async fn make_order(
     context: AtomicContextManager,
     payment_gateway_caller: Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> //injected dependency
 ) -> Result<ServiceResponse, ServiceError> {
-    let mut uow = UnitOfWork::<Repository<OrderAggregate>, TExecutor>::new(context).await;
+    let mut uow = UnitOfWork::<Repository<OrderAggregate>, SQLExecutor>::new(context).await;
 
     let mut order_aggregate = OrderAggregate::new(cmd,payment_gateway_caller);
     uow.repository().add(&mut task_aggregate).await?;
