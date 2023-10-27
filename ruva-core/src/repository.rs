@@ -55,5 +55,6 @@ macro_rules! prepare_bulk_insert {
 
 #[async_trait]
 pub trait TQueueProducer {
-	async fn add(&self, payload: Box<dyn Message>) -> Result<(), BaseError>;
+	type HeaderMeta;
+	async fn add(&self, header_meta: Self::HeaderMeta, payload: Box<dyn Message>) -> Result<(), BaseError>;
 }
