@@ -21,25 +21,34 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 			f.attrs.clear();
 		});
 
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap().to_string() == "is_existing") {
+			panic!("is_existing field not injectable! Perhaps it's duplicated?");
+		}
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap().to_string() == "events") {
+			panic!("events field not injectable! Perhaps it's duplicated?");
+		}
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap().to_string() == "version") {
+			panic!("version field not Injectable! Perhaps it's duplicated?");
+		}
+
 		fields.named.extend([
 			syn::Field::parse_named
 				.parse2(quote! {
 				   #[serde(skip_deserializing, skip_serializing)]
 				   pub(crate) is_existing: bool
 				})
-				.expect("is_existing field not injectable! Perhaps it's duplicated?"),
+				.unwrap(),
 			syn::Field::parse_named
 				.parse2(quote! {
 				   #[serde(skip_deserializing, skip_serializing)]
 				   pub(crate) events: ::std::collections::VecDeque<::std::boxed::Box<dyn #crates::prelude::Message>>
-
 				})
-				.expect("events field not injectable! Perhaps it's duplicated?"),
+				.unwrap(),
 			syn::Field::parse_named
 				.parse2(quote! {
 				   pub(crate) version: i32
 				})
-				.expect("version field not Injectable! Perhaps it's duplicated?"),
+				.unwrap(),
 		]);
 	} else {
 		panic!("[entity] can be attached only to struct")
