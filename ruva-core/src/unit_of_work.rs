@@ -75,23 +75,23 @@ pub trait Executor: Sync + Send {
 }
 
 #[async_trait]
-pub trait TUnitOfWork<R, E, A>: Send + Sync
-where
-	R: TRepository<E, A>,
-	E: Executor,
-	A: Aggregate,
-{
-	fn clone_context(&self) -> AtomicContextManager;
-
+pub trait TUnitOfWork: Send + Sync {
 	/// Creeate UOW object with context manager.
-
-	fn repository(&mut self) -> &mut R;
 
 	async fn begin(&mut self) -> Result<(), BaseError>;
 
 	async fn commit(&mut self) -> Result<(), BaseError>;
 
 	async fn rollback(self) -> Result<(), BaseError>;
+}
+
+pub trait TRepositoyCallable<R, E, A>
+where
+	R: TRepository<E, A>,
+	E: Executor,
+	A: Aggregate,
+{
+	fn repository(&mut self) -> &mut R;
 }
 
 #[derive(Clone)]
@@ -152,24 +152,13 @@ where
 }
 
 #[async_trait]
-impl<R, E, A, O> TUnitOfWork<R, E, A> for UnitOfWork<R, E, A, O>
+impl<R, E, A, O> TUnitOfWork for UnitOfWork<R, E, A, O>
 where
 	R: TRepository<E, A>,
 	E: Executor,
 	A: Aggregate,
 	O: IOutBox<E> + Send + Sync,
 {
-	fn clone_context(&self) -> AtomicContextManager {
-		Arc::clone(&self.context)
-	}
-
-	/// Creeate UOW object with context manager.
-
-	/// Get local event repository.
-	fn repository(&mut self) -> &mut R {
-		&mut self.repository
-	}
-
 	/// Begin transaction.
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
@@ -191,5 +180,33 @@ where
 	async fn rollback(self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 		executor.rollback().await
+	}
+}
+
+impl<R, E, A, O> TRepositoyCallable<R, E, A> for UnitOfWork<R, E, A, O>
+where
+	R: TRepository<E, A>,
+	E: Executor,
+	A: Aggregate,
+	O: IOutBox<E> + Send + Sync,
+{
+	fn repository(&mut self) -> &mut R {
+		&mut self.repository
+	}
+}
+
+pub trait TCloneContext {
+	fn clone_context(&self) -> AtomicContextManager;
+}
+
+impl<R, E, A, O> TCloneContext for UnitOfWork<R, E, A, O>
+where
+	R: TRepository<E, A>,
+	E: Executor,
+	A: Aggregate,
+	O: IOutBox<E> + Send + Sync,
+{
+	fn clone_context(&self) -> AtomicContextManager {
+		Arc::clone(&self.context)
 	}
 }
