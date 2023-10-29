@@ -21,13 +21,13 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 			f.attrs.clear();
 		});
 
-		if fields.named.iter().any(|x| x.ident.as_ref().unwrap().to_string() == "is_existing") {
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "is_existing") {
 			panic!("is_existing field not injectable! Perhaps it's duplicated?");
 		}
-		if fields.named.iter().any(|x| x.ident.as_ref().unwrap().to_string() == "events") {
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "events") {
 			panic!("events field not injectable! Perhaps it's duplicated?");
 		}
-		if fields.named.iter().any(|x| x.ident.as_ref().unwrap().to_string() == "version") {
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "version") {
 			panic!("version field not Injectable! Perhaps it's duplicated?");
 		}
 
