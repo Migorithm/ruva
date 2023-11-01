@@ -58,7 +58,7 @@
 
 use crate::{
 	outbox::IOutBox,
-	prelude::{Aggregate, AtomicContextManager, BaseError},
+	prelude::{AtomicContextManager, BaseError},
 	repository::TRepository,
 };
 use async_trait::async_trait;
@@ -85,38 +85,35 @@ pub trait TUnitOfWork: Send + Sync {
 	async fn rollback(self) -> Result<(), BaseError>;
 }
 
-pub trait TRepositoyCallable<R, E, A>
+pub trait TRepositoyCallable<R>
 where
-	R: TRepository<A>,
-	E: Executor,
-	A: Aggregate,
+	R: TRepository,
 {
 	fn repository(&mut self) -> &mut R;
 }
 
 #[derive(Clone)]
-pub struct UnitOfWork<R, E, A, O>
+pub struct UnitOfWork<R, E, O>
 where
-	R: TRepository<A>,
+	R: TRepository,
 	E: Executor,
-	A: Aggregate,
+
 	O: IOutBox<E>,
 {
 	/// real transaction executor
 	executor: Arc<RwLock<E>>,
 	/// global event event_queue
 	context: AtomicContextManager,
-	_aggregate: PhantomData<A>,
+
 	_outbox: PhantomData<O>,
 
 	/// event local repository for Executor
 	pub repository: R,
 }
-impl<R, E, A, O> UnitOfWork<R, E, A, O>
+impl<R, E, O> UnitOfWork<R, E, O>
 where
-	R: TRepository<A>,
+	R: TRepository,
 	E: Executor,
-	A: Aggregate,
 	O: IOutBox<E>,
 {
 	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>, repository: R) -> Self {
@@ -124,7 +121,7 @@ where
 			repository,
 			context,
 			executor,
-			_aggregate: PhantomData,
+
 			_outbox: PhantomData,
 		}
 	}
@@ -152,11 +149,11 @@ where
 }
 
 #[async_trait]
-impl<R, E, A, O> TUnitOfWork for UnitOfWork<R, E, A, O>
+impl<R, E, O> TUnitOfWork for UnitOfWork<R, E, O>
 where
-	R: TRepository<A>,
+	R: TRepository,
 	E: Executor,
-	A: Aggregate,
+
 	O: IOutBox<E> + Send + Sync,
 {
 	/// Begin transaction.
@@ -183,11 +180,11 @@ where
 	}
 }
 
-impl<R, E, A, O> TRepositoyCallable<R, E, A> for UnitOfWork<R, E, A, O>
+impl<R, E, O> TRepositoyCallable<R> for UnitOfWork<R, E, O>
 where
-	R: TRepository<A>,
+	R: TRepository,
 	E: Executor,
-	A: Aggregate,
+
 	O: IOutBox<E> + Send + Sync,
 {
 	fn repository(&mut self) -> &mut R {
@@ -199,11 +196,10 @@ pub trait TCloneContext {
 	fn clone_context(&self) -> AtomicContextManager;
 }
 
-impl<R, E, A, O> TCloneContext for UnitOfWork<R, E, A, O>
+impl<R, E, O> TCloneContext for UnitOfWork<R, E, O>
 where
-	R: TRepository<A>,
+	R: TRepository,
 	E: Executor,
-	A: Aggregate,
 	O: IOutBox<E> + Send + Sync,
 {
 	fn clone_context(&self) -> AtomicContextManager {
