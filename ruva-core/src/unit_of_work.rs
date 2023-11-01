@@ -30,7 +30,7 @@
 //! uow.repository().update(&mut aggregate).await?;
 //!
 //! // Commit transaction
-//! uow.commit::<ServiceOutBox>().await?;
+//! uow.commit().await?;
 //! ```
 //!
 //!
@@ -57,12 +57,11 @@
 //! ```
 
 use crate::{
-	outbox::IOutBox,
 	prelude::{AtomicContextManager, BaseError},
 	repository::TRepository,
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Executor is abstract implementation of whatever storage layer you use.
@@ -93,37 +92,26 @@ where
 }
 
 #[derive(Clone)]
-pub struct UnitOfWork<R, E, O>
+pub struct UnitOfWork<R, E>
 where
 	R: TRepository,
 	E: Executor,
-
-	O: IOutBox<E>,
 {
 	/// real transaction executor
 	executor: Arc<RwLock<E>>,
 	/// global event event_queue
 	context: AtomicContextManager,
 
-	_outbox: PhantomData<O>,
-
 	/// event local repository for Executor
 	pub repository: R,
 }
-impl<R, E, O> UnitOfWork<R, E, O>
+impl<R, E> UnitOfWork<R, E>
 where
 	R: TRepository,
 	E: Executor,
-	O: IOutBox<E>,
 {
 	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>, repository: R) -> Self {
-		Self {
-			repository,
-			context,
-			executor,
-
-			_outbox: PhantomData,
-		}
+		Self { repository, context, executor }
 	}
 	async fn _commit(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
@@ -133,7 +121,8 @@ where
 	/// commit_hook is invoked right before the calling for commit
 	/// which sorts out and processes outboxes and internally processable events.
 	async fn _commit_hook(&mut self) -> Result<(), BaseError> {
-		let event_queue = &mut self.context.write().await;
+		let cxt = self.clone_context();
+		let event_queue = &mut cxt.write().await;
 		let mut outboxes = vec![];
 
 		for e in self.repository.get_events() {
@@ -144,17 +133,18 @@ where
 				event_queue.push_back(e.message_clone());
 			}
 		}
-		O::add(self.executor.clone(), outboxes).await
+		if !outboxes.is_empty() {
+			self.repository().save_outbox(outboxes).await;
+		}
+		Ok(())
 	}
 }
 
 #[async_trait]
-impl<R, E, O> TUnitOfWork for UnitOfWork<R, E, O>
+impl<R, E> TUnitOfWork for UnitOfWork<R, E>
 where
 	R: TRepository,
 	E: Executor,
-
-	O: IOutBox<E> + Send + Sync,
 {
 	/// Begin transaction.
 	async fn begin(&mut self) -> Result<(), BaseError> {
@@ -180,12 +170,10 @@ where
 	}
 }
 
-impl<R, E, O> TRepositoyCallable<R> for UnitOfWork<R, E, O>
+impl<R, E> TRepositoyCallable<R> for UnitOfWork<R, E>
 where
 	R: TRepository,
 	E: Executor,
-
-	O: IOutBox<E> + Send + Sync,
 {
 	fn repository(&mut self) -> &mut R {
 		&mut self.repository
@@ -196,11 +184,10 @@ pub trait TCloneContext {
 	fn clone_context(&self) -> AtomicContextManager;
 }
 
-impl<R, E, O> TCloneContext for UnitOfWork<R, E, O>
+impl<R, E> TCloneContext for UnitOfWork<R, E>
 where
 	R: TRepository,
 	E: Executor,
-	O: IOutBox<E> + Send + Sync,
 {
 	fn clone_context(&self) -> AtomicContextManager {
 		Arc::clone(&self.context)
