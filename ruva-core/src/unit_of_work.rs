@@ -87,7 +87,7 @@ pub trait TUnitOfWork: Send + Sync {
 
 pub trait TRepositoyCallable<R, E, A>
 where
-	R: TRepository<E, A>,
+	R: TRepository<A>,
 	E: Executor,
 	A: Aggregate,
 {
@@ -97,7 +97,7 @@ where
 #[derive(Clone)]
 pub struct UnitOfWork<R, E, A, O>
 where
-	R: TRepository<E, A>,
+	R: TRepository<A>,
 	E: Executor,
 	A: Aggregate,
 	O: IOutBox<E>,
@@ -114,7 +114,7 @@ where
 }
 impl<R, E, A, O> UnitOfWork<R, E, A, O>
 where
-	R: TRepository<E, A>,
+	R: TRepository<A>,
 	E: Executor,
 	A: Aggregate,
 	O: IOutBox<E>,
@@ -154,7 +154,7 @@ where
 #[async_trait]
 impl<R, E, A, O> TUnitOfWork for UnitOfWork<R, E, A, O>
 where
-	R: TRepository<E, A>,
+	R: TRepository<A>,
 	E: Executor,
 	A: Aggregate,
 	O: IOutBox<E> + Send + Sync,
@@ -185,7 +185,7 @@ where
 
 impl<R, E, A, O> TRepositoyCallable<R, E, A> for UnitOfWork<R, E, A, O>
 where
-	R: TRepository<E, A>,
+	R: TRepository<A>,
 	E: Executor,
 	A: Aggregate,
 	O: IOutBox<E> + Send + Sync,
@@ -201,7 +201,7 @@ pub trait TCloneContext {
 
 impl<R, E, A, O> TCloneContext for UnitOfWork<R, E, A, O>
 where
-	R: TRepository<E, A>,
+	R: TRepository<A>,
 	E: Executor,
 	A: Aggregate,
 	O: IOutBox<E> + Send + Sync,
