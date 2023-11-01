@@ -84,6 +84,10 @@ pub trait TUnitOfWork: Send + Sync {
 	async fn rollback(self) -> Result<(), BaseError>;
 }
 
+pub trait TClone {
+	fn clone(&self) -> Self;
+}
+
 pub trait TRepositoyCallable<R>
 where
 	R: TRepository,
@@ -191,5 +195,19 @@ where
 {
 	fn clone_context(&self) -> AtomicContextManager {
 		Arc::clone(&self.context)
+	}
+}
+
+impl<R, E> TClone for UnitOfWork<R, E>
+where
+	R: TRepository + TClone,
+	E: Executor,
+{
+	fn clone(&self) -> Self {
+		Self {
+			executor: self.executor.clone(),
+			context: self.context.clone(),
+			repository: self.repository.clone(),
+		}
 	}
 }
