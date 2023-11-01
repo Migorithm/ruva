@@ -94,7 +94,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[async_trait]
-/// impl TRepository<SQLExecutor, TestAggregate> for SqlRepository<TestAggregate> {
+/// impl TRepository< TestAggregate> for SqlRepository<TestAggregate> {
 ///     fn new(executor: Arc<RwLock<SQLExecutor>>) -> Self {
 ///          ...
 ///     }
