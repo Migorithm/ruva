@@ -1,4 +1,4 @@
-use crate::prelude::{Aggregate, BaseError, Message, OutBox};
+use crate::prelude::{Aggregate, Message, OutBox};
 
 use async_trait::async_trait;
 use std::collections::VecDeque;
@@ -45,10 +45,4 @@ macro_rules! prepare_bulk_insert {
         }
         )
     }
-}
-
-#[async_trait]
-pub trait TQueueProducer {
-	type HeaderMeta;
-	async fn add(&self, header_meta: Self::HeaderMeta, payload: Box<dyn Message>) -> Result<(), BaseError>;
 }

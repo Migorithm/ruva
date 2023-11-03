@@ -1,4 +1,4 @@
-use crate::prelude::{Command, Message};
+use crate::prelude::{Command, Message, TCommandService};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
 use async_trait::async_trait;
 use hashbrown::HashMap;
@@ -42,25 +42,24 @@ impl DerefMut for ContextManager {
 }
 
 #[async_trait]
-pub trait TMessageBus<R: ApplicationResponse, E: ApplicationError + std::convert::From<crate::responses::BaseError>>
+pub trait TMessageBus<R, E, C>
 where
 	responses::BaseError: std::convert::From<E>,
+	R: ApplicationResponse,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
+	C: Command,
 {
-	fn command_handler(&self) -> &'static TCommandHandler<R, E>;
+	fn command_handler(&self, context_manager: AtomicContextManager) -> Box<dyn TCommandService<R, E, C>>;
 	fn event_handler(&self) -> &'static TEventHandler<R, E>;
 
-	async fn handle<C>(&self, message: C) -> Result<R, E>
+	async fn handle(&self, message: C) -> Result<R, E>
 	where
 		C: Command,
 	{
 		println!("Handle Command {:?}", message);
 		let context_manager = ContextManager::new();
 
-		let res = self.command_handler().get(&message.type_id()).ok_or_else(|| {
-			eprintln!("Unprocessable Command Given!");
-			BaseError::NotFound
-		})?(Box::new(message), context_manager.clone())
-		.await?;
+		let res = self.command_handler(context_manager.clone()).execute(message).await?;
 
 		// Trigger event
 		if !context_manager.read().await.event_queue.is_empty() {
