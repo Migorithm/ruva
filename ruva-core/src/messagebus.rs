@@ -56,7 +56,6 @@ where
 	where
 		C: Command,
 	{
-		println!("Handle Command {:?}", message);
 		let context_manager = ContextManager::new();
 
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
