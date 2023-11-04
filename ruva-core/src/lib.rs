@@ -1,4 +1,5 @@
 pub use paste::paste;
+pub mod handler;
 pub mod message;
 pub mod messagebus;
 pub mod outbox;
@@ -6,6 +7,7 @@ pub mod repository;
 pub mod responses;
 pub mod unit_of_work;
 pub mod prelude {
+	pub use crate::handler::*;
 	pub use crate::message::*;
 	pub use crate::messagebus::*;
 	pub use crate::outbox::OutBox;
