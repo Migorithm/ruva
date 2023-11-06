@@ -15,7 +15,7 @@ pub trait Message: Sync + Send + Any + Downcast {
 	fn metadata(&self) -> MessageMetadata;
 	fn outbox(&self) -> OutBox {
 		let metadata = self.metadata();
-		OutBox::new(metadata.aggregate_id, metadata.topic, self.state())
+		OutBox::new(metadata.aggregate_id, metadata.aggregate_name, metadata.topic, self.state())
 	}
 	fn message_clone(&self) -> Box<dyn Message>;
 
@@ -33,6 +33,7 @@ impl Debug for dyn Message {
 
 pub struct MessageMetadata {
 	pub aggregate_id: String,
+	pub aggregate_name: String,
 	pub topic: String,
 }
 

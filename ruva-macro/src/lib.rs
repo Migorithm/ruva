@@ -1,4 +1,4 @@
-use message::{find_identifier, render_event_visibility, render_message_token};
+use message::{find_identifier, get_aggregate_metadata, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
@@ -14,13 +14,14 @@ mod message;
 mod result;
 mod utils;
 
-#[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable, identifier))]
+#[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable, identifier, aggregate))]
 pub fn message_derive(attr: TokenStream) -> TokenStream {
-	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	let aggregate_metadata = get_aggregate_metadata(&mut ast);
 	let propagatability = render_event_visibility(&ast);
-	let identifier = find_identifier(&ast);
+	let identifier = find_identifier(&ast, aggregate_metadata.1);
 
-	render_message_token(&ast, propagatability, identifier).into()
+	render_message_token(&ast, propagatability, identifier, aggregate_metadata.0).into()
 }
 
 /// Define Aggregate root
