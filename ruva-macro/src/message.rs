@@ -1,9 +1,9 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg, ItemFn, Meta, Pat, PatIdent, PatType, Path, Type};
+use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg, ItemFn, Meta, MetaList, Pat, PatIdent, PatType, Path, Type};
 
 use crate::utils::{get_attributes, get_trait_checking_stmts, locate_crate_on_derive_macro};
 
-pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<TokenStream>, identifier: TokenStream) -> TokenStream {
+pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<TokenStream>, identifier: TokenStream, impl_assertion: TokenStream) -> TokenStream {
 	let name = &ast.ident;
 	let crates = locate_crate_on_derive_macro(ast);
 
@@ -30,6 +30,8 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<Token
 				stringify!(#name).into()
 			}
 		}
+
+		#impl_assertion
 	}
 }
 
@@ -70,9 +72,40 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<TokenStream> {
 	propagatability
 }
 
-pub(crate) fn find_identifier(ast: &DeriveInput) -> TokenStream {
+pub(crate) fn get_aggregate_metadata(ast: &mut DeriveInput) -> (TokenStream, String) {
+	let mut idx = 10000;
+	let res = ast
+		.attrs
+		.iter_mut()
+		.enumerate()
+		.flat_map(|(order, attr)| {
+			if let Meta::List(MetaList { path, tokens, .. }) = &mut attr.meta {
+				let ident = path.get_ident();
+				if ident.unwrap() != "aggregate" {
+					panic!("MetaList is allowed only for aggregate!");
+				}
+				let quote = quote!(
+					ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::Aggregate);
+				);
+				idx = order;
+
+				Some((quote, ident.unwrap().to_string()))
+			} else {
+				None
+			}
+		})
+		.collect::<Vec<_>>();
+
+	let res = res.first().expect("aggregate must be specified! \rExample: #[aggregate(CustomAggregate)]\n").clone();
+	ast.attrs.remove(idx);
+
+	res
+}
+
+pub(crate) fn find_identifier(ast: &DeriveInput, aggregate_metadata: String) -> TokenStream {
 	let name = &ast.ident;
 	let crates = locate_crate_on_derive_macro(ast);
+
 	match &ast.data {
 		Data::Struct(DataStruct {
 			fields: Fields::Named(FieldsNamed { named, .. }),
@@ -82,14 +115,15 @@ pub(crate) fn find_identifier(ast: &DeriveInput) -> TokenStream {
 			if identifier.len() != 1 {
 				panic!("One identifier Must Be Given To Message!")
 			}
+
 			let ident = identifier.first().unwrap().ident.clone().unwrap().clone();
 
 			quote!(
 				fn metadata(&self) -> #crates::prelude::MessageMetadata {
 					#crates::prelude::MessageMetadata{
 					aggregate_id: self.#ident.to_string(),
+					aggregate_name: #aggregate_metadata.into(),
 					topic: stringify!(#name).into()
-
 				}
 			}
 			)
