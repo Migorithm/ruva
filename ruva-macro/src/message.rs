@@ -74,6 +74,8 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<TokenStream> {
 
 pub(crate) fn get_aggregate_metadata(ast: &mut DeriveInput) -> (TokenStream, String) {
 	let mut idx = 10000;
+	let mut aggregate_name: Option<String> = None;
+
 	let res = ast
 		.attrs
 		.iter_mut()
@@ -87,9 +89,20 @@ pub(crate) fn get_aggregate_metadata(ast: &mut DeriveInput) -> (TokenStream, Str
 				let quote = quote!(
 					ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::Aggregate);
 				);
+
+				tokens.clone().into_iter().for_each(|t| {
+					if let proc_macro2::TokenTree::Ident(ident) = t {
+						aggregate_name = Some(ident.to_string());
+					}
+				});
+
+				if aggregate_name.is_none() || aggregate_name.as_ref().unwrap().is_empty() {
+					panic!("Aggregate name must be given!");
+				}
+
 				idx = order;
 
-				Some((quote, ident.unwrap().to_string()))
+				Some((quote, aggregate_name.clone().unwrap()))
 			} else {
 				None
 			}
