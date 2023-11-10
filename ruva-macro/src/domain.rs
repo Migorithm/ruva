@@ -41,7 +41,7 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 			syn::Field::parse_named
 				.parse2(quote! {
 				   #[serde(skip_deserializing, skip_serializing)]
-				   pub(crate) events: ::std::collections::VecDeque<::std::boxed::Box<dyn #crates::prelude::Message>>
+				   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::Message>>
 				})
 				.unwrap(),
 			syn::Field::parse_named
@@ -68,13 +68,13 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 		impl #crates::prelude::Aggregate for #name{
 			type Identifier = #aggregate_identifier_type;
 
-			fn events(&self) -> &::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
+			fn events(&self) -> &::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::Message>> {
 				&self.events
 			}
-			fn take_events(&mut self) -> ::std::collections::VecDeque<Box<dyn #crates::prelude::Message>> {
+			fn take_events(&mut self) -> ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::Message>> {
 				::std::mem::take(&mut self.events)
 			}
-			fn raise_event(&mut self, event: Box<dyn #crates::prelude::Message>) {
+			fn raise_event(&mut self, event: ::std::sync::Arc<dyn #crates::prelude::Message>) {
 				self.events.push_back(event)
 			}
 		}

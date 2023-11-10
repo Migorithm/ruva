@@ -2,9 +2,9 @@ use crate::prelude::OutBox;
 use downcast_rs::{impl_downcast, Downcast};
 use serde::Serialize;
 use serde_json::Value;
-use std::{any::Any, collections::VecDeque, fmt::Debug};
+use std::{collections::VecDeque, fmt::Debug};
 
-pub trait Message: Sync + Send + Any + Downcast {
+pub trait Message: Sync + Send + Downcast {
 	fn externally_notifiable(&self) -> bool {
 		false
 	}
@@ -17,11 +17,8 @@ pub trait Message: Sync + Send + Any + Downcast {
 		let metadata = self.metadata();
 		OutBox::new(metadata.aggregate_id, metadata.aggregate_name, metadata.topic, self.state())
 	}
-	fn message_clone(&self) -> Box<dyn Message>;
 
 	fn state(&self) -> String;
-
-	fn to_message(self) -> Box<dyn Message + 'static>;
 }
 
 impl_downcast!(Message);
@@ -45,19 +42,19 @@ pub trait MailSendable: Message + Serialize + Send + Sync + 'static {
 	}
 }
 
-pub trait Command: 'static + Send + Any + Sync + Debug {}
+pub trait Command: 'static + Send + Sync + Debug {}
 
 pub trait Aggregate: Send + Sync + Default {
 	type Identifier: Send + Sync;
-	fn collect_events(&mut self) -> VecDeque<Box<dyn Message>> {
+	fn collect_events(&mut self) -> VecDeque<std::sync::Arc<dyn Message>> {
 		if !self.events().is_empty() {
 			self.take_events()
 		} else {
 			VecDeque::new()
 		}
 	}
-	fn events(&self) -> &std::collections::VecDeque<Box<dyn Message>>;
+	fn events(&self) -> &std::collections::VecDeque<std::sync::Arc<dyn Message>>;
 
-	fn take_events(&mut self) -> std::collections::VecDeque<Box<dyn Message>>;
-	fn raise_event(&mut self, event: Box<dyn Message>);
+	fn take_events(&mut self) -> std::collections::VecDeque<std::sync::Arc<dyn Message>>;
+	fn raise_event(&mut self, event: std::sync::Arc<dyn Message>);
 }

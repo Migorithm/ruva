@@ -5,8 +5,8 @@ use std::collections::VecDeque;
 
 #[async_trait]
 pub trait TRepository: Send + Sync {
-	fn get_events(&mut self) -> VecDeque<Box<dyn Message>>;
-	fn set_events(&mut self, events: VecDeque<Box<dyn Message>>);
+	fn get_events(&mut self) -> VecDeque<std::sync::Arc<dyn Message>>;
+	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn Message>>);
 	fn event_hook<A: Aggregate>(&mut self, aggregate: &mut A) {
 		self.set_events(aggregate.take_events());
 	}

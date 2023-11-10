@@ -8,7 +8,7 @@ pub enum BaseError {
 	NotFound,
 	StopSentinel,
 	TransactionError,
-	StopSentinelWithEvent(Box<dyn Message>),
+	StopSentinelWithEvent(std::sync::Arc<dyn Message>),
 	DatabaseError(Box<AnyError>),
 	ServiceError(Box<AnyError>),
 }

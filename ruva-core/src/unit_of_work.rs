@@ -134,7 +134,7 @@ where
 				outboxes.push(e.outbox());
 			};
 			if e.internally_notifiable() {
-				event_queue.push_back(e.message_clone());
+				event_queue.push_back(e.clone());
 			}
 		}
 		if !outboxes.is_empty() {
