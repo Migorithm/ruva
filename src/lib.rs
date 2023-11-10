@@ -236,7 +236,7 @@ mod test {
 			#[stop_sentinel]
 			Items,
 			#[stop_sentinel_with_event]
-			StopSentinelWithEvent(Box<dyn Message>),
+			StopSentinelWithEvent(std::sync::Arc<dyn Message>),
 			#[database_error]
 			DatabaseError(Box<AnyError>),
 			BaseError(BaseError),

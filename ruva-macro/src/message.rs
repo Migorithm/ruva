@@ -12,17 +12,16 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<Token
 
 			#identifier
 
-			fn message_clone(&self) -> ::std::boxed::Box<dyn #crates::prelude::Message> {
-				::std::boxed::Box::new(self.clone())
-			}
 			fn state(&self) -> ::std::string::String {
 				serde_json::to_string(&self).expect("Failed to serialize")
 			}
-			fn to_message(self)-> ::std::boxed::Box<dyn #crates::prelude::Message+'static>{
-				::std::boxed::Box::new(self)
-			}
 
 			#(#propagatability)*
+		}
+		impl #name{
+			pub(crate) fn to_message(self)->  ::std::sync::Arc<dyn #crates::prelude::Message> {
+				::std::sync::Arc::new(self)
+			}
 		}
 		impl #crates::prelude::MailSendable for #name {
 			fn template_name(&self) -> ::std::string::String {

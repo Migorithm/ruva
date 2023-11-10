@@ -125,8 +125,8 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 				data
 			}
 		}
-		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: Box<dyn #crates::prelude::Message>);
-		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, Box<dyn #crates::prelude::Message>);
+		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: ::std::sync::Arc<dyn #crates::prelude::Message>);
+		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, ::std::sync::Arc<dyn #crates::prelude::Message>);
 	)
 	.into()
 }
