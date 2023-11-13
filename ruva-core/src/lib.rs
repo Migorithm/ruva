@@ -5,6 +5,7 @@ pub mod messagebus;
 pub mod outbox;
 pub mod repository;
 pub mod responses;
+pub mod snowflake;
 pub mod unit_of_work;
 pub mod prelude {
 	pub use crate::handler::*;
