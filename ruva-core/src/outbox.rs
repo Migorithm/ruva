@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
 
-use uuid::Uuid;
+use crate::snowflake::id_generator;
 
 #[derive(Debug, Clone)]
 pub struct OutBox {
-	pub id: Uuid,
+	pub id: i64,
 	pub aggregate_id: String,
 	pub aggregate_name: String,
 	pub topic: String,
@@ -16,7 +16,7 @@ pub struct OutBox {
 impl OutBox {
 	pub fn new(aggregate_id: String, aggregate_name: String, topic: String, state: String) -> Self {
 		Self {
-			id: Uuid::new_v4(),
+			id: id_generator().generate(),
 			aggregate_id,
 			aggregate_name,
 			topic,

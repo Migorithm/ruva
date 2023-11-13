@@ -201,6 +201,17 @@ fn race_next_milli(timestamp: i64, epoch: SystemTime) -> i64 {
 	}
 }
 
+pub fn id_generator() -> &'static NumericalUniqueIdGenerator {
+	use std::sync::OnceLock;
+	static SNOWFLAKE: OnceLock<NumericalUniqueIdGenerator> = OnceLock::new();
+	SNOWFLAKE.get_or_init(|| {
+		NumericalUniqueIdGenerator::new(
+			std::env::var("DATACENTER_ID").expect("DATACENTER_ID MUST BE SET").parse::<i32>().expect("Parsing Failed!"),
+			std::env::var("MACHINE_ID").expect("MACHINE_ID MUST BE SET").parse::<i32>().expect("Parsing Failed!"),
+		)
+	})
+}
+
 #[test]
 fn test_generate() {
 	let id_generator = NumericalUniqueIdGenerator::new(1, 2);
@@ -222,12 +233,6 @@ fn test_generate() {
 
 #[test]
 fn test_singletoe_generate() {
-	fn id_generator() -> &'static NumericalUniqueIdGenerator {
-		use std::sync::OnceLock;
-		static SNOWFLAKE: OnceLock<NumericalUniqueIdGenerator> = OnceLock::new();
-		SNOWFLAKE.get_or_init(|| NumericalUniqueIdGenerator::new(1, 1))
-	}
-
 	let id_generator = id_generator();
 	let mut ids = Vec::with_capacity(1000000);
 
