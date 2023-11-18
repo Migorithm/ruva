@@ -8,7 +8,7 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<Token
 	let crates = locate_crate_on_derive_macro(ast);
 
 	quote! {
-		impl #crates::prelude::Message for #name {
+		impl #crates::prelude::TEvent for #name {
 
 			#identifier
 
@@ -19,17 +19,10 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<Token
 			#(#propagatability)*
 		}
 		impl #name{
-			pub(crate) fn to_message(self)->  ::std::sync::Arc<dyn #crates::prelude::Message> {
+			pub(crate) fn to_message(self)->  ::std::sync::Arc<dyn #crates::prelude::TEvent> {
 				::std::sync::Arc::new(self)
 			}
 		}
-		impl #crates::prelude::MailSendable for #name {
-			fn template_name(&self) -> ::std::string::String {
-				// * subject to change
-				stringify!(#name).into()
-			}
-		}
-
 		#impl_assertion
 	}
 }
@@ -86,7 +79,7 @@ pub(crate) fn get_aggregate_metadata(ast: &mut DeriveInput) -> (TokenStream, Str
 					panic!("MetaList is allowed only for aggregate!");
 				}
 				let quote = quote!(
-					ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::Aggregate);
+					ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::TAggregate);
 				);
 
 				tokens.clone().into_iter().for_each(|t| {
@@ -96,7 +89,7 @@ pub(crate) fn get_aggregate_metadata(ast: &mut DeriveInput) -> (TokenStream, Str
 				});
 
 				if aggregate_name.is_none() || aggregate_name.as_ref().unwrap().is_empty() {
-					panic!("Aggregate name must be given!");
+					panic!("TAggregate name must be given!");
 				}
 
 				idx = order;
@@ -125,14 +118,14 @@ pub(crate) fn find_identifier(ast: &DeriveInput, aggregate_metadata: String) -> 
 		}) => {
 			let identifier = named.iter().filter(|f| get_attributes(f).into_iter().any(|ident| ident == *"identifier")).collect::<Vec<_>>();
 			if identifier.len() != 1 {
-				panic!("One identifier Must Be Given To Message!")
+				panic!("One identifier Must Be Given To TEvent!")
 			}
 
 			let ident = identifier.first().unwrap().ident.clone().unwrap().clone();
 
 			quote!(
-				fn metadata(&self) -> #crates::prelude::MessageMetadata {
-					#crates::prelude::MessageMetadata{
+				fn metadata(&self) -> #crates::prelude::EventMetadata {
+					#crates::prelude::EventMetadata{
 					aggregate_id: self.#ident.to_string(),
 					aggregate_name: #aggregate_metadata.into(),
 					topic: stringify!(#name).into()
@@ -149,7 +142,7 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 		panic!("There must be message argument!");
 	};
 
-	let mut stmts = get_trait_checking_stmts("::ruva::prelude::Aggregate");
+	let mut stmts = get_trait_checking_stmts("::ruva::prelude::TAggregate");
 
 	for aggregate in &ast.sig.inputs.iter().skip(1).collect::<Vec<_>>() {
 		if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate {

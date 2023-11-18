@@ -1,16 +1,23 @@
-use crate::prelude::{Aggregate, Message, OutBox};
+use crate::prelude::{OutBox, TAggregate, TEvent};
 
 use async_trait::async_trait;
 use std::collections::VecDeque;
 
 #[async_trait]
 pub trait TRepository: Send + Sync {
-	fn get_events(&mut self) -> VecDeque<std::sync::Arc<dyn Message>>;
-	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn Message>>);
-	fn event_hook<A: Aggregate>(&mut self, aggregate: &mut A) {
+	fn get_events(&mut self) -> VecDeque<std::sync::Arc<dyn TEvent>>;
+	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn TEvent>>);
+	fn event_hook<A: TAggregate>(&mut self, aggregate: &mut A) {
 		self.set_events(aggregate.take_events());
 	}
 	async fn save_outbox(&mut self, outboxes: Vec<OutBox>);
+}
+
+pub trait TRepositoyCallable<R>
+where
+	R: TRepository,
+{
+	fn repository(&mut self) -> &mut R;
 }
 
 // To Support Bulk Insert Operation

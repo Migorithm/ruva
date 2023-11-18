@@ -1,10 +1,8 @@
 use crate::prelude::OutBox;
 use downcast_rs::{impl_downcast, Downcast};
-use serde::Serialize;
-use serde_json::Value;
-use std::{collections::VecDeque, fmt::Debug};
+use std::fmt::Debug;
 
-pub trait Message: Sync + Send + Downcast {
+pub trait TEvent: Sync + Send + Downcast {
 	fn externally_notifiable(&self) -> bool {
 		false
 	}
@@ -12,7 +10,7 @@ pub trait Message: Sync + Send + Downcast {
 		false
 	}
 
-	fn metadata(&self) -> MessageMetadata;
+	fn metadata(&self) -> EventMetadata;
 	fn outbox(&self) -> OutBox {
 		let metadata = self.metadata();
 		OutBox::new(metadata.aggregate_id, metadata.aggregate_name, metadata.topic, self.state())
@@ -21,40 +19,17 @@ pub trait Message: Sync + Send + Downcast {
 	fn state(&self) -> String;
 }
 
-impl_downcast!(Message);
-impl Debug for dyn Message {
+impl_downcast!(TEvent);
+impl Debug for dyn TEvent {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", self.metadata().topic)
 	}
 }
 
-pub struct MessageMetadata {
+pub struct EventMetadata {
 	pub aggregate_id: String,
 	pub aggregate_name: String,
 	pub topic: String,
 }
 
-// Trait To Mark Event As Mail Sendable. Note that template_name must be specified.
-pub trait MailSendable: Message + Serialize + Send + Sync + 'static {
-	fn template_name(&self) -> String;
-	fn to_json(&self) -> Value {
-		serde_json::to_value(self).unwrap()
-	}
-}
-
-pub trait Command: 'static + Send + Sync + Debug {}
-
-pub trait Aggregate: Send + Sync + Default {
-	type Identifier: Send + Sync;
-	fn collect_events(&mut self) -> VecDeque<std::sync::Arc<dyn Message>> {
-		if !self.events().is_empty() {
-			self.take_events()
-		} else {
-			VecDeque::new()
-		}
-	}
-	fn events(&self) -> &std::collections::VecDeque<std::sync::Arc<dyn Message>>;
-
-	fn take_events(&mut self) -> std::collections::VecDeque<std::sync::Arc<dyn Message>>;
-	fn raise_event(&mut self, event: std::sync::Arc<dyn Message>);
-}
+pub trait TCommand: 'static + Send + Sync + Debug {}

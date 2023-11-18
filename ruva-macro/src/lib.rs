@@ -14,7 +14,7 @@ mod message;
 mod result;
 mod utils;
 
-#[proc_macro_derive(Message, attributes(internally_notifiable, externally_notifiable, identifier, aggregate))]
+#[proc_macro_derive(TEvent, attributes(internally_notifiable, externally_notifiable, identifier, aggregate))]
 pub fn message_derive(attr: TokenStream) -> TokenStream {
 	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 	let aggregate_metadata = get_aggregate_metadata(&mut ast);
@@ -24,7 +24,7 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 	render_message_token(&ast, propagatability, identifier, aggregate_metadata.0).into()
 }
 
-/// Define Aggregate root
+/// Define TAggregate root
 /// ## Example
 /// ```ignore
 /// #[aggregate]
@@ -170,13 +170,13 @@ pub fn entity(_: TokenStream, input: TokenStream) -> TokenStream {
 	domain::render_entity_token(input)
 }
 
-#[proc_macro_derive(Command)]
+#[proc_macro_derive(TCommand)]
 pub fn command_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 	let name = ast.ident;
 
 	quote!(
-		impl Command for #name{}
+		impl TCommand for #name{}
 	)
 	.into()
 }

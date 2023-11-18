@@ -1,4 +1,4 @@
-use crate::prelude::Message;
+use crate::prelude::TEvent;
 use std::any::Any;
 
 pub type AnyError = dyn Any + Send + Sync;
@@ -8,7 +8,7 @@ pub enum BaseError {
 	NotFound,
 	StopSentinel,
 	TransactionError,
-	StopSentinelWithEvent(std::sync::Arc<dyn Message>),
+	StopSentinelWithEvent(std::sync::Arc<dyn TEvent>),
 	DatabaseError(Box<AnyError>),
 	ServiceError(Box<AnyError>),
 }

@@ -52,7 +52,7 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	if let Some(stop_sentinel_with_event) = stop_sentinel_with_event {
 		if let syn::Fields::Unnamed(_) = stop_sentinel_with_event.fields {
 		} else {
-			panic!("#[stop_sentinel_with_event] expects Field(Message).")
+			panic!("#[stop_sentinel_with_event] expects Field(TEvent).")
 		}
 	}
 	let stop_sentinel_with_event = if let Some(stop_sentinel_with_event) = stop_sentinel_with_event {
@@ -70,10 +70,10 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 		if field.unnamed.len() == 1 {
 			field.unnamed[0].ty.clone()
 		} else {
-			panic!("#[stop_sentinel_with_event] expects Field(Message).");
+			panic!("#[stop_sentinel_with_event] expects Field(TEvent).");
 		}
 	} else {
-		panic!("StopSentinelWithEvent field expects Field(Message).")
+		panic!("StopSentinelWithEvent field expects Field(TEvent).")
 	};
 
 	/* \#\[database_error\] */
@@ -125,8 +125,8 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 				data
 			}
 		}
-		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: ::std::sync::Arc<dyn #crates::prelude::Message>);
-		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, ::std::sync::Arc<dyn #crates::prelude::Message>);
+		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: ::std::sync::Arc<dyn #crates::prelude::TEvent>);
+		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, ::std::sync::Arc<dyn #crates::prelude::TEvent>);
 	)
 	.into()
 }

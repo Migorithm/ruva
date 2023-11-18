@@ -1,9 +1,9 @@
 [package]
 name = "ruva-core"
-version = "0.2.13"
+version = "0.2.14"
 edition = "2021"
 license = "MIT"
-description = "Rust Library For Event Driven Message Handling"
+description = "Rust Library For Event Driven TEvent Handling"
 repository = "https://github.com/BeringLab/ruva"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

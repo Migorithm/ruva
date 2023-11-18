@@ -1,7 +1,7 @@
 [ruva-core]: https://docs.rs/ruva-core
 [ruva-macro]: https://docs.rs/ruva-macro
-[Command]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.Command.html
-[Event]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.Message.html
+[TCommand]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TCommand.html
+[Event]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
 [MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/index.html
 [Context]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
 
@@ -20,28 +20,28 @@ essential for implementing messagebus-like applications in Rust. In this
 section, we will take a brief tour, summarizing the major APIs and
 their uses.
 
-## Command & Event
-You can register any general struct with [Command] Derive Macro as follows:
+## TCommand & Event
+You can register any general struct with [TCommand] Derive Macro as follows:
 ```rust
-#[derive(Command)]
+#[derive(TCommand)]
 pub struct MakeOrder {
     pub user_id: i64,
     pub items: Vec<String>,
 }
 ```
-As you attach [Command] derive macro, MessageBus now is going to be able to understand how and where it should
+As you attach [TCommand] derive macro, MessageBus now is going to be able to understand how and where it should
 dispatch the command to.
 
 Likewise, you can do the same thing for Event:
 ```rust
-#[derive(Serialize, Deserialize, Clone, Message)]
+#[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderFailed {
     #[identifier]
     pub user_id: i64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Message)]
+#[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderSucceeded{
     #[identifier]
@@ -56,8 +56,8 @@ within the application
 * `externally_notifiable` is to leave `OutBox`.
 * `identifier` is to record aggregate id.
 
-## Initializing Command Handlers
-Command handlers are responsible for handling commands in an application, the response of which is sent directly to
+## Initializing TCommand Handlers
+TCommand handlers are responsible for handling commands in an application, the response of which is sent directly to
 clients. Commands are imperative in nature, meaning they specify what should be done.
 
 ```rust
@@ -78,7 +78,7 @@ Then you have to think about using event handlers.
 
 ## Registering Event
 
-`Event` is a side effect of [Command] or yet another [Event] processing.
+`Event` is a side effect of [TCommand] or yet another [Event] processing.
 You can register as many handlers as possible as long as they all consume same type of Event as follows:
 
 ### Example
@@ -96,7 +96,7 @@ init_event_handler!(
 }
 );
 ```
-In the `MakeOrder` Command Handling, we have either `OrderFailed` or `OrderSucceeded` event with their own processing handlers.
+In the `MakeOrder` TCommand Handling, we have either `OrderFailed` or `OrderSucceeded` event with their own processing handlers.
 Events are raised in the handlers that are thrown to [MessageBus] by [Context].
 [MessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
 
@@ -104,7 +104,7 @@ Events are raised in the handlers that are thrown to [MessageBus] by [Context].
 
 Handlers can be located anywhere as long as they accept two argument:
 
-* msg - either [Command] or [Event]
+* msg - either [TCommand] or [Event]
 * context - [AtomicContextManager]
 
 ### Example
@@ -173,8 +173,8 @@ when you invoke it. Everything else is done magically.
 
 ### Example
 ```rust
-#[derive(Command)]
-pub struct MakeOrder { // Test Command
+#[derive(TCommand)]
+pub struct MakeOrder { // Test TCommand
     pub user_id: i64,
     pub items: Vec<String>
 }

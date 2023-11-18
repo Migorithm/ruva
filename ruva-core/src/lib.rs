@@ -1,4 +1,5 @@
 pub use paste::paste;
+pub mod aggregate;
 pub mod handler;
 pub mod message;
 pub mod messagebus;
@@ -7,13 +8,16 @@ pub mod repository;
 pub mod responses;
 pub mod snowflake;
 pub mod unit_of_work;
+pub mod utils;
 pub mod prelude {
+	pub use crate::aggregate::*;
 	pub use crate::handler::*;
 	pub use crate::message::*;
 	pub use crate::messagebus::*;
 	pub use crate::outbox::OutBox;
 	pub use crate::responses::*;
-	pub use crate::unit_of_work::{Executor, UnitOfWork};
+	pub use crate::unit_of_work::UnitOfWork;
+	pub use crate::utils::*;
 	pub use async_trait::async_trait;
 	pub use hashbrown::HashMap as HandlerMapper;
 	pub use paste::paste;
