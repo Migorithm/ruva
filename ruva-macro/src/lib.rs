@@ -8,9 +8,9 @@ use syn::{DeriveInput, ItemFn};
 #[macro_use]
 extern crate quote;
 mod domain;
-
 mod handler;
 mod message;
+mod repository;
 mod result;
 mod utils;
 
@@ -179,4 +179,11 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 		impl TCommand for #name{}
 	)
 	.into()
+}
+
+#[proc_macro_derive(TRepository)]
+pub fn repository_derive(attr: TokenStream) -> TokenStream {
+	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+
+	repository::render_repository_token(&ast)
 }
