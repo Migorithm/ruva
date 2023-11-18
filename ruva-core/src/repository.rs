@@ -1,4 +1,4 @@
-use crate::prelude::{OutBox, TAggregate, TEvent};
+use crate::prelude::{OutBox, TEvent};
 
 use async_trait::async_trait;
 use std::collections::VecDeque;
@@ -7,9 +7,7 @@ use std::collections::VecDeque;
 pub trait TRepository: Send + Sync {
 	fn get_events(&mut self) -> VecDeque<std::sync::Arc<dyn TEvent>>;
 	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn TEvent>>);
-	fn event_hook<A: TAggregate>(&mut self, aggregate: &mut A) {
-		self.set_events(aggregate.take_events());
-	}
+
 	async fn save_outbox(&mut self, outboxes: Vec<OutBox>);
 }
 
