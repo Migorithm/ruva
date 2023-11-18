@@ -1,4 +1,4 @@
-use crate::prelude::{Command, Message, TCommandService};
+use crate::prelude::{TCommand, TCommandService, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
 use async_trait::async_trait;
 use hashbrown::HashMap;
@@ -9,13 +9,13 @@ use tokio::sync::RwLock;
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 
-pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(std::sync::Arc<dyn Message>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
+pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 /// Task Local Context Manager
 /// This is called for every time Messagebus.handle is invoked within which it manages events raised in service.
-/// It spawns out Executor that manages transaction.
+/// It spawns out TExecutor that manages transaction.
 pub struct ContextManager {
-	pub event_queue: VecDeque<Arc<dyn Message>>,
+	pub event_queue: VecDeque<Arc<dyn TEvent>>,
 }
 
 impl ContextManager {
@@ -26,7 +26,7 @@ impl ContextManager {
 }
 
 impl Deref for ContextManager {
-	type Target = VecDeque<Arc<dyn Message>>;
+	type Target = VecDeque<Arc<dyn TEvent>>;
 	fn deref(&self) -> &Self::Target {
 		&self.event_queue
 	}
@@ -43,14 +43,14 @@ where
 	responses::BaseError: std::convert::From<E>,
 	R: ApplicationResponse,
 	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
-	C: Command,
+	C: TCommand,
 {
 	fn command_handler(&self, context_manager: AtomicContextManager) -> Box<dyn TCommandService<R, E, C>>;
 	fn event_handler(&self) -> &'static TEventHandler<R, E>;
 
 	async fn handle(&self, message: C) -> Result<R, E>
 	where
-		C: Command,
+		C: TCommand,
 	{
 		let context_manager = ContextManager::new();
 
@@ -64,12 +64,12 @@ where
 
 		Ok(res)
 	}
-	async fn handle_event(&self, msg: Arc<dyn Message>) -> Result<(), E> {
+	async fn handle_event(&self, msg: Arc<dyn TEvent>) -> Result<(), E> {
 		let context_manager = ContextManager::new();
 		self._handle_event(msg, context_manager.clone()).await
 	}
 
-	async fn _handle_event(&self, msg: Arc<dyn Message>, context_manager: AtomicContextManager) -> Result<(), E> {
+	async fn _handle_event(&self, msg: Arc<dyn TEvent>, context_manager: AtomicContextManager) -> Result<(), E> {
 		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
 		println!("Handle Event : {:?}", msg);
@@ -144,7 +144,7 @@ macro_rules! init_event_handler {
                     vec![
                         $(
                             Box::new(
-                                |e:std::sync::Arc<dyn Message>, context_manager: ::ruva::prelude::AtomicContextManager| -> std::pin::Pin<Box<dyn futures::Future<Output = Result<$response, $error>> + Send>>{
+                                |e:std::sync::Arc<dyn TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> std::pin::Pin<Box<dyn futures::Future<Output = Result<$response, $error>> + Send>>{
 
 
 									#[allow(unused)]
@@ -155,7 +155,7 @@ macro_rules! init_event_handler {
 									}
 
                                     Box::pin($handler(
-                                        // * Convert event so event handler accepts not Arc<dyn Message> but `event_happend` type of message.
+                                        // * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
                                         // Safety:: client should access this vector of handlers by providing the corresponding event name
                                         // So, when it is followed, it logically doesn't make sense to cause an error.
                                         e.downcast_ref::<$event>().expect("Not Convertible!").clone(),
@@ -225,7 +225,7 @@ macro_rules! init_command {
 						std::any::TypeId::of::<$command>(),
 
 							Box::new( |c:Box<dyn std::any::Any+Send+Sync>, context_manager: ::ruva::prelude::AtomicContextManager|->std::pin::Pin<Box<dyn futures::Future<Output = Result<$response, $error>> + Send>> {
-								// * Convert event so event handler accepts not Arc<dyn Message> but `event_happend` type of message.
+								// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
 								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
 								#[allow(unused)]
 								macro_rules! matcher{

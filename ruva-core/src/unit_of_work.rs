@@ -11,14 +11,14 @@
 //!
 //! [UOW]: crate::unit_of_work::UnitOfWork
 //! [TRepository]: crate::repository::TRepository
-//! [Exec]: crate::unit_of_work::Executor
+//! [Exec]: crate::unit_of_work::TExecutor
 //! [Handler]: crate::unit_of_work::Handler
 //!
 //! #### Usage Pattern
 //!
 //! ```ignore
 //! // Intialize Uow, start transaction
-//! let mut uow = UnitOfWork::<Repository<TaskAggregate>, Executor,TaskAggregate>::new(context).await;
+//! let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor,TaskAggregate>::new(context).await;
 //!
 //! // Fetch data
 //! let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
@@ -44,7 +44,7 @@
 //! struct ApplicationHandler;
 //! impl Handler for ApplicationHandler{
 //!     type E = ApplicationExecutor;
-//!     type R = ApplicationRepository<Aggregate>
+//!     type R = ApplicationRepository<TAggregate>
 //! }
 //!
 //! impl ApplicationHandler{
@@ -57,21 +57,12 @@
 //! ```
 
 use crate::{
-	prelude::{AtomicContextManager, BaseError},
-	repository::TRepository,
+	prelude::{AtomicContextManager, BaseError, TClone},
+	repository::{TRepository, TRepositoyCallable},
 };
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
-/// Executor is abstract implementation of whatever storage layer you use.
-/// Among examples are RDBMS, Queue, NoSQLs.
-#[async_trait]
-pub trait Executor: Sync + Send {
-	async fn begin(&mut self) -> Result<(), BaseError>;
-	async fn commit(&mut self) -> Result<(), BaseError>;
-	async fn rollback(&mut self) -> Result<(), BaseError>;
-}
 
 #[async_trait]
 pub trait TUnitOfWork: Send + Sync {
@@ -81,38 +72,26 @@ pub trait TUnitOfWork: Send + Sync {
 
 	async fn commit(&mut self) -> Result<(), BaseError>;
 
-	async fn rollback(self) -> Result<(), BaseError>;
-}
-
-pub trait TClone {
-	fn clone(&self) -> Self;
-}
-
-pub trait TRepositoyCallable<R>
-where
-	R: TRepository,
-{
-	fn repository(&mut self) -> &mut R;
+	async fn rollback(&mut self) -> Result<(), BaseError>;
 }
 
 #[derive(Clone)]
 pub struct UnitOfWork<R, E>
 where
 	R: TRepository,
-	E: Executor,
+	E: TUnitOfWork,
 {
 	/// real transaction executor
 	executor: Arc<RwLock<E>>,
 	/// global event event_queue
 	context: AtomicContextManager,
 
-	/// event local repository for Executor
 	pub repository: R,
 }
 impl<R, E> UnitOfWork<R, E>
 where
 	R: TRepository,
-	E: Executor,
+	E: TUnitOfWork,
 {
 	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<E>>, repository: R) -> Self {
 		Self { repository, context, executor }
@@ -148,7 +127,7 @@ where
 impl<R, E> TUnitOfWork for UnitOfWork<R, E>
 where
 	R: TRepository,
-	E: Executor,
+	E: TUnitOfWork,
 {
 	/// Begin transaction.
 	async fn begin(&mut self) -> Result<(), BaseError> {
@@ -168,7 +147,7 @@ where
 	}
 
 	/// Rollback transaction.
-	async fn rollback(self) -> Result<(), BaseError> {
+	async fn rollback(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 		executor.rollback().await
 	}
@@ -177,7 +156,7 @@ where
 impl<R, E> TRepositoyCallable<R> for UnitOfWork<R, E>
 where
 	R: TRepository,
-	E: Executor,
+	E: TUnitOfWork,
 {
 	fn repository(&mut self) -> &mut R {
 		&mut self.repository
@@ -191,7 +170,7 @@ pub trait TCloneContext {
 impl<R, E> TCloneContext for UnitOfWork<R, E>
 where
 	R: TRepository,
-	E: Executor,
+	E: TUnitOfWork,
 {
 	fn clone_context(&self) -> AtomicContextManager {
 		Arc::clone(&self.context)
@@ -201,7 +180,7 @@ where
 impl<R, E> TClone for UnitOfWork<R, E>
 where
 	R: TRepository + TClone,
-	E: Executor,
+	E: TUnitOfWork,
 {
 	fn clone(&self) -> Self {
 		Self {

@@ -58,7 +58,7 @@ pub(crate) fn get_trait_checking_stmts(trait_path: &str) -> Vec<Stmt> {
 		parse_quote!(
 			impl<T> __IsTraitNotImplemented for T {}
 		),
-		// Blacket implementation for Type T that implements Aggregate
+		// Blacket implementation for Type T that implements TAggregate
 		parse_quote!(
 			struct IsTrait<T>(::core::marker::PhantomData<T>);
 		),

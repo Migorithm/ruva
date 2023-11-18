@@ -27,7 +27,7 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 
 	let message = inputs.first().unwrap();
 
-	//TODO Restrict message to type that implements either Command or Message OR impl Trait
+	//TODO Restrict message to type that implements either TCommand or TEvent OR impl Trait
 	let message_type = match message.clone() {
 		FnArg::Typed(PatType { ty, .. }) => *ty,
 		_ => panic!(""),
@@ -45,13 +45,13 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 	let generic_where = &generics.where_clause;
 
 	quote!(
-		// * Check if the first argument is of either Command or Message
+		// * Check if the first argument is of either TCommand or TEvent
 
 
 		// ::ruva::static_assertions::assert_impl_any!(
 		// 	#message_type:
-		// 	::ruva::prelude::Message,
-		// 	::ruva::prelude::Command
+		// 	::ruva::prelude::TEvent,
+		// 	::ruva::prelude::TCommand
 		// );
 		pub #asyncness fn #ident (#message,context: ::ruva::prelude::AtomicContextManager)-> #var {
 
