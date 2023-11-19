@@ -11,13 +11,6 @@ pub trait TRepository: Send + Sync {
 	async fn save_outbox(&mut self, outboxes: Vec<OutBox>);
 }
 
-pub trait TRepositoyCallable<R>
-where
-	R: TRepository,
-{
-	fn repository(&mut self) -> &mut R;
-}
-
 // To Support Bulk Insert Operation
 #[macro_export]
 macro_rules! prepare_bulk_insert {

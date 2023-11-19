@@ -16,7 +16,8 @@ pub mod prelude {
 	pub use crate::messagebus::*;
 	pub use crate::outbox::OutBox;
 	pub use crate::responses::*;
-	pub use crate::unit_of_work::UnitOfWork;
+	pub use crate::unit_of_work::*;
+
 	pub use crate::utils::*;
 	pub use async_trait::async_trait;
 	pub use hashbrown::HashMap as HandlerMapper;
