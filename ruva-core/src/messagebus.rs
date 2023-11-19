@@ -12,8 +12,7 @@ pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 /// Task Local Context Manager
-/// This is called for every time Messagebus.handle is invoked within which it manages events raised in service.
-/// It spawns out TExecutor that manages transaction.
+/// This is called for every time `handle` method is invoked.
 pub struct ContextManager {
 	pub event_queue: VecDeque<Arc<dyn TEvent>>,
 }
@@ -72,8 +71,6 @@ where
 	async fn _handle_event(&self, msg: Arc<dyn TEvent>, context_manager: AtomicContextManager) -> Result<(), E> {
 		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
-		println!("Handle Event : {:?}", msg);
-
 		let handlers = self.event_handler().get(&msg.metadata().topic).ok_or_else(|| {
 			eprintln!("Unprocessable Event Given! {:?}", msg);
 			BaseError::NotFound
@@ -103,9 +100,7 @@ where
 				},
 			};
 		}
-
 		// Resursive case
-
 		let incoming_event = context_manager.write().await.event_queue.pop_front();
 		if let Some(event) = incoming_event {
 			if let Err(err) = self._handle_event(event, context_manager.clone()).await {
@@ -113,7 +108,6 @@ where
 				eprintln!("{:?}", err);
 			}
 		}
-
 		Ok(())
 	}
 }
@@ -192,81 +186,5 @@ macro_rules! init_event_handler {
 				),*
 			}
 		)
-	}
-}
-
-/// init_command_handler creating macro
-/// Note that crate must have `crate::dependencies` must exist
-#[macro_export]
-macro_rules! init_command {
-    (
-		R: $response:ty,
-		E: $error:ty $(,)?
-        {
-			$(
-				$command:ty:$handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?
-			),*
-			$(,)?
-		}
-    )
-        => {
-
-		pub fn command_handler() -> &'static ruva::prelude::TCommandHandler<$response, $error> {
-			extern crate self as current_crate;
-			static COMMAND_HANDLER: ::std::sync::OnceLock<ruva::prelude::TCommandHandler<$response, $error>> = std::sync::OnceLock::new();
-
-			COMMAND_HANDLER.get_or_init(||{
-				use current_crate::dependencies;
-				let mut _map: ruva::prelude::TCommandHandler<$response,$error>= ::ruva::prelude::TCommandHandler::new();
-
-				$(
-					_map.insert(
-						// ! Only one command per one handler is acceptable, so the later insertion override preceding one.
-						std::any::TypeId::of::<$command>(),
-
-							Box::new( |c:Box<dyn std::any::Any+Send+Sync>, context_manager: ::ruva::prelude::AtomicContextManager|->std::pin::Pin<Box<dyn futures::Future<Output = Result<$response, $error>> + Send>> {
-								// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
-								// ! Logically, as it's from TypId of command, it doesn't make to cause an error.
-								#[allow(unused)]
-								macro_rules! matcher{
-									($a:ident)=>{
-										context_manager.clone()
-									}
-								}
-								Box::pin($handler(
-									*c.downcast::<$command>().unwrap(),
-								$(
-									// * Injectable functions are added here.
-									$(dependencies::$injectable( $( $(matcher!($arg)),*)?),)*
-								)?
-							))
-							}
-						),
-					);
-				)*
-				_map
-			})
-			}
-   	 	};
-	(
-		E: $error:ty,
-		R: $response:ty $(,)?
-        {
-			$(
-				$command:ty:$handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?
-			),*
-			$(,)?
-		}
-	) =>{
-		init_command!(
-			R:$response,E:$error
-			{
-				$(
-					$command:$handler $(=>($($injectable $(( $($arg),* ))? ),*))?
-				),*
-
-			}
-
-	 )
 	}
 }

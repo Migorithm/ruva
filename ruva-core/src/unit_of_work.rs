@@ -1,60 +1,49 @@
-//! ### UnitOfWork
-//! [UnitOfWork][UOW] is to a unit that manages atomic transaction.
-//!
-//! Its [executor][Exec] is supposed to be shared with its sub type [Repository][TRepository].
+//! ### TUnitOfWork
+//! [TUnitOfWork] is a trait to manage atomic transaction.
 //!
 //! `commit`, and `rollback`, is governed by this implementation.
 //!
-//! When events are collected in `Repository`[TRepository], you can collect them
+//! Concrete implementation that implements [TRepository] may also implement [TUnitOfWork]
 //!
-//! automatically thanks to `_commit_hook` method.
+//! To make sure that events raised in `Aggregate` object is properly collected, you want to implement
 //!
-//! [UOW]: crate::unit_of_work::UnitOfWork
+//! [TCommitHook] as well.
+//!
+//!
+//! [UOW]: crate::unit_of_work::TUnitOfWork
+//! [TCommitHook]: crate::unit_of_work::TCommitHook
 //! [TRepository]: crate::repository::TRepository
-//! [Exec]: crate::unit_of_work::TExecutor
 //! [Handler]: crate::unit_of_work::Handler
 //!
 //! #### Usage Pattern
 //!
 //! ```ignore
-//! // Intialize Uow, start transaction
-//! let mut uow = UnitOfWork::<Repository<TaskAggregate>, TExecutor,TaskAggregate>::new(context).await;
+//! // Service Handler
+//! pub struct CustomHandler<R> {
+//!     _r: PhantomData<R>,
+//! }
+//! impl<R> CustomHandler<R>
+//! where
+//!     R: TCustomRepository + TUnitOfWork,
+//! {
+//!     pub async fn create_aggregate(
+//!         cmd: CreateCommand,
+//!         mut uow: R,
+//!     ) -> Result<CustomResponse, CustomError> {
+//!         // Transation begin
+//!         uow.begin().await?;
+//!         let mut aggregate: CustomAggregate = CustomAggregate::new(cmd);
+//!         uow.add(&mut aggregate).await?;
 //!
-//! // Fetch data
-//! let mut aggregate = uow.repository().get(&cmd.aggregate_id).await?;
-//!
-//! // Process business logic
-//! aggregate.process_business_logic(cmd)?;
-//!
-//! // Apply changes
-//! uow.repository().update(&mut aggregate).await?;
-//!
-//! // Commit transaction
-//! uow.commit().await?;
-//! ```
-//!
-//!
-//!
-//! ### Handler
-//! [Handler] is what orchestrates operations from data fetching, business logic operation and store
-//! changes back to db. This is where tranasction occurs.
-//!
-//! ### Example
-//! ```ignore
-//! struct ApplicationHandler;
-//! impl Handler for ApplicationHandler{
-//!     type E = ApplicationExecutor;
-//!     type R = ApplicationRepository<TAggregate>
+//!         // Transation commit
+//!         uow.commit().await?;
+//!         Ok(aggregate.id.into())
+//!     }
 //! }
 //!
-//! impl ApplicationHandler{
-//!     pub async fn serve_request(
-//!         cmd: Command1,
-//!         context: AtomicContextManager,
-//! ) -> Result<(),ServiceError> {
-//!     let mut uow = TaskHandler::uow(context).await;
-//! }
 //! ```
+//! Note that if you don't "attatch" [TUnitOfWork], the `uow` above would only have an access to [TRepository] but not transation-related methods.
+//!
 
 use crate::{
 	prelude::{BaseError, TCloneContext},
