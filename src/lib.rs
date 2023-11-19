@@ -1,10 +1,12 @@
 //! [ruva-core]: https://docs.rs/ruva-core
 //! [ruva-macro]: https://docs.rs/ruva-macro
 //! [TCommand]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TCommand.html
-//! [Event]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
-//! [MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/index.html
+//! [TEvent]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
+//! [TMessageBus]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/trait.TMessageBus.html
 //! [Context]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
 //! [AtomicContextManager]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/type.AtomicContextManager.html
+//!	[TCommandService]: https://docs.rs/ruva-core/latest/ruva_core/handler/trait.TCommandService.html
+//! [TCommitHook]: https://docs.rs/ruva-core/latest/ruva_core/unit_of_work/trait.TCommitHook.html
 //!
 //! A event-driven framework for writing reliable and scalable system.
 //!
@@ -33,7 +35,7 @@
 //! As you attach [TCommand] derive macro, MessageBus now is going to be able to understand how and where it should
 //! dispatch the command to.
 //!
-//! Likewise, you can do the same thing for Event:
+//! To specify [TEvent] implementation, annotate struct with `TEvent` derive macro as in the following example:
 //! ```ignore
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
@@ -50,42 +52,47 @@
 //!     pub items: Vec<String>
 //! }
 //! ```
-//! Note that use of `internally_notifiable`(or `externally_notifiable`) and `identifier` is MUST.
+//! Note that use of `internally_notifiable`(or `externally_notifiable`) and `identifier` are MUST.
 //!
 //! * `internally_notifiable` is marker to let the system know that the event should be handled
 //! within the application
 //! * `externally_notifiable` is to leave `OutBox`.
 //! * `identifier` is to record aggregate id.
 //!
+//! This results in the following method attach to the struct for example,
+//! * `to_message()` : to convert the struct to heap allocated data structure so messagebus can handle them.
+//! * `state()` : to record event's state for outboxing
 //!
 //!
-//! ## Initializing TCommand Handlers
-//! TCommand handlers are responsible for handling commands in an application, the response of which is sent directly to
-//! clients. Commands are imperative in nature, meaning they specify what should be done.
+//! ## Initializing TCommandService
+//! For messagebus to recognize service handler, [TCommandService] must be implemented, the response of which is sent directly to
+//! clients.
 //!
 //! ```
 //! # const IGNORE_1: &str = stringify! {
-//! use ruva::prelude::{init_command_handler, init_event_handler};
-//! # };
-//! # macro_rules! init_command_handler {
-//! #    ($($tt:tt)*) => {}
-//! # }
-//!
-//! init_command_handler!(
-//! {
-//!    MakeOrder: OrderHandler::make_order,
-//!    CancelOrder: OrderHandler::cancel_order
+//! impl ruva::prelude::TMessageBus<CustomResponse,CustomError,CustomCommand> for MessageBus{
+//! fn event_handler(&self) -> &'static ruva::prelude::TEventHandler<CustomResponse, CustomError> {
+//!     self.event_handler
 //! }
-//! );
-//! ```
-//! In the example above, you see `MakeOrder` is mapped to `OrderHandler::make_order`, handler in application layer.
+//! fn command_handler(
+//!     &self,
+//!     context_manager: ruva::prelude::AtomicContextManager,
+//! ) -> Box<dyn ruva::prelude::TCommandService<CustomResponse, CustomError, CustomCommand>> {
+//!     Box::new(
+//!         HighestLevelOfAspectThatImplementTCommandService::new(
+//!             MidLevelAspectThatImplementTCommandService::new(
+//!                 TargetServiceThatImplementTCommandService
+//!             )
+//!         )
+//!     )
+//! }
+//! }
 //!
-//! At this point, imagine you want to handle both success/failure case of the `MakeOrder` command processing.
-//! Then you have to think about using event handlers.  
+//! ```
 //!
 //! ## Registering Event
 //!
-//! `Event` is a side effect of [TCommand] or yet another [Event] processing.
+//! [TEvent] is a side effect of [TCommand] or yet another [TEvent] processing.
 //! You can register as many handlers as possible as long as they all consume same type of Event as follows:
 //!
 //! ### Example
@@ -107,100 +114,82 @@
 //! );
 //! ```
 //! In the `MakeOrder` TCommand Handling, we have either `OrderFailed` or `OrderSucceeded` event with their own processing handlers.
-//! Events are raised in the handlers that are thrown to [MessageBus] by [Context].
-//! [MessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
+//! Events are raised in the handlers that are thrown to [TMessageBus] by [Context].
+//! [TMessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
 //!
 //! ## Handler API Example
 //!
 //! Handlers can be located anywhere as long as they accept two argument:
-//!
-//! * msg - either [TCommand] or [Event]
+//! * msg - either [TCommand] or [TEvent]
 //! * context - [AtomicContextManager]
+//!
 //!
 //! ### Example
 //! ```ignore
-//! pub async fn make_order(
-//!     cmd: MakeOrder,
-//!     context: AtomicContextManager,
-//! ) -> Result<ServiceResponse, ServiceError> {
-//!     let mut uow = UnitOfWork::<Repository<OrderAggregate>, SQLExecutor>::new(context).await;
-//!
-//!     let mut order_aggregate = OrderAggregate::new(cmd);
-//!     uow.repository().add(&mut task_aggregate).await?;
-//!
-//!     uow.commit::<ServiceOutBox>().await?;
-//!
-//!     Ok(().into())
+//! // Service Handler
+//! pub struct CustomHandler<R> {
+//!     _r: PhantomData<R>,
 //! }
-//! ```
-//! But sometimes, you may want to add yet another dependencies. For that, Dependency Injection mechanism has been implemented.
-//! So, you can also do something along the lines of:
-//! ```ignore
-//! pub async fn make_order(
-//!     cmd: MakeOrder,
-//!     context: AtomicContextManager,
-//!     payment_gateway_caller: Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> //injected dependency
-//! ) -> Result<ServiceResponse, ServiceError> {
-//!     let mut uow = UnitOfWork::<Repository<OrderAggregate>, SQLExecutor>::new(context).await;
+//! impl<R> CustomHandler<R>
+//! where
+//!     R: TCustomRepository + TUnitOfWork,
+//! {
+//!     pub async fn create_aggregate(
+//!         cmd: CreateCommand,
+//!         mut uow: R,
+//!     ) -> Result<CustomResponse, CustomError> {
+//!         // Transation begin
+//!         uow.begin().await?;
+//!         let mut aggregate: CustomAggregate = CustomAggregate::new(cmd);
+//!         uow.add(&mut aggregate).await?;
 //!
-//!     let mut order_aggregate = OrderAggregate::new(cmd,payment_gateway_caller);
-//!     uow.repository().add(&mut task_aggregate).await?;
-//!
-//!     uow.commit::<ServiceOutBox>().await?;
-//!
-//!     Ok(().into())
+//!         // Transation commit
+//!         uow.commit().await?;
+//!         Ok(aggregate.id.into())
+//!     }
 //! }
 //! ```
 //!
-//! How is this possible? because we preprocess handlers so it can allow for `DI container`.
 //!
-//! ## Dependency Injection
-//! You can simply register dependencies by putting attribute on top of free function.
+//! ## Dependency Injection(For event handlers)
+//! For dependency to be injected into handlers, you just need to declare dependencies in `crate::dependencies` and
+//! specify identifiers for them. It's worth noting that at the moment, only parameterless function or function that takes
+//! [AtomicContextManager] are allowed.
 //!
 //! ### Example
 //!
 //! ```ignore
 //! // crate::dependencies
-//! pub fn payment_gateway_caller() -> Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> {
-//!     if cfg!(test) {
-//!         __test_payment_gateway_caller()  //Dependency For Test
-//!     } else {
-//!         __actual_payment_gateway_caller() //Real Dependency
+//! init_event_handler!({
+//!     R: ApplicationResponse,
+//!     E: ApplicationError,
+//!     {
+//!         SomethingHappened:[
+//!             // take dependency defined in `crate::dependencies` named `uow` with context being argument
+//!             Handler::handle_this_event1 => (uow(c)),
+//!             // function that doesn't take additional dependency
+//!             Handler::handle_this_event2,
+//!         ],
+//!         SomethingElseHappened:[
+//!             //take dependency defined in `crate::dependencies` named `dependency1`
+//!             Handler::handle_this_event3 => (dependency1),
+//!             Handler::handle_this_event4 => (dependency1),
+//!         ],
 //!     }
 //! }
+//! )
 //! ```
 //!
-//! This is great as you can take your mind off static nature of the language.
 //!
 //!
-//!
-//! ## MessageBus
-//! At the core is event driven library is [MessageBus], which gets command and gets raised event from
-//! `UnitOfWork` and dispatch the event to the right handlers.
+//! ## TMessageBus
+//! At the core is event driven library is [TMessageBus], which gets command and take raised events from
+//! object that implements [TCommitHook] and dispatch the event to the right handlers.
 //! As this is done only in framework side, the only way you can 'feel' the presence of messagebus is
 //! when you invoke it. Everything else is done magically.
 //!
 //!
 //!
-//! ### Example
-//! ```ignore
-//! #[derive(TCommand)]
-//! pub struct MakeOrder { // Test TCommand
-//!     pub user_id: i64,
-//!     pub items: Vec<String>
-//! }
-//!
-//! async fn test_func(){
-//!     let bus = MessageBus::new(command_handler(), event_handler())
-//!     let command = MakeOrder{user_id:1, items:vec!["shirts","jeans"]}
-//!     match bus.handle(command).await{
-//!         Err(err)=> { // test for error case }
-//!         Ok(val)=> { // test for happy case }
-//!     }
-//!     }
-//!     }
-//! }
-//! ```
 //!
 //! #### Error from MessageBus
 //! When command has not yet been regitered, it returns an error - `BaseError::NotFound`
