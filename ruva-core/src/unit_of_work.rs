@@ -56,7 +56,10 @@
 //! }
 //! ```
 
-use crate::prelude::BaseError;
+use crate::{
+	prelude::{BaseError, TCloneContext},
+	repository::TRepository,
+};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -68,4 +71,26 @@ pub trait TUnitOfWork: Send + Sync {
 	async fn commit(&mut self) -> Result<(), BaseError>;
 
 	async fn rollback(&mut self) -> Result<(), BaseError>;
+}
+
+#[async_trait]
+pub trait TCommitHook: TRepository + TCloneContext {
+	async fn commit_hook(&mut self) -> Result<(), BaseError> {
+		let cxt = self.clone_context();
+		let event_queue = &mut cxt.write().await;
+		let mut outboxes = vec![];
+
+		for e in self.get_events() {
+			if e.externally_notifiable() {
+				outboxes.push(e.outbox());
+			};
+			if e.internally_notifiable() {
+				event_queue.push_back(e.clone());
+			}
+		}
+		if !outboxes.is_empty() {
+			self.save_outbox(outboxes).await;
+		}
+		Ok(())
+	}
 }
