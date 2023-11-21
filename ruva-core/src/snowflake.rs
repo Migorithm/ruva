@@ -232,7 +232,7 @@ fn test_generate() {
 }
 
 #[test]
-fn test_singletoe_generate() {
+fn test_singleton_generate() {
 	let id_generator = id_generator();
 	let mut ids = Vec::with_capacity(1000000);
 
