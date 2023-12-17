@@ -45,10 +45,7 @@
 //! Note that if you don't "attatch" [TUnitOfWork], the `uow` above would only have an access to [TRepository] but not transation-related methods.
 //!
 
-use crate::{
-	prelude::{BaseError, TCloneContext},
-	repository::TRepository,
-};
+use crate::prelude::BaseError;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -63,23 +60,6 @@ pub trait TUnitOfWork: Send + Sync {
 }
 
 #[async_trait]
-pub trait TCommitHook: TRepository + TCloneContext {
-	async fn commit_hook(&mut self) -> Result<(), BaseError> {
-		let cxt = self.clone_context();
-		let event_queue = &mut cxt.write().await;
-		let mut outboxes = vec![];
-
-		for e in self.get_events() {
-			if e.externally_notifiable() {
-				outboxes.push(e.outbox());
-			};
-			if e.internally_notifiable() {
-				event_queue.push_back(e.clone());
-			}
-		}
-		if !outboxes.is_empty() {
-			self.save_outbox(outboxes).await;
-		}
-		Ok(())
-	}
+pub trait TCommitHook {
+	async fn commit_hook(&mut self) -> Result<(), BaseError>;
 }
