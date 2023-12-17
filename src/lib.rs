@@ -202,9 +202,8 @@ pub extern crate static_assertions;
 pub mod prelude {
 	pub use ruva_core::event_macros::*;
 	pub use ruva_core::message::{EventMetadata, TCommand, TEvent};
+	#[cfg(feature = "sqlx-postgres")]
 	pub use ruva_core::rdb;
-	// #[cfg(feature = "sqlx")]
-	// pub use ruva_core::rdb;
 
 	pub use ruva_core::prelude::*;
 

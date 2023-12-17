@@ -17,10 +17,11 @@ pub mod prelude {
 	pub use crate::message::*;
 	pub use crate::messagebus::*;
 	pub use crate::outbox::OutBox;
+	#[cfg(feature = "sqlx-postgres")]
+	pub use crate::rdb;
 	pub use crate::repository::TRepository;
 	pub use crate::responses::*;
 	pub use crate::unit_of_work::*;
-
 	pub use crate::utils::*;
 	pub use async_trait::async_trait;
 	pub use hashbrown::HashMap as HandlerMapper;
