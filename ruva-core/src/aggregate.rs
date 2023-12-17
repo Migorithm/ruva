@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::prelude::TEvent;
 
-pub trait TAggregate: Send + Sync + Default {
+pub trait TAggregate: Send + Sync + Default + 'static {
 	type Identifier: Send + Sync;
 	fn collect_events(&mut self) -> VecDeque<std::sync::Arc<dyn TEvent>> {
 		if !self.events().is_empty() {
