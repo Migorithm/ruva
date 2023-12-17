@@ -187,10 +187,3 @@ pub fn repository_derive(attr: TokenStream) -> TokenStream {
 
 	repository::render_repository_token(&ast)
 }
-
-#[proc_macro_derive(TCommitHook)]
-pub fn commit_hook_derive(attr: TokenStream) -> TokenStream {
-	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
-
-	repository::render_event_hook(&ast)
-}

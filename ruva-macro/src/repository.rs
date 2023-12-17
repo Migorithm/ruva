@@ -16,13 +16,3 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 	)
 	.into()
 }
-
-pub fn render_event_hook(ast: &DeriveInput) -> TokenStream {
-	let name = &ast.ident;
-
-	quote!(
-		#[ruva::prelude::async_trait]
-		impl<A: TAggregate + 'static> ::ruva::ruva_core::unit_of_work::TCommitHook for #name<A> {}
-	)
-	.into()
-}
