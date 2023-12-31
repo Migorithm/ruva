@@ -45,7 +45,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 		}
 
 
-		#[async_trait::async_trait]
+
 		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::unit_of_work::TUnitOfWork for #name<A> {
 			async fn begin(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
 				self.0.begin().await
@@ -60,7 +60,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 			}
 		}
 
-		#[async_trait::async_trait]
+
 		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::unit_of_work::TCommitHook for #name<A> {
 			async fn commit_hook(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
 				self.0.commit_hook().await

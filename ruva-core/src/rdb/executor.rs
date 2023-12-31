@@ -1,5 +1,4 @@
 use crate::prelude::{BaseError, TUnitOfWork};
-use async_trait::async_trait;
 
 use sqlx::{pool::PoolOptions, postgres::PgConnectOptions, postgres::PgPool, ConnectOptions, Postgres, Transaction};
 use std::sync::Arc;
@@ -29,7 +28,6 @@ impl SQLExecutor {
 	}
 }
 
-#[async_trait]
 impl TUnitOfWork for SQLExecutor {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		match self.transaction.as_mut() {

@@ -46,20 +46,17 @@
 //!
 
 use crate::prelude::BaseError;
-use async_trait::async_trait;
 
-#[async_trait]
 pub trait TUnitOfWork: Send + Sync {
 	/// Creeate UOW object with context manager.
 
-	async fn begin(&mut self) -> Result<(), BaseError>;
+	fn begin(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 
-	async fn commit(&mut self) -> Result<(), BaseError>;
+	fn commit(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 
-	async fn rollback(&mut self) -> Result<(), BaseError>;
+	fn rollback(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 }
 
-#[async_trait]
 pub trait TCommitHook {
-	async fn commit_hook(&mut self) -> Result<(), BaseError>;
+	fn commit_hook(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 }

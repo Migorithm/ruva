@@ -1,6 +1,5 @@
 use std::{collections::VecDeque, marker::PhantomData, sync::Arc};
 
-use async_trait::async_trait;
 use tokio::sync::RwLock;
 
 use crate::{
@@ -87,13 +86,12 @@ impl<A: TAggregate> TCloneContext for SqlRepository<A> {
 	}
 }
 
-#[async_trait]
 impl<A: TAggregate + 'static> TRepository for SqlRepository<A> {
 	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn TEvent>>) {
 		self.events.extend(events)
 	}
 }
-#[async_trait]
+
 impl<A: TAggregate + 'static> TCommitHook for SqlRepository<A> {
 	async fn commit_hook(&mut self) -> Result<(), BaseError> {
 		self.save_outbox().await?;
@@ -102,7 +100,6 @@ impl<A: TAggregate + 'static> TCommitHook for SqlRepository<A> {
 	}
 }
 
-#[async_trait]
 impl<A: TAggregate + 'static> TUnitOfWork for SqlRepository<A> {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
