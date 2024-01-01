@@ -45,7 +45,7 @@ where
 	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
 	C: TCommand,
 {
-	fn command_handler(&self, context_manager: AtomicContextManager) -> Box<dyn TCommandService<R, E, C>>;
+	fn command_handler(&self, context_manager: AtomicContextManager) -> impl TCommandService<R, E, C>;
 	fn event_handler(&self) -> &'static TEventHandler<R, E>;
 
 	async fn handle(&self, message: C) -> Result<R, E>
