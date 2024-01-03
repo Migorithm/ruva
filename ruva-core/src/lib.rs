@@ -26,7 +26,12 @@ pub mod prelude {
 	pub use async_trait::async_trait;
 	pub use hashbrown::HashMap as HandlerMapper;
 	pub use paste::paste;
-	pub use serde::{Deserialize, Serialize};
+
+	pub use serde::{self, de::DeserializeOwned, Deserialize, Serialize};
+	pub use serde_json::{from_value, json, Value};
+	#[cfg(feature = "sqlx-postgres")]
+	pub use sqlx;
+	pub use tokio;
 }
 
 pub mod event_macros {

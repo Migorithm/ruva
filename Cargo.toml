@@ -12,6 +12,7 @@ repository = "https://github.com/BeringLab/ruva"
 [dependencies]
 ruva-core= {version="0.3.1", path="./ruva-core"}
 ruva-macro= {version="0.3.1", path="./ruva-macro"}
+ruva-es = {version="0.3.1",path="./ruva-es"}
 static_assertions="1.1.0"
 
 [features]
