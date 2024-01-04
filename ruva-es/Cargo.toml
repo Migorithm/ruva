@@ -10,4 +10,4 @@ ruva-core= {version="0.3.1", path="../ruva-core"}
 dotenv="0.15.0"
 
 [features]
-sqlx-postgres = []
+sqlx-postgres = ["ruva-core/sqlx-postgres"]

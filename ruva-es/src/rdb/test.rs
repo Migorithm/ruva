@@ -15,30 +15,31 @@ pub struct Account {
 	events: Vec<AccountEvent>,
 }
 impl Account {
-	pub(crate) fn create_account(cmd: CreateAccount) -> Self {
+	pub(crate) fn create_account(email: String, password: String) -> Self {
 		let mut aggregate = Account {
-			name: cmd.email.clone(),
-			hashed_password: cmd.password + "_hashed",
+			name: email.clone(),
+			hashed_password: password.to_string() + "_hashed",
 			..Default::default()
 		};
 
 		aggregate.raise_event(AccountEvent::AccountCreated {
-			name: cmd.email,
+			name: email,
 			hashed_password: aggregate.hashed_password.clone(),
 			id: aggregate.id,
 		});
 		aggregate
 	}
 	fn verify_password(&self, plain_text: &str) -> Result<(), Error> {
+		//! for testing purpose
+		if self.hashed_password == plain_text {
+			return Err(Error);
+		}
 		Ok(())
 	}
-	pub(crate) fn sign_in(&mut self, cmd: SignInAccount) -> Result<(), Error> {
-		self.verify_password(&cmd.password)?;
-		self.raise_event(AccountEvent::SignedIn {
-			email: cmd.email,
-			password: cmd.password,
-		});
-		self.version += 1;
+	pub(crate) fn sign_in(&mut self, email: String, password: String) -> Result<(), Error> {
+		self.verify_password(&password)?;
+		self.raise_event(AccountEvent::SignedIn { email, password });
+
 		Ok(())
 	}
 }
@@ -46,11 +47,19 @@ impl Account {
 impl TAggregateES for Account {
 	type Event = AccountEvent;
 	type Error = Error;
+	type Command = AccountCommand;
 
 	fn apply(&mut self, event: Self::Event) {
 		match event {
-			Self::Event::AccountCreated { .. } => todo!(),
-			Self::Event::SignedIn { .. } => todo!(),
+			Self::Event::AccountCreated { id, name, hashed_password } => {
+				*self = Account {
+					id,
+					name,
+					hashed_password,
+					..Default::default()
+				}
+			}
+			Self::Event::SignedIn { .. } => {}
 		}
 	}
 
@@ -59,6 +68,15 @@ impl TAggregateES for Account {
 	}
 	fn events(&self) -> &Vec<Self::Event> {
 		&self.events
+	}
+	fn handle(&mut self, cmd: Self::Command) -> Result<(), Self::Error> {
+		match cmd {
+			AccountCommand::CreateAccount { email, password } => {
+				*self = Self::create_account(email, password);
+				Ok(())
+			}
+			AccountCommand::SignInAccount { email, password } => self.sign_in(email, password),
+		}
 	}
 }
 
@@ -79,16 +97,9 @@ impl TAggregateMetadata for Account {
 
 #[derive(Deserialize, Clone)]
 #[serde(crate = "ruva_core::prelude::serde")]
-pub struct CreateAccount {
-	pub email: String,
-	pub password: String,
-}
-
-#[derive(Deserialize, Clone)]
-#[serde(crate = "ruva_core::prelude::serde")]
-pub struct SignInAccount {
-	pub email: String,
-	pub password: String,
+pub enum AccountCommand {
+	CreateAccount { email: String, password: String },
+	SignInAccount { email: String, password: String },
 }
 
 #[derive(Debug, Deserialize, PartialEq, Clone, Serialize)]
@@ -120,8 +131,66 @@ pub struct Error;
 impl ApplicationError for Error {}
 
 #[cfg(test)]
-
 mod test_account {
+	use crate::testing::TestFrameWork;
+
+	use super::{Account, AccountCommand, AccountEvent};
+
+	#[test]
+	fn create_account() {
+		let expected = AccountEvent::AccountCreated {
+			id: 0,
+			name: "test_email@mail.com".to_string(),
+			hashed_password: "test_password_hashed".to_string(),
+		};
+
+		TestFrameWork::<Account>::new()
+			.given_no_previous_events()
+			.when(AccountCommand::CreateAccount {
+				email: "test_email@mail.com".to_string(),
+				password: "test_password".to_string(),
+			})
+			.then_expect_events(vec![expected]);
+	}
+
+	#[test]
+	fn sign_in() {
+		let expected = AccountEvent::SignedIn {
+			email: "test_email@mail.com".to_string(),
+			password: "test_password".to_string(),
+		};
+
+		TestFrameWork::<Account>::new()
+			.given(vec![AccountEvent::AccountCreated {
+				id: 0,
+				name: "test_email@mail.com".to_string(),
+				hashed_password: "test_password_hashed".to_string(),
+			}])
+			.when(AccountCommand::SignInAccount {
+				email: "test_email@mail.com".to_string(),
+				password: "test_password".to_string(),
+			})
+			.then_expect_events(vec![expected]);
+	}
+
+	#[test]
+	fn sign_in_fail_case() {
+		TestFrameWork::<Account>::new()
+			.given(vec![AccountEvent::AccountCreated {
+				id: 0,
+				name: "test_email@mail.com".to_string(),
+				hashed_password: "test_password_hashed".to_string(),
+			}])
+			.when(AccountCommand::SignInAccount {
+				email: "test_email@mail.com".to_string(),
+				password: "test_password_hashed".to_string(),
+			})
+			.then_expect_error_message("Error");
+	}
+}
+
+#[cfg(test)]
+mod test_persistence {
 
 	use ruva_core::prelude::tokio;
 	use ruva_core::rdb::executor::SQLExecutor;
@@ -129,10 +198,7 @@ mod test_account {
 	use crate::{
 		aggregate::TAggregateMetadata,
 		event_store::TEventStore,
-		rdb::{
-			repository::SqlRepository,
-			test::{Account, CreateAccount, SignInAccount},
-		},
+		rdb::{repository::SqlRepository, test::Account},
 	};
 	async fn clean_up() {
 		dotenv::dotenv().ok();
@@ -142,12 +208,9 @@ mod test_account {
 
 	#[tokio::test]
 	async fn test_commit() {
-		dotenv::dotenv().ok();
+		clean_up().await;
 		let repo = SqlRepository::new(SQLExecutor::new());
-		let aggregate = Account::create_account(CreateAccount {
-			email: "test_email@mail.com".to_string(),
-			password: "test_password".to_string(),
-		});
+		let aggregate = Account::create_account("test_email@mail.com".to_string(), "test_password".to_string());
 
 		repo.commit(&aggregate).await.unwrap();
 	}
@@ -158,10 +221,7 @@ mod test_account {
 
 		// given
 		let repo = SqlRepository::new(SQLExecutor::new());
-		let aggregate = Account::create_account(CreateAccount {
-			email: "test_email@mail.com".to_string(),
-			password: "test_password".to_string(),
-		});
+		let aggregate = Account::create_account("test_email@mail.com".to_string(), "test_password".to_string());
 		repo.commit(&aggregate).await.unwrap();
 
 		// when
@@ -179,28 +239,17 @@ mod test_account {
 
 		// given
 		let repo = SqlRepository::new(SQLExecutor::new());
-		let aggregate = Account::create_account(CreateAccount {
-			email: "test_email@mail.com".to_string(),
-			password: "test_password".to_string(),
-		});
-
+		let aggregate = Account::create_account("test_email@mail.com".to_string(), "test_password".to_string());
 		repo.commit(&aggregate).await.unwrap();
 
 		let mut account_aggregate = repo.load_aggregate(aggregate.id.to_string().as_str()).await.expect("Shouldn't fail!");
 
 		// when
-		account_aggregate
-			.sign_in(SignInAccount {
-				email: "test_email@mail.com".to_string(),
-				password: "test_password".to_string(),
-			})
-			.unwrap();
-
+		account_aggregate.sign_in("test_email@mail.com".to_string(), "test_password".to_string()).unwrap();
 		repo.commit(&account_aggregate).await.unwrap();
 
 		// then
 		let updated_account_aggregate = repo.load_aggregate(aggregate.id.to_string().as_str()).await.expect("Shouldn't fail!");
-
 		assert_eq!(updated_account_aggregate.sequence(), 2);
 	}
 }
