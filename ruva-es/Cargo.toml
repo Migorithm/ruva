@@ -2,6 +2,9 @@
 name = "ruva-es"
 version = "0.3.2"
 edition = "2021"
+license = "MIT"
+description = "Rust Library For Event Driven TEvent Handling"
+repository = "https://github.com/BeringLab/ruva"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
