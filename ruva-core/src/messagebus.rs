@@ -9,7 +9,6 @@ use tokio::sync::RwLock;
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
-
 pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
 
 /// Task Local Context Manager
@@ -38,37 +37,17 @@ impl DerefMut for ContextManager {
 }
 
 #[async_trait]
-pub trait TMessageBus<R, E, C>
+pub trait TEventBus<R, E>
 where
-	responses::BaseError: std::convert::From<E>,
 	R: ApplicationResponse,
-	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
-	C: TCommand,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
+	crate::responses::BaseError: std::convert::From<E>,
 {
-	fn command_handler(&self, context_manager: AtomicContextManager) -> impl TCommandService<R, E, C>;
 	fn event_handler(&self) -> &'static TEventHandler<R, E>;
-
-	async fn handle(&self, message: C) -> Result<R, E>
-	where
-		C: TCommand,
-	{
-		let context_manager = ContextManager::new();
-
-		let res = self.command_handler(context_manager.clone()).execute(message).await?;
-
-		// Trigger event
-		if !context_manager.read().await.event_queue.is_empty() {
-			let event = context_manager.write().await.event_queue.pop_front();
-			let _ = self._handle_event(event.unwrap(), context_manager.clone()).await;
-		}
-
-		Ok(res)
-	}
 	async fn handle_event(&self, msg: Arc<dyn TEvent>) -> Result<(), E> {
 		let context_manager = ContextManager::new();
 		self._handle_event(msg, context_manager.clone()).await
 	}
-
 	async fn _handle_event(&self, msg: Arc<dyn TEvent>, context_manager: AtomicContextManager) -> Result<(), E> {
 		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
@@ -110,6 +89,29 @@ where
 			}
 		}
 		Ok(())
+	}
+}
+
+#[async_trait]
+pub trait TMessageBus<R, E, C>: TEventBus<R, E>
+where
+	responses::BaseError: std::convert::From<E>,
+	R: ApplicationResponse,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
+	C: TCommand,
+{
+	fn command_handler(&self, context_manager: AtomicContextManager) -> impl TCommandService<R, E, C>;
+
+	async fn handle(&self, message: C) -> Result<R, E> {
+		let context_manager = ContextManager::new();
+		let res = self.command_handler(context_manager.clone()).execute(message).await?;
+
+		// Trigger event
+		if !context_manager.read().await.event_queue.is_empty() {
+			let event = context_manager.write().await.event_queue.pop_front();
+			let _ = self._handle_event(event.unwrap(), context_manager.clone()).await;
+		}
+		Ok(res)
 	}
 }
 

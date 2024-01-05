@@ -1,12 +1,12 @@
 [package]
 name = "ruva-es"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ruva-core= {version="0.3.1", path="../ruva-core"}
+ruva-core= {version="0.3.2", path="../ruva-core"}
 dotenv="0.15.0"
 
 [features]
