@@ -55,7 +55,8 @@ pub trait TUnitOfWork: Send + Sync {
 	fn commit(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 
 	fn rollback(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
-	fn close(&self) -> impl std::future::Future<Output = ()> + Send;
+
+	fn close(&mut self) -> impl std::future::Future<Output = ()> + Send;
 }
 
 pub trait TCommitHook {

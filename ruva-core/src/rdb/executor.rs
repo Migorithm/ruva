@@ -17,6 +17,7 @@ impl SQLExecutor {
 			transaction: None,
 		}))
 	}
+
 	pub fn transaction(&mut self) -> &mut Transaction<'static, Postgres> {
 		match self.transaction.as_mut() {
 			Some(trx) => trx,
@@ -55,8 +56,13 @@ impl TUnitOfWork for SQLExecutor {
 		}
 	}
 
-	async fn close(&self) {
-		self.pool.close().await;
+	async fn close(&mut self) {
+		match self.transaction.take() {
+			None => (),
+			Some(trx) => {
+				let _ = trx.rollback().await;
+			}
+		}
 	}
 }
 

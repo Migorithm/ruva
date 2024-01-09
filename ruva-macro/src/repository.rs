@@ -59,7 +59,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 				self.0.rollback().await
 			}
 
-			async fn close(&self) {
+			async fn close(&mut self) {
 				self.0.close().await;
 			}
 		}
