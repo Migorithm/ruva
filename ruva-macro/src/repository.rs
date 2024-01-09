@@ -58,6 +58,10 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 			async fn rollback(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
 				self.0.rollback().await
 			}
+
+			async fn close(&self) {
+				self.0.close().await;
+			}
 		}
 
 
@@ -78,6 +82,8 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 				self.0.clone_context()
 			}
 		}
+
+
 	)
 	.into()
 }

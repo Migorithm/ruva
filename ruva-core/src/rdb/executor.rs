@@ -54,6 +54,10 @@ impl TUnitOfWork for SQLExecutor {
 			Some(trx) => trx.rollback().await.map_err(|err| BaseError::DatabaseError(Box::new(err))),
 		}
 	}
+
+	async fn close(&self) {
+		self.pool.close().await;
+	}
 }
 
 pub fn connection_pool() -> &'static PgPool {
@@ -66,7 +70,7 @@ pub fn connection_pool() -> &'static PgPool {
 				let mut opts: PgConnectOptions = url.parse().unwrap();
 				opts.disable_statement_logging();
 				PoolOptions::new()
-					.max_connections(30)
+					.max_connections(100)
 					.connect_with(opts)
 					.await
 					.map_err(|err| BaseError::DatabaseError(Box::new(err)))

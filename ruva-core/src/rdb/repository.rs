@@ -118,4 +118,7 @@ impl<A: TAggregate + 'static> TUnitOfWork for SqlRepository<A> {
 		let mut executor = self.executor.write().await;
 		executor.rollback().await
 	}
+	async fn close(&self) {
+		self.executor.read().await.close().await;
+	}
 }
