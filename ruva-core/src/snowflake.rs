@@ -1,9 +1,13 @@
 //! This is to generate global identifier
 
 use std::hint::spin_loop;
+use std::ops::Deref;
 use std::sync::atomic::{AtomicI16, AtomicI64, Ordering};
 
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use serde::de::Visitor;
+use serde::{de, Serialize, Serializer};
 
 #[derive(Debug)]
 pub struct NumericalUniqueIdGenerator {
@@ -212,6 +216,106 @@ pub fn id_generator() -> &'static NumericalUniqueIdGenerator {
 	})
 }
 
+#[derive(Clone, Hash, PartialEq, Debug, Eq, Ord, PartialOrd, Copy, Default)]
+pub struct SnowFlake(pub i64);
+impl SnowFlake {
+	pub fn generate() -> Self {
+		id_generator().generate().into()
+	}
+}
+
+impl Deref for SnowFlake {
+	type Target = i64;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl From<i64> for SnowFlake {
+	fn from(value: i64) -> Self {
+		Self(value)
+	}
+}
+
+impl From<SnowFlake> for String {
+	fn from(value: SnowFlake) -> Self {
+		value.0.to_string()
+	}
+}
+
+impl From<SnowFlake> for i64 {
+	fn from(value: SnowFlake) -> Self {
+		value.0
+	}
+}
+
+impl std::fmt::Display for SnowFlake {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
+	}
+}
+
+impl<'de> serde::Deserialize<'de> for SnowFlake {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		struct SnowflakeVisitor;
+
+		impl<'de> Visitor<'de> for SnowflakeVisitor {
+			type Value = SnowFlake;
+
+			fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+				f.write_str("Snowflake as a number or string")
+			}
+
+			fn visit_i64<E>(self, id: i64) -> Result<Self::Value, E>
+			where
+				E: de::Error,
+			{
+				Ok(SnowFlake(id))
+			}
+
+			fn visit_u64<E>(self, id: u64) -> Result<Self::Value, E>
+			where
+				E: de::Error,
+			{
+				if id < std::i64::MAX as u64 {
+					Ok(SnowFlake(id.try_into().unwrap()))
+				} else {
+					Err(E::custom(format!("Snowflake out of range: {}", id)))
+				}
+			}
+
+			fn visit_str<E>(self, id: &str) -> Result<Self::Value, E>
+			where
+				E: de::Error,
+			{
+				match id.parse::<u64>() {
+					Ok(val) => self.visit_u64(val),
+					Err(_) => Err(E::custom("Failed to parse snowflake")),
+				}
+			}
+		}
+
+		deserializer.deserialize_any(SnowflakeVisitor)
+	}
+}
+
+impl Serialize for SnowFlake {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		// Convert the u64 to a string
+		let s = self.0.to_string();
+
+		// Serialize the string
+		serializer.serialize_str(&s)
+	}
+}
+
 #[test]
 fn test_generate() {
 	let id_generator = NumericalUniqueIdGenerator::new(1, 2);
@@ -247,4 +351,9 @@ fn test_singleton_generate() {
 
 		ids.clear();
 	}
+}
+
+#[test]
+fn test_json() {
+	println!("{}", serde_json::json!(i64::MAX));
 }
