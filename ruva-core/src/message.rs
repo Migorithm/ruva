@@ -26,6 +26,7 @@ impl Debug for dyn TEvent {
 	}
 }
 
+#[derive(Debug)]
 pub struct EventMetadata {
 	pub aggregate_id: String,
 	pub aggregate_name: String,
