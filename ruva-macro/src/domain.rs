@@ -41,6 +41,12 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 			syn::Field::parse_named
 				.parse2(quote! {
 				   #[serde(skip_deserializing, skip_serializing)]
+				   pub(crate) is_updated: bool
+				})
+				.unwrap(),
+			syn::Field::parse_named
+				.parse2(quote! {
+				   #[serde(skip_deserializing, skip_serializing)]
 				   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>>
 				})
 				.unwrap(),
@@ -75,6 +81,7 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 				::std::mem::take(&mut self.events)
 			}
 			fn raise_event(&mut self, event: ::std::sync::Arc<dyn #crates::prelude::TEvent>) {
+				tracing::info!("event raised! {:?}", event.metadata());
 				self.events.push_back(event)
 			}
 		}
@@ -105,6 +112,16 @@ pub(crate) fn render_entity_token(input: TokenStream) -> TokenStream {
 				})
 				.unwrap(),
 		);
+		fields.named.push(
+			syn::Field::parse_named
+				.parse2(quote! {
+
+				   #[serde(skip_deserializing, skip_serializing)]
+				   pub(crate) is_updated: bool
+
+				})
+				.unwrap(),
+		);
 	} else {
 		panic!("[entity] can be attached only to struct")
 	}
@@ -129,7 +146,7 @@ fn get_setters(data: &Data) -> proc_macro2::TokenStream {
 		let ident = f.ident.unwrap();
 		let ty = f.ty.to_token_stream().to_string();
 		let code = format!(
-			"pub fn set_{}(mut self, {}:impl core::convert::Into<{}>)->Self{{self.{}={}.into(); self }}",
+			"pub fn set_{}(&mut self, {}:impl core::convert::Into<{}>){{self.{}={}.into();self.is_updated=true}}",
 			ident, ident, ty, ident, ident
 		);
 		quotes.push(code);
