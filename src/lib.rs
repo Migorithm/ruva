@@ -6,6 +6,7 @@
 //! [Context]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
 //! [AtomicContextManager]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/type.AtomicContextManager.html
 //! [TCommandService]: https://docs.rs/ruva-core/latest/ruva_core/handler/trait.TCommandService.html
+//! [TCommitHook]: https://docs.rs/ruva-core/latest/ruva_core/unit_of_work/trait.TCommitHook.html
 
 //!
 //! A event-driven framework for writing reliable and scalable system.
@@ -25,7 +26,7 @@
 //!
 //! ## TCommand & Event
 //! You can register any general struct with [TCommand] Derive Macro as follows:
-//! ```ignore
+//! ```rust,no_run
 //! #[derive(TCommand)]
 //! pub struct MakeOrder {
 //!     pub user_id: i64,
@@ -36,7 +37,7 @@
 //! dispatch the command to.
 //!
 //! To specify [TEvent] implementation, annotate struct with `TEvent` derive macro as in the following example:
-//! ```ignore
+//! ```rust,no_run
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
 //! pub struct OrderFailed {
@@ -68,8 +69,8 @@
 //! For messagebus to recognize service handler, [TCommandService] must be implemented, the response of which is sent directly to
 //! clients.
 //!
-//! ```
-//! # const IGNORE_1: &str = stringify! {
+//! ```rust,no_run
+//!
 //! impl ruva::prelude::TMessageBus<CustomResponse,CustomError,CustomCommand> for MessageBus{
 //! fn event_handler(&self) -> &'static ruva::prelude::TEventHandler<CustomResponse, CustomError> {
 //!     self.event_handler
@@ -87,7 +88,6 @@
 //!     )
 //! }
 //! }
-//!
 //! ```
 //!
 //! ## Registering Event
@@ -97,7 +97,7 @@
 //!
 //! ### Example
 //!
-//! ```
+//! ```rust,no_run
 //! # macro_rules! init_event_handler {
 //! #    ($($tt:tt)*) => {}
 //! # }
@@ -125,7 +125,7 @@
 //!
 //!
 //! ### Example
-//! ```ignore
+//! ```rust,no_run
 //! // Service Handler
 //! pub struct CustomHandler<R> {
 //!     _r: PhantomData<R>,
@@ -158,7 +158,7 @@
 //!
 //! ### Example
 //!
-//! ```ignore
+//! ```rust,no_run
 //! // crate::dependencies
 //! init_event_handler!({
 //!     R: ApplicationResponse,

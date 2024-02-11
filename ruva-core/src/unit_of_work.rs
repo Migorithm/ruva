@@ -17,7 +17,7 @@
 //!
 //! #### Usage Pattern
 //!
-//! ```ignore
+//! ```rust,no_run
 //! // Service Handler
 //! pub struct CustomHandler<R> {
 //!     _r: PhantomData<R>,

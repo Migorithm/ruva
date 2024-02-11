@@ -1,3 +1,20 @@
+//! ### TEvent
+//! [TEvent] is a trait to manage application-specific events.
+//! Using ruva framework, you can simply annotate struct as follows:
+//! ```rust,no_run
+//! #[derive(Serialize, Deserialize, Clone, TEvent)]
+//! #[aggregate(CustomAggregate)]
+//! #[internally_notifiable]
+//! #[externally_notifiable]
+//! pub struct CustomEvent {
+//!     #[identifier]
+//!     pub id: i64,
+//!     pub custom_field: String,
+//! }
+//! ```
+//! Here, `internally_notifiable` indicates that the event will be handled internally by `MessageBus`
+//! And the `externally_notifiable` means that the event will be stored in the form of `OutBox` and
+//! will be handled in the separate process (or thread)
 use crate::prelude::OutBox;
 use downcast_rs::{impl_downcast, Downcast};
 use std::fmt::Debug;

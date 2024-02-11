@@ -26,7 +26,7 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 
 /// Define TAggregate root
 /// ## Example
-/// ```ignore
+/// ```rust,no_run
 /// #[aggregate]
 /// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
@@ -40,10 +40,11 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// assert!(!aggregate.is_existing);
 /// assert_eq!(aggregate.events.len(), 0);
 /// assert_eq!(aggregate.age, 1)
+/// }
 /// ```
 ///
 /// the following will cause an error with saying "identifier is specified only once!"
-/// ```ignore
+/// ```rust,no_run
 /// #[aggregate]
 /// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
@@ -55,7 +56,7 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Likewise, not specifying `identifier` will also error out
-/// ```ignore
+/// ```rust,no_run
 /// #[aggregate]
 /// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
@@ -70,7 +71,8 @@ pub fn aggregate(_: TokenStream, input: TokenStream) -> TokenStream {
 
 /// Define ApplicationResponse so that could be recognized by messagebus
 /// ## Example
-/// ```ignore
+///
+/// ```rust,no_run
 /// #[derive(Debug, ApplicationResponse)]
 /// enum ServiceResponse{
 ///     Response1
@@ -85,7 +87,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 
 /// Attribute macro for marking repository methods that collect events
 /// ## Example
-/// ```ignore
+/// ```rust,no_run
 ///
 /// #[aggregate]
 /// #[derive(Default, Serialize, Deserialize)]
@@ -146,7 +148,7 @@ pub fn event_hook(_: TokenStream, input: TokenStream) -> TokenStream {
 /// - `#[database_error]` - Specify the error matching for `BaseError::DatabaseError`.
 ///
 /// ## Example
-/// ```ignore
+/// ```rust,no_run
 /// #[derive(Debug, ApplicationError)]
 /// #[crates(crate::imports::ruva)]
 /// enum TestError {

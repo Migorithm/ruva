@@ -57,13 +57,9 @@ where
 		})?;
 
 		for handler in handlers.iter() {
-			match handler(msg.clone(), context_manager.clone()).await {
-				Ok(_val) => {
-					eprintln!("Event Handling Succeeded!");
-				}
-
+			if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
 				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-				Err(err) => match err.into() {
+				match err.into() {
 					BaseError::StopSentinel => {
 						eprintln!("Stop Sentinel Arrived!");
 
@@ -77,9 +73,10 @@ where
 					err => {
 						eprintln!("Error Occurred While Handling Event! Error:{:?}", err);
 					}
-				},
-			};
+				}
+			}
 		}
+
 		// Resursive case
 		let incoming_event = context_manager.write().await.event_queue.pop_front();
 		if let Some(event) = incoming_event {
