@@ -101,7 +101,8 @@ where
 
 	async fn handle(&self, message: C) -> Result<R, E> {
 		let context_manager = ContextManager::new();
-		let res = self.command_handler(context_manager.clone()).execute(message).await?;
+		let mut handler = self.command_handler(context_manager.clone());
+		let res = handler.execute(message).await?;
 
 		// Trigger event
 		if !context_manager.read().await.event_queue.is_empty() {

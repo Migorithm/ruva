@@ -207,6 +207,7 @@ pub mod prelude {
 
 	pub use ruva_core::prelude::*;
 
+	pub use async_trait;
 	pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, TCommand, TEvent, TRepository};
 }
 
