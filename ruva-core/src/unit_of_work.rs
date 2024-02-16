@@ -59,6 +59,18 @@ pub trait TUnitOfWork: Send + Sync {
 	fn close(&mut self) -> impl std::future::Future<Output = ()> + Send;
 }
 
-pub trait TCommitHook {
+pub trait TCommitHook: Send + Sync {
 	fn commit_hook(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
+}
+
+impl<T: TCommitHook> TCommitHook for &mut T {
+	async fn commit_hook(&mut self) -> Result<(), BaseError> {
+		(self as &mut T).commit_hook().await
+	}
+}
+impl<T: TCommitHook> TCommitHook for std::sync::Arc<tokio::sync::RwLock<T>> {
+	async fn commit_hook(&mut self) -> Result<(), BaseError> {
+		let mut guard = self.write().await;
+		guard.commit_hook().await
+	}
 }
