@@ -17,8 +17,8 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 		impl<A: ruva::ruva_core::aggregate::TAggregate> #name<A> {
 			pub fn new(
 				context: AtomicContextManager,
-				executor: Arc<RwLock<SQLExecutor>>,
 			) -> Self {
+				let executor = ruva::ruva_core::rdb::executor::SQLExecutor::new();
 				Self(SqlRepository::new(context, executor))
 			}
 		}
