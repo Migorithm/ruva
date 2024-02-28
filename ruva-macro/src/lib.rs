@@ -1,3 +1,4 @@
+use command::derive_into_command;
 use message::{find_identifier, get_aggregate_metadata, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
@@ -7,6 +8,7 @@ use syn::{DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
+mod command;
 mod domain;
 mod handler;
 mod message;
@@ -179,6 +181,18 @@ pub fn command_derive(attr: TokenStream) -> TokenStream {
 
 	quote!(
 		impl TCommand for #name{}
+	)
+	.into()
+}
+
+#[proc_macro_derive(IntoCommand, attributes(required_input))]
+pub fn into_command_derive(attr: TokenStream) -> TokenStream {
+	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+
+	let quote = derive_into_command(&mut ast);
+
+	quote!(
+		#quote
 	)
 	.into()
 }

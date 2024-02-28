@@ -40,7 +40,10 @@ pub(crate) fn get_attributes(field: &Field) -> Vec<Ident> {
 		attributes
 	}
 }
-
+pub(crate) fn get_type_name(ty: &Type) -> String {
+	let syn::Type::Path(syn::TypePath { path, .. }) = ty else { panic!("Wrong type") };
+	path.segments.first().unwrap().ident.to_string()
+}
 pub(crate) fn get_trait_checking_stmts(trait_path: &str) -> Vec<Stmt> {
 	let path = syn::parse::<Path>(trait_path.parse().expect("Unqualified path")).expect("Parsing path for trait failed!");
 

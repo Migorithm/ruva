@@ -207,7 +207,7 @@ pub mod prelude {
 
 	pub use ruva_core::prelude::*;
 
-	pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, TCommand, TEvent, TRepository};
+	pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, IntoCommand, TCommand, TEvent, TRepository};
 }
 
 #[cfg(test)]
