@@ -39,7 +39,11 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 							ident_type_in_map.insert(identifier_in_string, type_name);
 							f
 						})
-						.filter(|f| !input_required_values.iter().any(|required_f| *required_f == *f))
+						.filter(|f| {
+							!input_required_values
+								.iter()
+								.any(|required_f| *required_f.ident.clone().unwrap().to_string() == *f.ident.clone().unwrap().to_string())
+						})
 						.map(|f| {
 							input_not_required_ident_type_vec.push(f.ident.clone().unwrap().to_string());
 							f
