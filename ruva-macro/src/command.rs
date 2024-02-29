@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use proc_macro2::TokenStream;
 use syn::{punctuated::Punctuated, Data, DataStruct, DeriveInput, Fields};
 
@@ -23,7 +21,8 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 				.collect::<Punctuated<syn::Field, syn::token::Comma>>();
 			let mut body_ast = ast.clone();
 
-			let mut ident_type_in_map: HashMap<String, String> = HashMap::new();
+			let mut idents_in_vec: Vec<String> = vec![];
+			let mut types_in_vec: Vec<String> = vec![];
 			let mut input_not_required_ident_type_vec: Vec<String> = vec![];
 
 			body_ast.data = Data::Struct(DataStruct {
@@ -34,9 +33,8 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 						.into_iter()
 						.map(|f| {
 							// Get type name and identifier for the type
-							let type_name = get_type_name(&f.ty);
-							let identifier_in_string = f.ident.clone().unwrap().to_string();
-							ident_type_in_map.insert(identifier_in_string, type_name);
+							idents_in_vec.push(f.ident.clone().unwrap().to_string());
+							types_in_vec.push(get_type_name(&f.ty));
 							f
 						})
 						.filter(|f| {
@@ -57,8 +55,9 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 			body_ast.ident = body_name.clone();
 
 			let mut input_keys_in_vec: Vec<String> = vec![];
-			let input_parameters = ident_type_in_map
+			let input_parameters = idents_in_vec
 				.iter()
+				.zip(types_in_vec.iter())
 				.filter(|(key, _value)| !input_not_required_ident_type_vec.contains(key))
 				.map(|(key, value)| {
 					input_keys_in_vec.push(key.clone());
@@ -73,8 +72,9 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 				input_keys += ",";
 			}
 
-			let self_parameters = ident_type_in_map
+			let self_parameters = idents_in_vec
 				.iter()
+				.zip(types_in_vec.iter())
 				.filter(|(key, _value)| input_not_required_ident_type_vec.contains(key))
 				.map(|(key, _)| format!("{}:self.{}", key, key))
 				.collect::<Vec<_>>()
