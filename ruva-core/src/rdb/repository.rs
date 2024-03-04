@@ -91,7 +91,6 @@ impl<A: TAggregate + 'static> TRepository for SqlRepository<A> {
 		self.events.extend(events)
 	}
 }
-
 impl<A: TAggregate + 'static> TCommitHook for SqlRepository<A> {
 	async fn commit_hook(&mut self) -> Result<(), BaseError> {
 		self.save_outbox().await?;
