@@ -33,7 +33,7 @@ impl TUnitOfWork for SQLExecutor {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		match self.transaction.as_mut() {
 			None => {
-				self.transaction = Some(self.pool.begin().await.map_err(|err| BaseError::DatabaseError(Box::new(err)))?);
+				self.transaction = Some(self.pool.begin().await?);
 				Ok(())
 			}
 			Some(_trx) => {
@@ -46,13 +46,13 @@ impl TUnitOfWork for SQLExecutor {
 	async fn commit(&mut self) -> Result<(), BaseError> {
 		match self.transaction.take() {
 			None => panic!("Tranasction Has Not Begun!"),
-			Some(trx) => trx.commit().await.map_err(|err| BaseError::DatabaseError(Box::new(err))),
+			Some(trx) => Ok(trx.commit().await?),
 		}
 	}
 	async fn rollback(&mut self) -> Result<(), BaseError> {
 		match self.transaction.take() {
 			None => panic!("Tranasction Has Not Begun!"),
-			Some(trx) => trx.rollback().await.map_err(|err| BaseError::DatabaseError(Box::new(err))),
+			Some(trx) => Ok(trx.rollback().await?),
 		}
 	}
 
@@ -79,7 +79,7 @@ pub fn connection_pool() -> &'static PgPool {
 					.max_connections(100)
 					.connect_with(opts)
 					.await
-					.map_err(|err| BaseError::DatabaseError(Box::new(err)))
+					.map_err(|err| BaseError::DatabaseError(err.to_string()))
 					.unwrap()
 			}
 			get_connection_pool()

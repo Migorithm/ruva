@@ -1,3 +1,4 @@
+use crate::prelude::BaseError;
 use crate::snowflake::SnowFlake;
 
 use sqlx::error::BoxDynError;
@@ -35,5 +36,12 @@ impl PgHasArrayType for SnowFlake {
 
 	fn array_compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
 		<i64 as PgHasArrayType>::array_compatible(ty)
+	}
+}
+
+impl From<sqlx::Error> for BaseError {
+	fn from(value: sqlx::Error) -> Self {
+		eprintln!("{:?}", value);
+		Self::DatabaseError(value.to_string())
 	}
 }

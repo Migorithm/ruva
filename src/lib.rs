@@ -221,7 +221,7 @@ mod test {
 
 		use crate as ruva;
 		use ruva_core::message::TEvent;
-		use ruva_core::responses::{AnyError, BaseError};
+		use ruva_core::responses::BaseError;
 		use ruva_macro::ApplicationError;
 
 		#[derive(Debug, ApplicationError)]
@@ -232,7 +232,7 @@ mod test {
 			#[stop_sentinel_with_event]
 			StopSentinelWithEvent(std::sync::Arc<dyn TEvent>),
 			#[database_error]
-			DatabaseError(Box<AnyError>),
+			DatabaseError(String),
 			BaseError(BaseError),
 		}
 

@@ -63,7 +63,7 @@ impl<A: TAggregate + 'static> SqlRepository<A> {
 		.await
 		.map_err(|err| {
 			tracing::error!("failed to insert outbox! {}", err);
-			BaseError::DatabaseError(Box::new(err))
+			BaseError::DatabaseError(err.to_string())
 		})?;
 		Ok(())
 	}

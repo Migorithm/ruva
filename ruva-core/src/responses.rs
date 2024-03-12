@@ -9,7 +9,7 @@ pub enum BaseError {
 	StopSentinel,
 	TransactionError,
 	StopSentinelWithEvent(std::sync::Arc<dyn TEvent>),
-	DatabaseError(Box<AnyError>),
+	DatabaseError(String),
 	ServiceError(Box<AnyError>),
 }
 
