@@ -69,22 +69,14 @@ impl TUnitOfWork for SQLExecutor {
 pub fn connection_pool() -> &'static PgPool {
 	static POOL: std::sync::OnceLock<PgPool> = std::sync::OnceLock::new();
 	POOL.get_or_init(|| {
-		std::thread::spawn(|| {
-			#[tokio::main]
-			async fn get_connection_pool() -> PgPool {
-				let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-				let mut opts: PgConnectOptions = url.parse().unwrap();
-				opts.disable_statement_logging();
+		let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+		let mut opts: PgConnectOptions = url.parse().unwrap();
+		opts.disable_statement_logging();
 
-				let mut pool_options = PoolOptions::new().max_connections(100);
-				if cfg!(test) {
-					pool_options = pool_options.test_before_acquire(false)
-				};
-				pool_options.connect_with(opts).await.map_err(|err| BaseError::DatabaseError(err.to_string())).unwrap()
-			}
-			get_connection_pool()
-		})
-		.join()
-		.unwrap()
+		let mut pool_options = PoolOptions::new().max_connections(100);
+		if cfg!(test) {
+			pool_options = pool_options.test_before_acquire(false)
+		};
+		pool_options.connect_lazy_with(opts)
 	})
 }
