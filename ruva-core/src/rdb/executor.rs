@@ -75,12 +75,12 @@ pub fn connection_pool() -> &'static PgPool {
 				let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 				let mut opts: PgConnectOptions = url.parse().unwrap();
 				opts.disable_statement_logging();
-				PoolOptions::new()
-					.max_connections(100)
-					.connect_with(opts)
-					.await
-					.map_err(|err| BaseError::DatabaseError(err.to_string()))
-					.unwrap()
+
+				let mut pool_options = PoolOptions::new().max_connections(100);
+				if cfg!(test) {
+					pool_options = pool_options.test_before_acquire(false)
+				};
+				pool_options.connect_with(opts).await.map_err(|err| BaseError::DatabaseError(err.to_string())).unwrap()
 			}
 			get_connection_pool()
 		})
