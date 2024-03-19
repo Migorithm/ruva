@@ -5,6 +5,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 	let name = &ast.ident;
 
 	quote!(
+
 		impl<A: ruva::ruva_core::aggregate::TAggregate> #name<A> {
 			pub fn event_hook(
 				&mut self,
@@ -82,6 +83,8 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 				self.0.clone_context()
 			}
 		}
+
+
 
 
 	)

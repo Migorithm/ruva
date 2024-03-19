@@ -70,6 +70,13 @@ impl TUnitOfWork for SQLExecutor {
 	}
 }
 
+pub trait TCloneExecutor<T>
+where
+	T: TUnitOfWork,
+{
+	fn clone_executor(&self) -> Arc<RwLock<T>>;
+}
+
 static INIT: OnceLock<PgPool> = OnceLock::new();
 
 pub fn connection_pool() -> PgPool {
