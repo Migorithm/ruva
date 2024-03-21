@@ -192,8 +192,8 @@ mod test_account {
 #[cfg(test)]
 mod test_persistence {
 
-	use ruva_core::prelude::tokio;
 	use ruva_core::rdb::executor::SQLExecutor;
+	use ruva_core::{prelude::tokio, rdb::executor::pg_pool};
 
 	use crate::{
 		aggregate::TAggregateMetadata,
@@ -202,14 +202,14 @@ mod test_persistence {
 	};
 	async fn clean_up() {
 		dotenv::dotenv().ok();
-		let executor = SQLExecutor::new();
+		let executor = SQLExecutor::new(pg_pool());
 		let _ = ruva_core::prelude::sqlx::query("TRUNCATE events,snapshots CASCADE").execute(executor.read().await.connection()).await;
 	}
 
 	#[tokio::test]
 	async fn test_commit() {
 		clean_up().await;
-		let repo = SqlRepository::new(SQLExecutor::new());
+		let repo = SqlRepository::new(SQLExecutor::new(pg_pool()));
 		let aggregate = Account::create_account("test_email@mail.com".to_string(), "test_password".to_string());
 
 		repo.commit(&aggregate).await.unwrap();
@@ -220,7 +220,7 @@ mod test_persistence {
 		clean_up().await;
 
 		// given
-		let repo = SqlRepository::new(SQLExecutor::new());
+		let repo = SqlRepository::new(SQLExecutor::new(pg_pool()));
 		let aggregate = Account::create_account("test_email@mail.com".to_string(), "test_password".to_string());
 		repo.commit(&aggregate).await.unwrap();
 
@@ -238,7 +238,7 @@ mod test_persistence {
 		clean_up().await;
 
 		// given
-		let repo = SqlRepository::new(SQLExecutor::new());
+		let repo = SqlRepository::new(SQLExecutor::new(pg_pool()));
 		let aggregate = Account::create_account("test_email@mail.com".to_string(), "test_password".to_string());
 		repo.commit(&aggregate).await.unwrap();
 

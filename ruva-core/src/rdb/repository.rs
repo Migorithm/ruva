@@ -8,7 +8,7 @@ use crate::{
 	repository::TRepository,
 };
 
-use super::executor::{SQLExecutor, TCloneExecutor};
+use super::executor::SQLExecutor;
 
 pub struct SqlRepository<A: TAggregate> {
 	pub executor: Arc<RwLock<SQLExecutor>>,
@@ -119,11 +119,5 @@ impl<A: TAggregate + 'static> TUnitOfWork for SqlRepository<A> {
 	}
 	async fn close(&mut self) {
 		self.executor.write().await.close().await;
-	}
-}
-
-impl<A: TAggregate + 'static> TCloneExecutor<SQLExecutor> for SqlRepository<A> {
-	fn clone_executor(&self) -> Arc<RwLock<SQLExecutor>> {
-		self.executor.clone()
 	}
 }

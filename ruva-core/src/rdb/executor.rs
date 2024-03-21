@@ -5,7 +5,7 @@ use sqlx::{
 	postgres::{PgConnectOptions, PgPool},
 	ConnectOptions, PgConnection, Postgres, Transaction,
 };
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Debug)]
@@ -15,11 +15,8 @@ pub struct SQLExecutor {
 }
 
 impl SQLExecutor {
-	pub fn new() -> Arc<RwLock<Self>> {
-		Arc::new(RwLock::new(Self {
-			pool: connection_pool(),
-			transaction: None,
-		}))
+	pub fn new(pool: PgPool) -> Arc<RwLock<Self>> {
+		Arc::new(RwLock::new(Self { pool, transaction: None }))
 	}
 
 	pub fn transaction(&mut self) -> &mut PgConnection {
@@ -70,25 +67,13 @@ impl TUnitOfWork for SQLExecutor {
 	}
 }
 
-pub trait TCloneExecutor<T>
-where
-	T: TUnitOfWork,
-{
-	fn clone_executor(&self) -> Arc<RwLock<T>>;
-}
+pub fn pg_pool() -> PgPool {
+	let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+	let opts: PgConnectOptions = url.parse::<PgConnectOptions>().unwrap().disable_statement_logging();
 
-static INIT: OnceLock<PgPool> = OnceLock::new();
+	let mut pool_options = PoolOptions::new().acquire_timeout(std::time::Duration::from_secs(2));
 
-pub fn connection_pool() -> PgPool {
-	INIT.get_or_init(|| {
-		let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-		let opts: PgConnectOptions = url.parse::<PgConnectOptions>().unwrap().disable_statement_logging();
+	pool_options = pool_options.max_connections(1);
 
-		let mut pool_options = PoolOptions::new().acquire_timeout(std::time::Duration::from_secs(2)).max_connections(1);
-		if cfg!(test) {
-			pool_options = pool_options.test_before_acquire(false)
-		};
-		pool_options.connect_lazy_with(opts)
-	})
-	.clone()
+	pool_options.connect_lazy_with(opts)
 }
