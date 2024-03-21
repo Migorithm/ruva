@@ -3,7 +3,7 @@ use std::{marker::PhantomData, sync::Arc};
 use ruva_core::{
 	prelude::{
 		from_value, json,
-		sqlx::{self, Row},
+		sqlx::{self, postgres::PgRow, Row},
 		tokio::sync::RwLock,
 		Value,
 	},
@@ -67,7 +67,7 @@ impl<A: TAggregateES + TAggregateMetadata> TEventStore<A> for SqlRepository<A> {
             "#,
 		)
 		.bind(aggregate_id)
-		.map(|record| EventEnvolope {
+		.map(|record: PgRow| EventEnvolope {
 			aggregate_type: record.get("aggregate_type"),
 			aggregate_id: record.get("aggregate_id"),
 			sequence: record.get("sequence"),

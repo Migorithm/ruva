@@ -5,6 +5,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 	let name = &ast.ident;
 
 	quote!(
+
 		impl<A: ruva::ruva_core::aggregate::TAggregate> #name<A> {
 			pub fn event_hook(
 				&mut self,
@@ -14,14 +15,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 			}
 		}
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> #name<A> {
-			pub fn new(
-				context: AtomicContextManager,
-			) -> Self {
-				let executor = ruva::ruva_core::rdb::executor::SQLExecutor::new();
-				Self(SqlRepository::new(context, executor))
-			}
-		}
+
 
 		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::repository::TRepository for #name<A> {
 			fn set_events(
@@ -82,6 +76,8 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 				self.0.clone_context()
 			}
 		}
+
+
 
 
 	)

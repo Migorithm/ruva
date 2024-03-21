@@ -1,31 +1,32 @@
 use crate::prelude::{BaseError, TUnitOfWork};
 
-use sqlx::{pool::PoolOptions, postgres::PgConnectOptions, postgres::PgPool, ConnectOptions, Postgres, Transaction};
+use sqlx::{
+	pool::PoolOptions,
+	postgres::{PgConnectOptions, PgPool},
+	ConnectOptions, PgConnection, Postgres, Transaction,
+};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct SQLExecutor {
-	pool: &'static PgPool,
+	pool: PgPool,
 	transaction: Option<Transaction<'static, Postgres>>,
 }
 
 impl SQLExecutor {
-	pub fn new() -> Arc<RwLock<Self>> {
-		Arc::new(RwLock::new(Self {
-			pool: connection_pool(),
-			transaction: None,
-		}))
+	pub fn new(pool: PgPool) -> Arc<RwLock<Self>> {
+		Arc::new(RwLock::new(Self { pool, transaction: None }))
 	}
 
-	pub fn transaction(&mut self) -> &mut Transaction<'static, Postgres> {
+	pub fn transaction(&mut self) -> &mut PgConnection {
 		match self.transaction.as_mut() {
 			Some(trx) => trx,
 			None => panic!("Transaction Has Not Begun!"),
 		}
 	}
 	pub fn connection(&self) -> &PgPool {
-		self.pool
+		&self.pool
 	}
 }
 
@@ -66,17 +67,13 @@ impl TUnitOfWork for SQLExecutor {
 	}
 }
 
-pub fn connection_pool() -> &'static PgPool {
-	static POOL: std::sync::OnceLock<PgPool> = std::sync::OnceLock::new();
-	POOL.get_or_init(|| {
-		let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-		let mut opts: PgConnectOptions = url.parse().unwrap();
-		opts.disable_statement_logging();
+pub fn pg_pool() -> PgPool {
+	let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+	let opts: PgConnectOptions = url.parse::<PgConnectOptions>().unwrap().disable_statement_logging();
 
-		let mut pool_options = PoolOptions::new().max_connections(100);
-		if cfg!(test) {
-			pool_options = pool_options.test_before_acquire(false)
-		};
-		pool_options.connect_lazy_with(opts)
-	})
+	let mut pool_options = PoolOptions::new().acquire_timeout(std::time::Duration::from_secs(2));
+
+	pool_options = pool_options.max_connections(1);
+
+	pool_options.connect_lazy_with(opts)
 }
