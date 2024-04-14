@@ -1,6 +1,4 @@
-use std::marker::PhantomData;
-
-use crate::prelude::{AtomicContextManager, BaseError, OutBox, TAggregate, TCommitHook, TEvent, TRepository, TUnitOfWork};
+use crate::prelude::{AtomicContextManager, BaseError, OutBox, TCommitHook, TEvent, TRepository, TUnitOfWork};
 
 pub fn outbox_table() -> &'static std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>>> {
 	static GROUP_TABLE: std::sync::OnceLock<std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>>>> = std::sync::OnceLock::new();
@@ -8,19 +6,14 @@ pub fn outbox_table() -> &'static std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>
 }
 
 #[derive(Clone)]
-pub struct MockDb<A: TAggregate> {
-	_aggregate: PhantomData<A>,
+pub struct MockDb {
 	pub events: std::collections::VecDeque<std::sync::Arc<dyn TEvent>>,
 	pub context: AtomicContextManager,
 }
 
-impl<A: TAggregate> MockDb<A> {
+impl MockDb {
 	pub fn new(context: AtomicContextManager) -> Self {
-		MockDb {
-			_aggregate: PhantomData,
-			events: Default::default(),
-			context,
-		}
+		MockDb { events: Default::default(), context }
 	}
 
 	pub(crate) async fn send_internally_notifiable_messages(&self) {
@@ -37,12 +30,12 @@ impl<A: TAggregate> MockDb<A> {
 	}
 }
 
-impl<A: TAggregate> TRepository for MockDb<A> {
+impl TRepository for MockDb {
 	fn set_events(&mut self, events: std::collections::VecDeque<std::sync::Arc<dyn TEvent>>) {
 		self.events.extend(events)
 	}
 }
-impl<A: TAggregate> TCommitHook for MockDb<A> {
+impl TCommitHook for MockDb {
 	async fn commit_hook(&mut self) -> Result<(), crate::prelude::BaseError> {
 		self.save_outbox().await?;
 		self.send_internally_notifiable_messages().await;
@@ -50,7 +43,7 @@ impl<A: TAggregate> TCommitHook for MockDb<A> {
 	}
 }
 
-impl<A: TAggregate> TUnitOfWork for MockDb<A> {
+impl TUnitOfWork for MockDb {
 	async fn begin(&mut self) -> Result<(), crate::prelude::BaseError> {
 		Ok(())
 	}
