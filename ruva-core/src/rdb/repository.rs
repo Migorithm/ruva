@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, marker::PhantomData, sync::Arc};
+use std::{collections::VecDeque, sync::Arc};
 
 use tokio::sync::RwLock;
 
@@ -10,23 +10,21 @@ use crate::{
 
 use super::executor::SQLExecutor;
 
-pub struct SqlRepository<A: TAggregate> {
+pub struct SqlRepository {
 	pub executor: Arc<RwLock<SQLExecutor>>,
-	_phantom: PhantomData<A>,
 	events: VecDeque<std::sync::Arc<dyn TEvent>>,
 	context: AtomicContextManager,
 }
 
-impl<A: TAggregate + 'static> SqlRepository<A> {
+impl SqlRepository {
 	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<SQLExecutor>>) -> Self {
 		Self {
 			executor,
-			_phantom: std::marker::PhantomData,
 			events: Default::default(),
 			context,
 		}
 	}
-	pub fn event_hook(&mut self, aggregate: &mut A) {
+	pub fn event_hook<A: TAggregate>(&mut self, aggregate: &mut A) {
 		self.set_events(aggregate.take_events());
 	}
 	pub(crate) async fn send_internally_notifiable_messages(&self) {
@@ -69,29 +67,28 @@ impl<A: TAggregate + 'static> SqlRepository<A> {
 	}
 }
 
-impl<A: TAggregate> TClone for SqlRepository<A> {
+impl TClone for SqlRepository {
 	fn clone(&self) -> Self {
 		Self {
 			executor: self.executor.clone(),
-			_phantom: PhantomData,
 			events: Default::default(),
 			context: self.context.clone(),
 		}
 	}
 }
 
-impl<A: TAggregate> TCloneContext for SqlRepository<A> {
+impl TCloneContext for SqlRepository {
 	fn clone_context(&self) -> AtomicContextManager {
 		self.context.clone()
 	}
 }
 
-impl<A: TAggregate + 'static> TRepository for SqlRepository<A> {
+impl TRepository for SqlRepository {
 	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn TEvent>>) {
 		self.events.extend(events)
 	}
 }
-impl<A: TAggregate + 'static> TCommitHook for SqlRepository<A> {
+impl TCommitHook for SqlRepository {
 	async fn commit_hook(&mut self) -> Result<(), BaseError> {
 		self.save_outbox().await?;
 		self.send_internally_notifiable_messages().await;
@@ -99,7 +96,7 @@ impl<A: TAggregate + 'static> TCommitHook for SqlRepository<A> {
 	}
 }
 
-impl<A: TAggregate + 'static> TUnitOfWork for SqlRepository<A> {
+impl TUnitOfWork for SqlRepository {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		let mut executor = self.executor.write().await;
 		executor.begin().await

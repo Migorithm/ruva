@@ -7,3 +7,4 @@ pub trait TClone {
 pub trait TCloneContext {
 	fn clone_context(&self) -> AtomicContextManager;
 }
+
