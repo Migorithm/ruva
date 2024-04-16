@@ -6,8 +6,8 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 
 	quote!(
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> #name<A> {
-			pub fn event_hook(
+		impl #name {
+			pub fn event_hook<A:TAggregate>(
 				&mut self,
 				aggregate: &mut A,
 			) {
@@ -17,7 +17,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 
 
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::repository::TRepository for #name<A> {
+		impl ruva::ruva_core::repository::TRepository for #name {
 			fn set_events(
 				&mut self,
 				events: std::collections::VecDeque<std::sync::Arc<dyn TEvent>>,
@@ -26,13 +26,13 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 			}
 		}
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ::std::ops::Deref for #name<A> {
-			type Target = ruva::ruva_core::rdb::repository::SqlRepository<A>;
+		impl ::std::ops::Deref for #name {
+			type Target = ruva::ruva_core::rdb::repository::SqlRepository;
 			fn deref(&self) -> &Self::Target {
 				&self.0
 			}
 		}
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ::std::ops::DerefMut for #name<A> {
+		impl ::std::ops::DerefMut for #name {
 			fn deref_mut(&mut self) -> &mut Self::Target {
 				&mut self.0
 			}
@@ -40,7 +40,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 
 
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::unit_of_work::TUnitOfWork for #name<A> {
+		impl ruva::ruva_core::unit_of_work::TUnitOfWork for #name {
 			async fn begin(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
 				self.0.begin().await
 			}
@@ -59,19 +59,19 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 		}
 
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::unit_of_work::TCommitHook for #name<A> {
+		impl ruva::ruva_core::unit_of_work::TCommitHook for #name {
 			async fn commit_hook(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
 				self.0.commit_hook().await
 			}
 		}
 
 
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::utils::TClone for #name<A> {
+		impl ruva::ruva_core::utils::TClone for #name {
 			fn clone(&self) -> Self {
 				Self(self.0.clone())
 			}
 		}
-		impl<A: ruva::ruva_core::aggregate::TAggregate> ruva::ruva_core::utils::TCloneContext for #name<A> {
+		impl ruva::ruva_core::utils::TCloneContext for #name {
 			fn clone_context(&self) -> ruva::ruva_core::messagebus::AtomicContextManager {
 				self.0.clone_context()
 			}
