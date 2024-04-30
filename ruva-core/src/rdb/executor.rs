@@ -10,12 +10,12 @@ use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct SQLExecutor {
-	pool: PgPool,
+	pool: &'static PgPool,
 	transaction: Option<Transaction<'static, Postgres>>,
 }
 
 impl SQLExecutor {
-	pub fn new(pool: PgPool) -> Arc<RwLock<Self>> {
+	pub fn new(pool: &'static PgPool) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self { pool, transaction: None }))
 	}
 
@@ -26,7 +26,7 @@ impl SQLExecutor {
 		}
 	}
 	pub fn connection(&self) -> &PgPool {
-		&self.pool
+		self.pool
 	}
 }
 
