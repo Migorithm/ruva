@@ -98,7 +98,7 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 
 			quote!(
 
-				#[derive(Debug, serde::Deserialize, Clone, utoipa::ToSchema)]
+				#[derive(Debug, serde::Deserialize, serde::Serialize, Clone, utoipa::ToSchema)]
 				#body_ast
 				#into_statement
 			)
