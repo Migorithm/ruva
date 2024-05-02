@@ -1,10 +1,6 @@
 use crate::prelude::{BaseError, TUnitOfWork};
 
-use sqlx::{
-	pool::PoolOptions,
-	postgres::{PgConnectOptions, PgPool},
-	ConnectOptions, PgConnection, Postgres, Transaction,
-};
+use sqlx::{postgres::PgPool, PgConnection, Postgres, Transaction};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -65,15 +61,4 @@ impl TUnitOfWork for SQLExecutor {
 			}
 		}
 	}
-}
-
-pub fn pg_pool() -> PgPool {
-	let url = &std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-	let opts: PgConnectOptions = url.parse::<PgConnectOptions>().unwrap().disable_statement_logging();
-
-	let mut pool_options = PoolOptions::new().acquire_timeout(std::time::Duration::from_secs(2));
-
-	pool_options = pool_options.max_connections(1);
-
-	pool_options.connect_lazy_with(opts)
 }

@@ -1,6 +1,6 @@
 [package]
 name = "ruva-es"
-version = "0.3.19"
+version = "0.3.20"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven TEvent Handling"
@@ -9,7 +9,7 @@ repository = "https://github.com/BeringLab/ruva"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ruva-core= {version="0.3.19", path="../ruva-core"}
+ruva-core= {version="0.3.20", path="../ruva-core"}
 dotenv="0.15.0"
 
 [features]
