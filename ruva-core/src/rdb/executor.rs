@@ -24,6 +24,9 @@ impl SQLExecutor {
 	pub fn connection(&self) -> &PgPool {
 		self.pool
 	}
+	pub fn in_transaction(&self) -> bool {
+		self.transaction.is_some()
+	}
 }
 
 impl TUnitOfWork for SQLExecutor {
