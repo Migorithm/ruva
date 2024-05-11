@@ -2,7 +2,7 @@ use crate::aggregate::TAggregateMetadata;
 
 use crate::{aggregate::TAggregateES, event::TEvent};
 
-use ruva_core::prelude::{Deserialize, Serialize};
+use ruva_core::prelude::serde::{Deserialize, Serialize};
 use ruva_core::responses::ApplicationError;
 
 #[derive(Debug, Serialize, Deserialize, Default)]

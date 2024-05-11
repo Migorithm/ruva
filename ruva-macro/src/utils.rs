@@ -15,15 +15,15 @@ pub(crate) fn find_enum_variant<'a>(data_enum: &'a DataEnum) -> impl Fn(&'a str)
 }
 
 // tell if a field is annotated with specific attribute name and get its Types
-pub(crate) fn find_attr_and_locate_its_type_from_field(field: &mut Field, attribute_name: &str) -> Vec<Type> {
-	let mut identifier_types = vec![];
-	for attr in field.attrs.iter_mut() {
-		if attr.meta.path().segments.iter().any(|f| f.ident == *attribute_name) {
-			identifier_types.push(field.ty.clone());
-		}
-	}
-	identifier_types
-}
+// pub(crate) fn find_attr_and_locate_its_type_from_field(field: &mut Field, attribute_name: &str) -> Vec<Type> {
+// 	let mut identifier_types = vec![];
+// 	for attr in field.attrs.iter_mut() {
+// 		if attr.meta.path().segments.iter().any(|f| f.ident == *attribute_name) {
+// 			identifier_types.push(field.ty.clone());
+// 		}
+// 	}
+// 	identifier_types
+// }
 
 // get attributes from field
 pub(crate) fn get_attributes(field: &Field) -> Vec<Ident> {

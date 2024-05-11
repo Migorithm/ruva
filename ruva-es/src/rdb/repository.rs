@@ -2,10 +2,9 @@ use std::{marker::PhantomData, sync::Arc};
 
 use ruva_core::{
 	prelude::{
-		from_value, json,
+		serde_json::{from_value, json, Value},
 		sqlx::{self, postgres::PgRow, Row},
 		tokio::sync::RwLock,
-		Value,
 	},
 	prepare_bulk_operation,
 	rdb::executor::SQLExecutor,

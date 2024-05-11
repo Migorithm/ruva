@@ -1,4 +1,3 @@
-pub use paste::paste;
 pub mod aggregate;
 pub mod handler;
 pub mod message;
@@ -25,13 +24,13 @@ pub mod prelude {
 	pub use crate::utils::*;
 	pub use async_trait::async_trait;
 	pub use hashbrown::HashMap as HandlerMapper;
-	pub use paste::paste;
-
-	pub use serde::{self, de::DeserializeOwned, Deserialize, Serialize};
-	pub use serde_json::{from_value, json, Value};
+	pub use serde;
+	pub use serde::{Deserialize, Serialize};
+	pub use serde_json;
 	#[cfg(feature = "sqlx-postgres")]
 	pub use sqlx;
 	pub use tokio;
+	pub use tracing;
 }
 
 pub mod event_macros {
