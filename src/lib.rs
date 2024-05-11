@@ -41,14 +41,14 @@
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
 //! pub struct OrderFailed {
-//!     #[identifier]
+//!     
 //!     pub user_id: i64,
 //! }
 //!
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
 //! pub struct OrderSucceeded{
-//!     #[identifier]
+//!     
 //!     pub user_id: i64,
 //!     pub items: Vec<String>
 //! }
@@ -215,14 +215,17 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
 
+	use crate as ruva;
+
+	use ruva_core::prelude::*;
+	use ruva_macro::aggregate;
 	#[test]
 	fn application_error_derive_test() {
-		use std::fmt::Display;
-
-		use crate as ruva;
 		use ruva_core::message::TEvent;
+
 		use ruva_core::responses::BaseError;
 		use ruva_macro::ApplicationError;
+		use std::fmt::Display;
 
 		#[derive(Debug, ApplicationError)]
 		#[crates(ruva)]
@@ -246,5 +249,19 @@ mod test {
 				}
 			}
 		}
+	}
+
+	#[aggregate]
+	#[derive(Debug, Clone, Serialize, Default)]
+	pub struct AggregateStruct {
+		id: i32,
+		#[serde(skip_serializing)]
+		name: String,
+	}
+	#[test]
+	fn test_serialize() {
+		let aggregate = AggregateStruct::default();
+		let serialized = serde_json::to_string(&aggregate).unwrap();
+		assert_eq!(serialized, "{\"id\":0,\"version\":0}");
 	}
 }

@@ -37,14 +37,14 @@ Likewise, you can do the same thing for Event:
 #[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderFailed {
-    #[identifier]
+    
     pub user_id: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderSucceeded{
-    #[identifier]
+    
     pub user_id: i64,
     pub items: Vec<String>
 }

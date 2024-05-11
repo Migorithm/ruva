@@ -32,7 +32,6 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// #[aggregate]
 /// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
-///    #[identifier]
 ///     pub(crate) age: i64,
 /// }
 ///
@@ -45,14 +44,11 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// the following will cause an error with saying "identifier is specified only once!"
 /// ```rust,no_run
 /// #[aggregate]
 /// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
-///     #[identifier]
 ///     pub(crate) age: i64,
-///      #[identifier]
 ///     pub(crate) name: String,
 /// }
 /// ```
@@ -94,7 +90,7 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 /// #[aggregate]
 /// #[derive(Default, Serialize, Deserialize)]
 /// struct TestAggregate {
-///     #[identifier]
+///     
 ///     pub age: i64,
 /// }
 ///

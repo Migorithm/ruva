@@ -7,7 +7,7 @@
 //! #[internally_notifiable]
 //! #[externally_notifiable]
 //! pub struct CustomEvent {
-//!     #[identifier]
+//!     
 //!     pub id: i64,
 //!     pub custom_field: String,
 //! }
