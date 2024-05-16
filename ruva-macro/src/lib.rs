@@ -62,6 +62,45 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 ///     pub(crate) name: String,
 /// }
 /// ```
+///
+/// `{your aggregate name}Adapter` will be generated automatically so you can use it to adapt it to database
+/// ```rust,no_run```
+///
+/// #[aggregate]
+/// #[derive(Debug, Clone, Serialize, Default)]
+/// pub struct AggregateStruct {
+///     #[adapter_ignore]
+///     id: i32,
+///     #[serde(skip_serializing)]
+///     name: String,
+///     some_other_field: i32,
+/// }
+/// let aggregate = AggregateStruct::default();
+/// let serialized = serde_json::to_string(&aggregate).unwrap();
+/// assert_eq!(serialized, "{\"id\":0,\"some_other_field\":0,\"version\":0}");
+///
+/// let adapter = AggregateStructAdapter::default();
+/// let serialized = serde_json::to_string(&adapter).unwrap();
+/// assert_eq!(serialized, "{\"some_other_field\":0}");
+///
+/// ```
+///
+/// Conversion is automatically done as follows:
+/// ```rust,no_run```
+/// let aggregate = AggregateStruct {
+///         name: "migo".into(),
+///         some_other_field: 2,
+///         id: 1,
+///         ..Default::default()
+///     };
+///     let converted_adapter = AggregateStructAdapter::from(aggregate);
+///     assert_eq!(converted_adapter.name, "migo");
+///     assert_eq!(converted_adapter.some_other_field, 2);
+///     let converted_struct = AggregateStruct::from(converted_adapter);
+///     assert_eq!(converted_struct.name, "migo");
+///     assert_eq!(converted_struct.some_other_field, 2);
+/// ```
+///
 #[proc_macro_attribute]
 pub fn aggregate(_: TokenStream, input: TokenStream) -> TokenStream {
 	domain::render_aggregate(input)

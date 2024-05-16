@@ -48,7 +48,7 @@
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
 //! pub struct OrderSucceeded{
-//!     
+//!     #[identifier]
 //!     pub user_id: i64,
 //!     pub items: Vec<String>
 //! }
@@ -254,14 +254,61 @@ mod test {
 	#[aggregate]
 	#[derive(Debug, Clone, Serialize, Default)]
 	pub struct AggregateStruct {
+		#[adapter_ignore]
 		id: i32,
 		#[serde(skip_serializing)]
 		name: String,
+		some_other_field: i32,
 	}
 	#[test]
 	fn test_serialize() {
 		let aggregate = AggregateStruct::default();
 		let serialized = serde_json::to_string(&aggregate).unwrap();
-		assert_eq!(serialized, "{\"id\":0,\"version\":0}");
+		assert_eq!(serialized, "{\"id\":0,\"some_other_field\":0,\"version\":0}");
+	}
+
+	#[test]
+	fn test_adapter_accessible() {
+		let adapter = AggregateStructAdapter::default();
+		let serialized = serde_json::to_string(&adapter).unwrap();
+		assert_eq!(serialized, "{\"some_other_field\":0}");
+	}
+
+	#[test]
+	fn test_conversion() {
+		let aggregate = AggregateStruct {
+			name: "migo".into(),
+			some_other_field: 2,
+			id: 1,
+			..Default::default()
+		};
+
+		let converted_adapter = AggregateStructAdapter::from(aggregate);
+
+		assert_eq!(converted_adapter.name, "migo");
+		assert_eq!(converted_adapter.some_other_field, 2);
+
+		let converted_struct = AggregateStruct::from(converted_adapter);
+		assert_eq!(converted_struct.name, "migo");
+		assert_eq!(converted_struct.some_other_field, 2);
+	}
+
+	#[test]
+	fn test_when_there_is_no_apdater_ignore_attr() {
+		#[aggregate]
+		#[derive(Debug, Clone, Serialize, Default)]
+		pub struct TestStruct {
+			id: i32,
+			name: String,
+			some_other_field: i32,
+		}
+
+		let non_adapter = TestStruct::default();
+		let non_adapter_serialized = serde_json::to_string(&non_adapter).unwrap();
+		assert_eq!(non_adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0,\"version\":0}");
+
+		let adapter = TestStructAdapter::default();
+		let adapter_serialized = serde_json::to_string(&adapter).unwrap();
+		assert_eq!(adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0}");
 	}
 }
