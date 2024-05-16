@@ -251,46 +251,64 @@ mod test {
 		}
 	}
 
-	#[aggregate]
-	#[derive(Debug, Clone, Serialize, Default)]
-	pub struct AggregateStruct {
-		#[adapter_ignore]
-		id: i32,
-		#[serde(skip_serializing)]
-		name: String,
-		some_other_field: i32,
-	}
 	#[test]
 	fn test_serialize() {
-		let aggregate = AggregateStruct::default();
+		#[aggregate]
+		#[derive(Debug, Clone, Serialize, Default)]
+		pub struct SerializeTest {
+			#[adapter_ignore]
+			id: i32,
+			#[serde(skip_serializing)]
+			name: String,
+			foo: i32,
+		}
+		let aggregate = SerializeTest::default();
 		let serialized = serde_json::to_string(&aggregate).unwrap();
 		assert_eq!(serialized, "{\"id\":0,\"some_other_field\":0,\"version\":0}");
 	}
 
 	#[test]
 	fn test_adapter_accessible() {
-		let adapter = AggregateStructAdapter::default();
+		#[aggregate]
+		#[derive(Debug, Clone, Serialize, Default)]
+		pub struct TestStruct {
+			#[adapter_ignore]
+			id: i32,
+			#[serde(skip_serializing)]
+			name: String,
+			foo: i32,
+		}
+		let adapter = TestStructAdapter::default();
 		let serialized = serde_json::to_string(&adapter).unwrap();
 		assert_eq!(serialized, "{\"some_other_field\":0}");
 	}
 
 	#[test]
 	fn test_conversion() {
-		let aggregate = AggregateStruct {
+		#[aggregate]
+		#[derive(Debug, Clone, Serialize, Default)]
+		pub struct ConversionStruct {
+			#[adapter_ignore]
+			id: i32,
+			#[serde(skip_serializing)]
+			name: String,
+			foo: i32,
+		}
+		let aggregate = ConversionStruct {
 			name: "migo".into(),
-			some_other_field: 2,
+			foo: 2,
 			id: 1,
 			..Default::default()
 		};
-
-		let converted_adapter = AggregateStructAdapter::from(aggregate);
+		assert_eq!(aggregate.id, 1);
+		let converted_adapter = ConversionStructAdapter::from(aggregate);
 
 		assert_eq!(converted_adapter.name, "migo");
-		assert_eq!(converted_adapter.some_other_field, 2);
+		assert_eq!(converted_adapter.foo, 2);
 
-		let converted_struct = AggregateStruct::from(converted_adapter);
+		let converted_struct = ConversionStruct::from(converted_adapter);
 		assert_eq!(converted_struct.name, "migo");
-		assert_eq!(converted_struct.some_other_field, 2);
+		assert_eq!(converted_struct.foo, 2);
 	}
 
 	#[test]

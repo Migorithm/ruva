@@ -37,14 +37,14 @@ Likewise, you can do the same thing for Event:
 #[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderFailed {
-    
+    #[identifier]
     pub user_id: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderSucceeded{
-    
+    #[identifier]
     pub user_id: i64,
     pub items: Vec<String>
 }
@@ -194,3 +194,5 @@ async fn test_func(){
 #### Error from MessageBus
 When command has not yet been regitered, it returns an error - `BaseError::NotFound`
 Be mindful that bus does NOT return the result of event processing as in distributed event processing.
+
+
