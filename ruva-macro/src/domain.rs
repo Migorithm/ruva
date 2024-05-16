@@ -164,15 +164,15 @@ pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStr
 	let aggregate_name = input.ident.clone();
 	let adapter_name = Ident::new(&(input.ident.to_string() + "Adapter"), proc_macro2::Span::call_site());
 
-	let mut input = input.clone();
-	input.ident = adapter_name.clone();
+	let mut adapter_input = input.clone();
+	adapter_input.ident = adapter_name.clone();
 
 	let mut fields_to_ignore: Vec<String> = vec![];
 
 	if let syn::Data::Struct(DataStruct {
 		fields: syn::Fields::Named(ref mut fields),
 		..
-	}) = &mut input.data
+	}) = &mut adapter_input.data
 	{
 		fields.named.iter_mut().for_each(|f: &mut Field| {
 			if let Some(ignorable_field) = check_if_field_has_attribute_and_return_field_name(f, "adapter_ignore") {
@@ -186,29 +186,37 @@ pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStr
 	let mut aggregates_fields: Vec<String> = vec![];
 	let mut adapter_fields: Vec<String> = vec![];
 
-	extracts_field_names_from_derive_input(&input).into_iter().for_each(|field_name| {
+	extracts_field_names_from_derive_input(input).into_iter().for_each(|field_name| {
+		// ignorable field means that the field is not compatible with adapter
 		if !fields_to_ignore.contains(&field_name) {
 			adapter_fields.push(format!("{}: value.{}", field_name, field_name));
+			aggregates_fields.push(format!("{}: value.{}", field_name, field_name));
 		}
-		aggregates_fields.push(format!("{}: value.{}", field_name, field_name));
 	});
 
 	aggregates_fields.push("is_existing: true".to_string());
 	aggregates_fields.push("is_updated: false".to_string());
 	aggregates_fields.push("events: ::std::collections::VecDeque::new()".to_string());
 	aggregates_fields.push("version: 0".to_string());
-	let aggregates_fields: proc_macro2::TokenStream = aggregates_fields.join(",").parse().unwrap();
 
-	let adapter_fields: proc_macro2::TokenStream = adapter_fields.join(",").parse().unwrap();
+	if !fields_to_ignore.is_empty() {
+		aggregates_fields.push("..Default::default()".to_string());
+	}
+	let aggregates_fields = aggregates_fields.join(",");
+	let adapter_fields = adapter_fields.join(",");
+
+	let aggregates_fields: proc_macro2::TokenStream = aggregates_fields.parse().unwrap();
+
+	let adapter_fields: proc_macro2::TokenStream = adapter_fields.parse().unwrap();
 
 	quote!(
-		#input
+
+		#adapter_input
 
 		impl From<#adapter_name> for #aggregate_name{
 			fn from(value: #adapter_name) -> Self{
 				Self{
-					#aggregates_fields,
-					..Default::default()
+					#aggregates_fields
 				}
 			}
 		}
