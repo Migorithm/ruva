@@ -1,25 +1,27 @@
 use proc_macro::TokenStream;
 
 use quote::ToTokens;
-use syn::{parse::Parser, parse_macro_input, Data, DataStruct, DeriveInput, Field};
+use syn::{parse::Parser, parse_macro_input, Data, DataStruct, DeriveInput, Field, Ident};
 
-use crate::utils::locate_crate_on_derive_macro;
+use crate::utils::{
+	check_if_field_has_attribute_and_return_field_name, extracts_field_names_from_derive_input, locate_crate_on_derive_macro, remove_fields_from_fields_based_on_field_name, skip_over_attributes,
+};
 
 pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 	let mut ast = parse_macro_input!(input as DeriveInput);
-	let name = &ast.ident;
+	let name = ast.ident.clone();
 	let crates = locate_crate_on_derive_macro(&ast);
 
-	// let mut identifier_types = vec![];
+	let adapter_quote = create_struct_adapter_quote(&ast);
+
 	if let syn::Data::Struct(DataStruct {
 		fields: syn::Fields::Named(ref mut fields),
 		..
 	}) = &mut ast.data
 	{
-		// fields.named.iter_mut().for_each(|f| {
-		// 	identifier_types.extend(find_attr_and_locate_its_type_from_field(f, "identifier"));
-		// 	f.attrs.clear();
-		// });
+		fields.named.iter_mut().for_each(|f| {
+			skip_over_attributes(f, "adapter_ignore");
+		});
 
 		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "is_existing") {
 			panic!("is_existing field not injectable! Perhaps it's duplicated?");
@@ -89,6 +91,9 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 		impl #name{
 			#setters
 		}
+
+
+		#adapter_quote
 	)
 	.into()
 }
@@ -153,4 +158,67 @@ fn get_setters(data: &Data) -> proc_macro2::TokenStream {
 	}
 	let joined: proc_macro2::TokenStream = quotes.join(" ").parse().unwrap();
 	joined
+}
+
+pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStream {
+	let aggregate_name = input.ident.clone();
+	let adapter_name = Ident::new(&(input.ident.to_string() + "Adapter"), proc_macro2::Span::call_site());
+
+	let mut input = input.clone();
+	input.ident = adapter_name.clone();
+
+	let mut fields_to_ignore: Vec<String> = vec![];
+
+	if let syn::Data::Struct(DataStruct {
+		fields: syn::Fields::Named(ref mut fields),
+		..
+	}) = &mut input.data
+	{
+		fields.named.iter_mut().for_each(|f: &mut Field| {
+			if let Some(ignorable_field) = check_if_field_has_attribute_and_return_field_name(f, "adapter_ignore") {
+				fields_to_ignore.push(ignorable_field);
+				skip_over_attributes(f, "adapter_ignore");
+			}
+		});
+		remove_fields_from_fields_based_on_field_name(fields, &fields_to_ignore);
+	}
+
+	let mut aggregates_fields: Vec<String> = vec![];
+	let mut adapter_fields: Vec<String> = vec![];
+
+	extracts_field_names_from_derive_input(&input).into_iter().for_each(|field_name| {
+		if !fields_to_ignore.contains(&field_name) {
+			adapter_fields.push(format!("{}: value.{}", field_name, field_name));
+		}
+		aggregates_fields.push(format!("{}: value.{}", field_name, field_name));
+	});
+
+	aggregates_fields.push("is_existing: true".to_string());
+	aggregates_fields.push("is_updated: false".to_string());
+	aggregates_fields.push("events: ::std::collections::VecDeque::new()".to_string());
+	aggregates_fields.push("version: 0".to_string());
+	let aggregates_fields: proc_macro2::TokenStream = aggregates_fields.join(",").parse().unwrap();
+
+	let adapter_fields: proc_macro2::TokenStream = adapter_fields.join(",").parse().unwrap();
+
+	quote!(
+		#input
+
+		impl From<#adapter_name> for #aggregate_name{
+			fn from(value: #adapter_name) -> Self{
+				Self{
+					#aggregates_fields,
+					..Default::default()
+				}
+			}
+		}
+
+		impl From<#aggregate_name> for #adapter_name{
+			fn from(value: #aggregate_name) -> Self{
+				Self{
+					#adapter_fields
+				}
+			}
+		}
+	)
 }
