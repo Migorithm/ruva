@@ -29,9 +29,9 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "events") {
 			panic!("events field not injectable! Perhaps it's duplicated?");
 		}
-		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "version") {
-			panic!("version field not Injectable! Perhaps it's duplicated?");
-		}
+		// if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "version") {
+		// 	panic!("version field not Injectable! Perhaps it's duplicated?");
+		// }
 
 		fields.named.extend([
 			syn::Field::parse_named
@@ -52,11 +52,11 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 				   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>>
 				})
 				.unwrap(),
-			syn::Field::parse_named
-				.parse2(quote! {
-				   pub(crate) version: i32
-				})
-				.unwrap(),
+			// syn::Field::parse_named
+			// 	.parse2(quote! {
+			// 	   pub(crate) version: i32
+			// 	})
+			// 	.unwrap(),
 		]);
 	} else {
 		panic!("[entity] can be attached only to struct")
@@ -197,7 +197,7 @@ pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStr
 	aggregates_fields.push("is_existing: true".to_string());
 	aggregates_fields.push("is_updated: false".to_string());
 	aggregates_fields.push("events: ::std::collections::VecDeque::new()".to_string());
-	aggregates_fields.push("version: 0".to_string());
+	// aggregates_fields.push("version: 0".to_string());
 
 	if !fields_to_ignore.is_empty() {
 		aggregates_fields.push("..Default::default()".to_string());
