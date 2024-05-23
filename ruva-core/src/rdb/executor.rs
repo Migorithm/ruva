@@ -21,9 +21,7 @@ impl SQLExecutor {
 			None => panic!("Transaction Has Not Begun!"),
 		}
 	}
-	pub fn connection(&self) -> &PgPool {
-		self.pool
-	}
+
 	pub fn in_transaction(&self) -> bool {
 		self.transaction.is_some()
 	}
