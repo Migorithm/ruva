@@ -1,5 +1,4 @@
 use std::{collections::VecDeque, sync::Arc};
-
 use tokio::sync::RwLock;
 
 use crate::{
@@ -33,6 +32,7 @@ impl SqlRepository {
 
 		self.events.iter().filter(|e| e.internally_notifiable()).for_each(|e| event_queue.push_back(e.clone()));
 	}
+
 	pub(crate) async fn save_outbox(&self) -> Result<(), BaseError> {
 		let outboxes = self.events.iter().filter(|e| e.externally_notifiable()).map(|o| o.outbox()).collect::<Vec<_>>();
 

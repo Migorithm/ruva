@@ -74,7 +74,7 @@ impl<A: TAggregateES + TAggregateMetadata> TEventStore<A> for SqlRepository<A> {
 			event_version: record.get("event_version"),
 			payload: record.get("payload"),
 		})
-		.fetch_all(self.executor.read().await.connection())
+		.fetch_all(self.executor.write().await.transaction())
 		.await
 		.unwrap())
 	}
@@ -128,7 +128,7 @@ impl<A: TAggregateES + TAggregateMetadata> TEventStore<A> for SqlRepository<A> {
 		.bind(&event_type)
 		.bind(&event_version)
 		.bind(&payload)
-		.execute(self.executor.read().await.connection())
+		.execute(self.executor.write().await.transaction())
 		.await
 		.unwrap();
 		Ok(())
