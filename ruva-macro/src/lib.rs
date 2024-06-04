@@ -4,11 +4,12 @@ use message::{find_identifier, get_aggregate_metadata, render_event_visibility, 
 
 use proc_macro::TokenStream;
 
-use syn::{DeriveInput, ItemFn};
+use syn::{parse_macro_input, DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
 mod command;
+mod construct;
 mod domain;
 mod handler;
 mod message;
@@ -237,4 +238,11 @@ pub fn repository_derive(attr: TokenStream) -> TokenStream {
 	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 
 	repository::render_repository_token(&ast)
+}
+
+#[proc_macro_derive(TConstruct, attributes(except))]
+pub fn derive_construct(input: TokenStream) -> TokenStream {
+	let mut input = parse_macro_input!(input as DeriveInput);
+
+	construct::expand_derive_construct(&mut input).unwrap_or_else(syn::Error::into_compile_error).into()
 }
