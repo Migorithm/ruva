@@ -240,6 +240,7 @@ pub fn repository_derive(attr: TokenStream) -> TokenStream {
 	repository::render_repository_token(&ast)
 }
 
+// what if I want attribute to be #[ruva(except)]?
 #[proc_macro_derive(TConstruct, attributes(except))]
 pub fn derive_construct(input: TokenStream) -> TokenStream {
 	let mut input = parse_macro_input!(input as DeriveInput);

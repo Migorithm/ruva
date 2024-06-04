@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 
 use quote::ToTokens;
-use syn::{parse::Parser, parse_macro_input, Data, DataStruct, DeriveInput, Field, Ident};
+use syn::{parse::Parser, parse_macro_input, punctuated::Punctuated, token::Comma, Data, DataStruct, DeriveInput, Field, GenericParam, Generics, Ident, Type, WherePredicate};
 
 use crate::utils::{
 	check_if_field_has_attribute_and_return_field_name, extracts_field_names_from_derive_input, locate_crate_on_derive_macro, remove_fields_from_fields_based_on_field_name, skip_over_attributes,
@@ -10,6 +10,9 @@ use crate::utils::{
 pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 	let mut ast = parse_macro_input!(input as DeriveInput);
 	let name = ast.ident.clone();
+	let generics = &ast.generics;
+	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
 	let crates = locate_crate_on_derive_macro(&ast);
 
 	let adapter_quote = create_struct_adapter_quote(&ast);
@@ -52,28 +55,16 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 				   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>>
 				})
 				.unwrap(),
-			// syn::Field::parse_named
-			// 	.parse2(quote! {
-			// 	   pub(crate) version: i32
-			// 	})
-			// 	.unwrap(),
 		]);
 	} else {
 		panic!("[entity] can be attached only to struct")
 	}
 
-	// if identifier_types.is_empty() {
-	// 	panic!("identifer must be speicified!")
-	// } else if identifier_types.len() > 1 {
-	// 	panic!("identifer is specified only once!")
-	// }
-	// let aggregate_identifier_type = identifier_types.first().unwrap();
-
 	let setters = get_setters(&ast.data);
 
 	quote!(
 		#ast
-		impl #crates::prelude::TAggregate for #name{
+		impl #impl_generics  #crates::prelude::TAggregate for #name #ty_generics #where_clause {
 			// type Identifier = #aggregate_identifier_type;
 
 			fn events(&self) -> &::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>> {
@@ -88,7 +79,7 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 			}
 		}
 
-		impl #name{
+		impl #impl_generics #name #ty_generics #where_clause{
 			#setters
 		}
 
@@ -162,6 +153,8 @@ fn get_setters(data: &Data) -> proc_macro2::TokenStream {
 
 pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStream {
 	let aggregate_name = input.ident.clone();
+	let mut generics = input.generics.clone();
+
 	let adapter_name = Ident::new(&(input.ident.to_string() + "Adapter"), proc_macro2::Span::call_site());
 
 	let mut adapter_input = input.clone();
@@ -176,8 +169,12 @@ pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStr
 	{
 		fields.named.iter_mut().for_each(|f: &mut Field| {
 			if let Some(ignorable_field) = check_if_field_has_attribute_and_return_field_name(f, "adapter_ignore") {
+				// if the field's type is generic, skip over
+
 				fields_to_ignore.push(ignorable_field);
 				skip_over_attributes(f, "adapter_ignore");
+
+				try_remove_generic_type(&mut generics, f.ty.clone());
 			}
 		});
 		remove_fields_from_fields_based_on_field_name(fields, &fields_to_ignore);
@@ -209,24 +206,74 @@ pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStr
 
 	let adapter_fields: proc_macro2::TokenStream = adapter_fields.parse().unwrap();
 
+	adapter_input.generics = generics.clone();
+
+	let (impl_adapter_generics, ty_adapter_generics, _where_adapter_clause) = generics.split_for_impl();
+
+	let (impl_aggregate_generics, ty_aggregate_generics, where_aggregate_clause) = input.generics.split_for_impl();
+
 	quote!(
 
 		#adapter_input
 
-		impl From<#adapter_name> for #aggregate_name{
-			fn from(value: #adapter_name) -> Self{
+		impl #impl_aggregate_generics From<#adapter_name #ty_adapter_generics> for #aggregate_name #impl_aggregate_generics #where_aggregate_clause{
+			fn from(value: #adapter_name #ty_adapter_generics) -> #aggregate_name #impl_aggregate_generics {
 				Self{
 					#aggregates_fields
 				}
 			}
 		}
 
-		impl From<#aggregate_name> for #adapter_name{
-			fn from(value: #aggregate_name) -> Self{
+		impl #impl_aggregate_generics From<#aggregate_name #ty_aggregate_generics> for #adapter_name #impl_adapter_generics #where_aggregate_clause{
+			fn from(value: #aggregate_name #ty_aggregate_generics) -> #adapter_name #ty_adapter_generics{
 				Self{
 					#adapter_fields
 				}
 			}
 		}
 	)
+}
+
+fn try_remove_generic_type(generics: &mut Generics, ty: Type) {
+	// find the generic type and remove it from the generics and from where clause
+	let mut removed_generic = vec![];
+
+	let generic_params: Punctuated<GenericParam, _> = generics
+		.params
+		.iter()
+		.filter_map(|generic_param| {
+			if let GenericParam::Type(type_param) = generic_param {
+				let type_name = ty.to_token_stream().to_string();
+				if type_param.ident != type_name {
+					Some(generic_param.clone())
+				} else {
+					removed_generic.push(type_name);
+					None
+				}
+			} else {
+				Some(generic_param.clone())
+			}
+		})
+		.collect();
+
+	// find the generic type and remove it from the generics and from where clause using removed_generic
+	if let Some(where_clauses) = generics.where_clause.as_mut() {
+		let mut predicates: Punctuated<WherePredicate, Comma> = Punctuated::new();
+
+		where_clauses.predicates.iter().for_each(|predicate| {
+			if let syn::WherePredicate::Type(predicate_type) = predicate {
+				if let syn::Type::Path(type_path) = &predicate_type.bounded_ty {
+					if let Some(segment) = type_path.path.segments.first() {
+						if removed_generic.contains(&segment.ident.to_string()) {
+							return;
+						}
+					}
+				}
+				predicates.push(predicate.clone());
+			}
+		});
+		where_clauses.predicates = predicates;
+	}
+
+	generics.params = generic_params;
 }
