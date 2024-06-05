@@ -15,52 +15,9 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 
 	let crates = locate_crate_on_derive_macro(&ast);
 
-	let adapter_quote = create_struct_adapter_quote(&ast);
+	let adapter_quote = create_struct_adapter_quote(&ast, true);
 
-	if let syn::Data::Struct(DataStruct {
-		fields: syn::Fields::Named(ref mut fields),
-		..
-	}) = &mut ast.data
-	{
-		fields.named.iter_mut().for_each(|f| {
-			skip_over_attributes(f, "adapter_ignore");
-		});
-
-		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "is_existing") {
-			panic!("is_existing field not injectable! Perhaps it's duplicated?");
-		}
-		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "events") {
-			panic!("events field not injectable! Perhaps it's duplicated?");
-		}
-		// if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "version") {
-		// 	panic!("version field not Injectable! Perhaps it's duplicated?");
-		// }
-
-		fields.named.extend([
-			syn::Field::parse_named
-				.parse2(quote! {
-				   #[serde(skip_deserializing, skip_serializing)]
-				   pub(crate) is_existing: bool
-				})
-				.unwrap(),
-			syn::Field::parse_named
-				.parse2(quote! {
-				   #[serde(skip_deserializing, skip_serializing)]
-				   pub(crate) is_updated: bool
-				})
-				.unwrap(),
-			syn::Field::parse_named
-				.parse2(quote! {
-				   #[serde(skip_deserializing, skip_serializing)]
-				   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>>
-				})
-				.unwrap(),
-		]);
-	} else {
-		panic!("[entity] can be attached only to struct")
-	}
-
-	let setters = get_setters(&ast.data);
+	let setters = set_entity_fields(&mut ast.data, true);
 
 	quote!(
 		#ast
@@ -92,44 +49,79 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 pub(crate) fn render_entity_token(input: TokenStream) -> TokenStream {
 	let mut ast = parse_macro_input!(input as DeriveInput);
 	let name = &ast.ident;
+	let generics = &ast.generics;
+	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+	let adapter_quote = create_struct_adapter_quote(&ast, false);
 
+	let setters = set_entity_fields(&mut ast.data, false);
+
+	quote!(
+		#ast
+
+		impl #impl_generics #name #ty_generics #where_clause{
+			#setters
+		}
+
+		#adapter_quote
+
+	)
+	.into()
+}
+
+pub(crate) fn set_entity_fields(input_data: &mut syn::Data, for_aggregate: bool) -> proc_macro2::TokenStream {
 	if let syn::Data::Struct(DataStruct {
 		fields: syn::Fields::Named(ref mut fields),
 		..
-	}) = &mut ast.data
+	}) = input_data
 	{
-		fields.named.push(
+		fields.named.iter_mut().for_each(|f| {
+			skip_over_attributes(f, "adapter_ignore");
+		});
+
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "is_existing") {
+			panic!("is_existing field not injectable! Perhaps it's duplicated?");
+		}
+		if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "is_updated") {
+			panic!("is_updated field not injectable! Perhaps it's duplicated?");
+		}
+
+		fields.named.extend([
 			syn::Field::parse_named
 				.parse2(quote! {
-
 				   #[serde(skip_deserializing, skip_serializing)]
 				   pub(crate) is_existing: bool
-
 				})
 				.unwrap(),
-		);
-		fields.named.push(
 			syn::Field::parse_named
 				.parse2(quote! {
-
 				   #[serde(skip_deserializing, skip_serializing)]
 				   pub(crate) is_updated: bool
-
 				})
 				.unwrap(),
-		);
+		]);
+
+		if for_aggregate {
+			if fields.named.iter().any(|x| x.ident.as_ref().unwrap() == "events") {
+				panic!("events field not injectable! Perhaps it's duplicated?");
+			}
+
+			fields.named.push(
+				syn::Field::parse_named
+					.parse2(quote! {
+					   #[serde(skip_deserializing, skip_serializing)]
+					   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn ruva::prelude::TEvent>>
+					})
+					.unwrap(),
+			)
+		}
 	} else {
+		if for_aggregate {
+			panic!("[aggregate] can be attached only to struct")
+		}
 		panic!("[entity] can be attached only to struct")
 	}
 
-	let setters = get_setters(&ast.data);
-	quote!(
-		#ast
-		impl #name{
-			#setters
-		}
-	)
-	.into()
+	get_setters(input_data)
 }
 
 fn get_setters(data: &Data) -> proc_macro2::TokenStream {
@@ -151,7 +143,7 @@ fn get_setters(data: &Data) -> proc_macro2::TokenStream {
 	joined
 }
 
-pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStream {
+pub fn create_struct_adapter_quote(input: &DeriveInput, for_aggregate: bool) -> proc_macro2::TokenStream {
 	let aggregate_name = input.ident.clone();
 	let mut generics = input.generics.clone();
 
@@ -193,7 +185,11 @@ pub fn create_struct_adapter_quote(input: &DeriveInput) -> proc_macro2::TokenStr
 
 	aggregates_fields.push("is_existing: true".to_string());
 	aggregates_fields.push("is_updated: false".to_string());
-	aggregates_fields.push("events: ::std::collections::VecDeque::new()".to_string());
+
+	// ! Event field is only for aggregate
+	if for_aggregate {
+		aggregates_fields.push("events: ::std::collections::VecDeque::new()".to_string());
+	}
 	// aggregates_fields.push("version: 0".to_string());
 
 	if !fields_to_ignore.is_empty() {
