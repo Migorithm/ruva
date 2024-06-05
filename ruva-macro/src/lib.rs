@@ -102,6 +102,50 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 ///     assert_eq!(converted_struct.some_other_field, 2);
 /// ```
 ///
+/// Generic can also be used for aggregate:
+/// ```rust,no_run
+/// #[derive(Default, Debug, Serialize, Deserialize)]
+/// struct Unset;
+///
+/// #[aggregate]
+/// #[derive(Default, Debug, Serialize, Clone)]
+/// struct MyStruct<T = Unset>
+/// where
+///     T: Send + Sync + Default + 'static,
+/// {
+///     name: String,
+///     age: i32,
+///
+///     #[adapter_ignore]
+///     sub_type: T,
+/// }
+///
+/// impl MyStruct<String> {
+///     fn do_something_with_string(&self) -> String {
+///         self.sub_type.clone()
+///     }
+/// }
+///
+/// impl MyStruct<i32> {
+///     fn do_something_with_i32(&self) -> i32 {
+///         self.sub_type
+///     }
+/// }
+///
+/// let adapter = MyStructAdapter {
+///     name: "hello".to_string(),
+///     age: 10,
+/// };
+///
+/// let _my_unset_struct = Into::<MyStruct>::into(adapter.clone()); // default type is set which has no method attached.
+///
+/// let my_string_struct = Into::<MyStruct<String>>::into(adapter.clone());
+/// let my_int32_struct = Into::<MyStruct<i32>>::into(adapter.clone());
+///
+/// assert_eq!(my_string_struct.do_something_with_string(), String::default());
+/// assert_eq!(my_int32_struct.do_something_with_i32(), i32::default());
+///
+/// ```
 #[proc_macro_attribute]
 pub fn aggregate(_: TokenStream, input: TokenStream) -> TokenStream {
 	domain::render_aggregate(input)
