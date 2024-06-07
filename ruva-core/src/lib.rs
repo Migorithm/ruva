@@ -9,7 +9,7 @@ pub mod repository;
 pub mod responses;
 pub mod snowflake;
 pub mod unit_of_work;
-pub mod utils;
+
 pub mod prelude {
 	pub use crate::aggregate::*;
 	pub use crate::handler::*;
@@ -21,7 +21,7 @@ pub mod prelude {
 	pub use crate::repository::TRepository;
 	pub use crate::responses::*;
 	pub use crate::unit_of_work::*;
-	pub use crate::utils::*;
+
 	pub use async_trait::async_trait;
 	pub use hashbrown::HashMap as HandlerMapper;
 	pub use serde;

@@ -1,8 +1,6 @@
 use crate::prelude::{BaseError, TUnitOfWork};
 
 use sqlx::{postgres::PgPool, PgConnection, Postgres, Transaction};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct SQLExecutor {
@@ -11,8 +9,8 @@ pub struct SQLExecutor {
 }
 
 impl SQLExecutor {
-	pub fn new(pool: &'static PgPool) -> Arc<RwLock<Self>> {
-		Arc::new(RwLock::new(Self { pool, transaction: None }))
+	pub fn new(pool: &'static PgPool) -> Self {
+		Self { pool, transaction: None }
 	}
 
 	pub fn transaction(&mut self) -> &mut PgConnection {
