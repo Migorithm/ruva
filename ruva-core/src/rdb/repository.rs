@@ -1,8 +1,7 @@
-use std::{collections::VecDeque, sync::Arc};
-use tokio::sync::RwLock;
+use std::collections::VecDeque;
 
 use crate::{
-	prelude::{AtomicContextManager, BaseError, TAggregate, TClone, TCloneContext, TCommitHook, TEvent, TUnitOfWork},
+	prelude::{AtomicContextManager, BaseError, TAggregate, TCommitHook, TEvent, TUnitOfWork},
 	prepare_bulk_operation,
 	repository::TRepository,
 };
@@ -10,13 +9,13 @@ use crate::{
 use super::executor::SQLExecutor;
 
 pub struct SqlRepository {
-	pub executor: Arc<RwLock<SQLExecutor>>,
+	pub executor: SQLExecutor,
 	events: VecDeque<std::sync::Arc<dyn TEvent>>,
 	context: AtomicContextManager,
 }
 
 impl SqlRepository {
-	pub fn new(context: AtomicContextManager, executor: Arc<RwLock<SQLExecutor>>) -> Self {
+	pub fn new(context: AtomicContextManager, executor: SQLExecutor) -> Self {
 		Self {
 			executor,
 			events: Default::default(),
@@ -27,13 +26,12 @@ impl SqlRepository {
 		self.set_events(aggregate.take_events());
 	}
 	pub(crate) async fn send_internally_notifiable_messages(&self) {
-		let cxt = self.clone_context();
-		let event_queue = &mut cxt.write().await;
+		let event_queue = &mut self.context.write().await;
 
 		self.events.iter().filter(|e| e.internally_notifiable()).for_each(|e| event_queue.push_back(e.clone()));
 	}
 
-	pub(crate) async fn save_outbox(&self) -> Result<(), BaseError> {
+	pub(crate) async fn save_outbox(&mut self) -> Result<(), BaseError> {
 		let outboxes = self.events.iter().filter(|e| e.externally_notifiable()).map(|o| o.outbox()).collect::<Vec<_>>();
 
 		prepare_bulk_operation!(
@@ -57,29 +55,13 @@ impl SqlRepository {
 		.bind(&topic)
 		.bind(&state)
 		.bind(&aggregate_name)
-		.execute(self.executor.write().await.transaction())
+		.execute(self.executor.transaction())
 		.await
 		.map_err(|err| {
 			tracing::error!("failed to insert outbox! {}", err);
 			BaseError::DatabaseError(err.to_string())
 		})?;
 		Ok(())
-	}
-}
-
-impl TClone for SqlRepository {
-	fn clone(&self) -> Self {
-		Self {
-			executor: self.executor.clone(),
-			events: Default::default(),
-			context: self.context.clone(),
-		}
-	}
-}
-
-impl TCloneContext for SqlRepository {
-	fn clone_context(&self) -> AtomicContextManager {
-		self.context.clone()
 	}
 }
 
@@ -98,8 +80,7 @@ impl TCommitHook for SqlRepository {
 
 impl TUnitOfWork for SqlRepository {
 	async fn begin(&mut self) -> Result<(), BaseError> {
-		let mut executor = self.executor.write().await;
-		executor.begin().await
+		self.executor.begin().await
 	}
 
 	async fn commit(&mut self) -> Result<(), BaseError> {
@@ -107,14 +88,13 @@ impl TUnitOfWork for SqlRepository {
 		self.commit_hook().await?;
 
 		// commit
-		self.executor.write().await.commit().await
+		self.executor.commit().await
 	}
 
 	async fn rollback(&mut self) -> Result<(), BaseError> {
-		let mut executor = self.executor.write().await;
-		executor.rollback().await
+		self.executor.rollback().await
 	}
 	async fn close(&mut self) {
-		self.executor.write().await.close().await;
+		self.executor.close().await;
 	}
 }
