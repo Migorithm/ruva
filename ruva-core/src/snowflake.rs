@@ -281,7 +281,7 @@ impl<'de> serde::Deserialize<'de> for SnowFlake {
 			where
 				E: de::Error,
 			{
-				if id < std::i64::MAX as u64 {
+				if id < i64::MAX as u64 {
 					Ok(SnowFlake(id.try_into().unwrap()))
 				} else {
 					Err(E::custom(format!("Snowflake out of range: {}", id)))
