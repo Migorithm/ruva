@@ -86,10 +86,16 @@ You can register as many handlers as possible as long as they all consume same t
 ```rust
 init_event_handler!(
 {
-   OrderFaild: [
+    Response,
+    Error,
+    |ctx| YourServiceEventHandler::new(ctx),
+
+    OrderFaild: [
            NotificationHandler::send_mail,
            ],
-   OrderSucceeded: [
+           
+    #[asynchronous]
+    OrderSucceeded: [
            DeliveryHandler::checkout_delivery_items,
            InventoryHandler::change_inventory_count
            ]
