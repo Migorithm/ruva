@@ -140,13 +140,13 @@ where
 /// ## Example
 /// ```rust,no_run
 /// init_event_handler!(
-/// YourServiceResponse,
-/// YourServiceError,
-/// |ctx| YourEventHandler(ApplicationRepository::new(ctx)),
-/// #[asynchronous]
-/// YourEvent:[handler1, handler2],
-/// #[synchronous]
-/// YourEvent2:[handler3, handler4],
+///     YourServiceResponse,
+///     YourServiceError,
+///     |ctx| YourEventHandler(ApplicationRepository::new(ctx)),
+///     #[asynchronous]
+///     YourEvent:[handler1, handler2],
+///     #[synchronous]
+///     YourEvent2:[handler3, handler4],
 /// );
 /// ```
 #[macro_export]
