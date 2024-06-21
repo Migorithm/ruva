@@ -9,7 +9,21 @@ use tokio::sync::RwLock;
 
 pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
-pub type TEventHandler<R, E> = HashMap<String, Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<R, E> + Send + Sync>>>;
+
+pub type Handlers<R, E> = Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<R, E> + Send + Sync>>;
+pub enum EventHandlers<R, E> {
+	Sync(Handlers<R, E>),
+	Async(Handlers<R, E>),
+}
+impl<R, E> EventHandlers<R, E> {
+	pub fn extend(&mut self, handlers: Handlers<R, E>) {
+		match self {
+			Self::Sync(h) => h.extend(handlers),
+			Self::Async(h) => h.extend(handlers),
+		}
+	}
+}
+pub type TEventHandler<R, E> = HashMap<String, EventHandlers<R, E>>;
 
 /// Task Local Context Manager
 /// This is called for every time `handle` method is invoked.
@@ -56,24 +70,35 @@ where
 			BaseError::NotFound
 		})?;
 
-		for handler in handlers.iter() {
-			if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
-				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-				match err.into() {
-					BaseError::StopSentinel => {
-						eprintln!("Stop Sentinel Arrived!");
+		match handlers {
+			EventHandlers::Sync(h) => {
+				for handler in h.iter() {
+					if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
+						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+						match err.into() {
+							BaseError::StopSentinel => {
+								eprintln!("Stop Sentinel Arrived!");
 
-						break;
-					}
-					BaseError::StopSentinelWithEvent(event) => {
-						eprintln!("Stop Sentinel With Event Arrived!");
-						context_manager.write().await.push_back(event);
-						break;
-					}
-					err => {
-						eprintln!("Error Occurred While Handling Event! Error:{:?}", err);
+								break;
+							}
+							BaseError::StopSentinelWithEvent(event) => {
+								eprintln!("Stop Sentinel With Event Arrived!");
+								context_manager.write().await.push_back(event);
+								break;
+							}
+							err => {
+								eprintln!("Error Occurred While Handling Event! Error:{:?}", err);
+							}
+						}
 					}
 				}
+			}
+			EventHandlers::Async(h) => {
+				let mut futures = Vec::new();
+				for handler in h.iter() {
+					futures.push(handler(msg.clone(), context_manager.clone()));
+				}
+				let _ = futures::future::try_join_all(futures).await;
 			}
 		}
 
@@ -102,7 +127,6 @@ where
 	async fn handle(&self, message: C) -> Result<R, E> {
 		let context_manager = ContextManager::new();
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
-
 		// Trigger event
 		if !context_manager.read().await.event_queue.is_empty() {
 			let event = context_manager.write().await.event_queue.pop_front();
@@ -112,79 +136,66 @@ where
 	}
 }
 
-/// init_event_handler creating macro
-/// Not that crate must have `Dependency` struct with its own implementation
+/// This macro is used to create event handler for each event.
+/// ## Example
+/// ```rust,no_run
+/// init_event_handler!(
+///     YourServiceResponse,
+///     YourServiceError,
+///     |ctx| YourEventHandler(ApplicationRepository::new(ctx)),
+///     #[asynchronous]
+///     YourEvent:[handler1, handler2],
+///     #[synchronous]
+///     YourEvent2:[handler3, handler4],
+/// );
+/// ```
 #[macro_export]
 macro_rules! init_event_handler {
     (
-		R: $response:ty,
-		E: $error:ty $(,)?
-        {
+		$R:ty,
+		$E:ty,
+		$context_handler :expr,
 			$(
-				$event:ty: [$($handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]
+				$(#[$asynchrony:ident])?
+				$event:ty:[$($handler:ident $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]
 			),*
 			$(,)?
-		}
+
     ) =>{
-		pub fn event_handler() -> &'static ::ruva::prelude::TEventHandler<$response, $error>  {
-			extern crate self as current_crate;
-			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TEventHandler<$response, $error>> = std::sync::OnceLock::new();
+		pub fn event_handler() -> &'static ::ruva::prelude::TEventHandler<$R, $E>  {
+			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TEventHandler<$R, $E>> = ::std::sync::OnceLock::new();
 			EVENT_HANDLER.get_or_init(||{
-			use current_crate::dependencies;
-            let mut _map : ::ruva::prelude::TEventHandler<$response, $error> = ::ruva::prelude::HandlerMapper::new();
-            $(
+				let mut _map : ::ruva::prelude::TEventHandler<$R, $E> = ::ruva::prelude::HandlerMapper::new();
+				$(
+
+				let mut handlers = if stringify!($asc) == "asynchronous" {
+					::ruva::prelude::EventHandlers::Async(vec![])
+				} else {
+					::ruva::prelude::EventHandlers::Sync(vec![])
+				};
+				handlers.extend(vec![
+					$(
+						Box::new(
+							|e: ::std::sync::Arc<dyn TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> ::std::pin::Pin<Box<dyn futures::Future<Output = Result<$R, $E>> + Send>>{
+								let event_handler = $context_handler(context_manager);
+								Box::pin(event_handler.$handler(
+									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
+									// Safety:: client should access this vector of handlers by providing the corresponding event name
+									// So, when it is followed, it logically doesn't make sense to cause an error.
+									e.downcast_ref::<$event>().expect("Not Convertible!").clone(),
+								))
+							}
+							),
+					)*
+				]);
                 _map.insert(
                     stringify!($event).into(),
-                    vec![
-                        $(
-                            Box::new(
-                                |e:std::sync::Arc<dyn TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> std::pin::Pin<Box<dyn futures::Future<Output = Result<$response, $error>> + Send>>{
-
-
-									#[allow(unused)]
-									macro_rules! matcher{
-										($a:ident)=>{
-											context_manager.clone()
-										}
-									}
-
-                                    Box::pin($handler(
-                                        // * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
-                                        // Safety:: client should access this vector of handlers by providing the corresponding event name
-                                        // So, when it is followed, it logically doesn't make sense to cause an error.
-                                        e.downcast_ref::<$event>().expect("Not Convertible!").clone(),
-										$(
-											// * Injectable functions are added here.
-											$(dependencies::$injectable( $( $(matcher!($arg)),*)?),)*
-										)?
-                                    ))
-                                }
-                                ),
-                        )*
-                    ]
+					handlers
                 );
             )*
             _map
         })
     }
-};
-	(
-		E: $error:ty,
-		R: $response:ty $(,)?
-		{
-			$(
-				$event:ty: [$($handler:expr $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]
-			),*
-			$(,)?
-		}
-	) =>{
-		init_event_handler!(
-			R:$response,E:$error,
-			{
-				$(
-					$event: [$($handler $(=>($($injectable $(( $($arg),* ))? ),*))?),* ]
-				),*
-			}
-		)
-	}
+}
+
 }

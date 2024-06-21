@@ -1,6 +1,6 @@
 [package]
 name = "ruva-macro"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven TEvent Handling"
