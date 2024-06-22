@@ -72,22 +72,22 @@ where
 
 		match handlers {
 			EventHandlers::Sync(h) => {
-				for handler in h.iter() {
+				for (i, handler) in h.iter().enumerate() {
 					if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
 						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
 						match err.into() {
 							BaseError::StopSentinel => {
-								tracing::error!("Stop Sentinel Arrived!");
+								tracing::error!("Stop Sentinel Arrived In {i}th Event!");
 
 								break;
 							}
 							BaseError::StopSentinelWithEvent(event) => {
-								tracing::error!("Stop Sentinel With Event Arrived!");
+								tracing::error!("Stop Sentinel With Event Arrived In {i}th Event!");
 								context_manager.write().await.push_back(event);
 								break;
 							}
 							err => {
-								tracing::error!("Error Occurred While Handling Event! Error:{:?}", err);
+								tracing::error!("Error Occurred While Handling Event In {i}th Event! Error:{:?}", err);
 							}
 						}
 					}
