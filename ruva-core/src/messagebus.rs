@@ -1,6 +1,7 @@
 use crate::prelude::{TCommand, TCommandService, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
 use async_trait::async_trait;
+#[cfg(feature = "backtrace")]
 use backtrace::BacktraceSymbol;
 use hashbrown::HashMap;
 use std::collections::VecDeque;
@@ -66,9 +67,12 @@ where
 	async fn _handle_event(&self, msg: Arc<dyn TEvent>, context_manager: AtomicContextManager) -> Result<(), E> {
 		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
-		fn get_caller() -> Option<BacktraceSymbol> {
+		#[cfg(feature = "backtrace")]
+		fn get_caller_data() -> Option<String> {
+			use std::result;
+
 			let stack_trace = backtrace::Backtrace::new();
-			stack_trace
+			let caller = stack_trace
 				.frames()
 				.iter()
 				.filter(|x| x.symbols().first().and_then(|x| x.name()).and_then(|x| x.as_str()).is_some())
@@ -82,7 +86,44 @@ where
 				})
 				.map(|x| x.symbols().first().unwrap())
 				.next()
-				.cloned()
+				.cloned();
+			if caller.is_none() {
+				return None;
+			}
+			let caller = caller.unwrap();
+			let module_path = caller.name().expect("caller에서 name을 기준으로 비교했기 때문에 현재는 값이 반드시 존재함");
+			let filename = caller.filename();
+			let line = caller.lineno();
+
+			let mut result = String::new();
+			result.push_str(module_path.as_str().unwrap());
+			if filename.is_some() && filename.unwrap().to_str().is_some() {
+				result.push_str(" ");
+				result.push_str(filename.unwrap().to_str().unwrap());
+			}
+			if line.is_some() {
+				result.push_str(":");
+				result.push_str(line.unwrap().to_string().as_str());
+			}
+			Some(result)
+		}
+		macro_rules! print_error {
+			($($arg:tt)*) => {
+				#[cfg(feature = "backtrace")]
+				{
+					let caller = get_caller_data();
+					if caller.is_some() {
+						let caller = caller.unwrap();
+						tracing::error!(?caller, $($arg)*);
+					} else {
+						tracing::error!($($arg)*);
+					}
+				}
+				#[cfg(not(feature = "backtrace"))]
+				{
+					tracing::error!($($arg)*);
+				}
+			};
 		}
 
 		let handlers = self.event_handler().get(&msg.metadata().topic).ok_or_else(|| {
@@ -95,46 +136,21 @@ where
 				for (i, handler) in h.iter().enumerate() {
 					if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
 						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-						let caller = get_caller();
 						match err.into() {
 							BaseError::StopSentinel => {
 								let error_msg = format!("Stop Sentinel Arrived In {i}th Event!");
-								if caller.is_some() {
-									let caller = caller.unwrap();
-									let filename = caller.filename();
-									let line = caller.lineno();
-									let module_path = caller.name().expect("caller에서 name을 기준으로 비교했기 때문에 현재는 값이 반드시 존재함");
-									tracing::error!(?module_path, ?filename, ?line, "{}", error_msg);
-								} else {
-									tracing::error!("{}", error_msg);
-								}
+								print_error!("{}", error_msg);
 								break;
 							}
 							BaseError::StopSentinelWithEvent(event) => {
 								let error_msg = format!("Stop Sentinel With Event Arrived In {i}th Event!");
-								if caller.is_some() {
-									let caller = caller.unwrap();
-									let filename = caller.filename();
-									let line = caller.lineno();
-									let module_path = caller.name().expect("caller에서 name을 기준으로 비교했기 때문에 현재는 값이 반드시 존재함");
-									tracing::error!(?module_path, ?filename, ?line, "{}", error_msg);
-								} else {
-									tracing::error!("{}", error_msg);
-								}
+								print_error!("{}", error_msg);
 								context_manager.write().await.push_back(event);
 								break;
 							}
 							err => {
 								let error_msg = format!("Error Occurred While Handling Event In {i}th Event! Error:{:?}", err);
-								if caller.is_some() {
-									let caller = caller.unwrap();
-									let filename = caller.filename();
-									let line = caller.lineno();
-									let module_path = caller.name().expect("caller에서 name을 기준으로 비교했기 때문에 현재는 값이 반드시 존재함");
-									tracing::error!(?module_path, ?filename, ?line, "{}", error_msg);
-								} else {
-									tracing::error!("{}", error_msg);
-								}
+								print_error!("{}", error_msg);
 							}
 						}
 					}
@@ -146,17 +162,8 @@ where
 					futures.push(handler(msg.clone(), context_manager.clone()));
 				}
 				if let Err(err) = futures::future::try_join_all(futures).await {
-					let caller = get_caller();
 					let error_msg = format!("Error Occurred While Handling Event! Error:{:?}", err);
-					if caller.is_some() {
-						let caller = caller.unwrap();
-						let filename = caller.filename();
-						let line = caller.lineno();
-						let module_path = caller.name().expect("caller에서 name을 기준으로 비교했기 때문에 현재는 값이 반드시 존재함");
-						tracing::error!(?module_path, ?filename, ?line, "{}", error_msg);
-					} else {
-						tracing::error!("{}", error_msg);
-					}
+					print_error!("{}", error_msg);
 				}
 			}
 		}

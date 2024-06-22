@@ -28,7 +28,8 @@ sqlx = {version="0.7.4" ,features = ["runtime-tokio-rustls",
     "chrono",
     "json",
     "rust_decimal"],optional=true}
-backtrace = "0.3.73"
+backtrace = { version = "0.3.73", optional = true}
 
 [features]
+backtrace = ["dep:backtrace"]
 sqlx-postgres = ["sqlx"]
