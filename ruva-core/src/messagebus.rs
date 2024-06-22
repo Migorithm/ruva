@@ -98,7 +98,9 @@ where
 				for handler in h.iter() {
 					futures.push(handler(msg.clone(), context_manager.clone()));
 				}
-				let _ = futures::future::try_join_all(futures).await;
+				if let Err(err) = futures::future::try_join_all(futures).await {
+					tracing::error!("Error Occurred While Handling Event! Error:{:?}", err);
+				}
 			}
 		}
 
