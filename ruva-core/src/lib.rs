@@ -4,8 +4,8 @@ pub mod message;
 pub mod messagebus;
 pub mod outbox;
 
-#[cfg(feature = "backtrace")]
 pub mod backtrace;
+
 pub mod rdb;
 pub mod repository;
 pub mod responses;

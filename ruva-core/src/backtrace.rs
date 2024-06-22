@@ -1,3 +1,4 @@
+#[cfg(feature = "backtrace")]
 #[inline]
 pub fn get_caller_data() -> Option<String> {
 	let stack_trace = backtrace::Backtrace::new();

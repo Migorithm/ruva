@@ -1,4 +1,3 @@
-use crate::backtrace_error;
 use crate::prelude::{TCommand, TCommandService, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
 use async_trait::async_trait;
@@ -80,18 +79,18 @@ where
 						match err.into() {
 							BaseError::StopSentinel => {
 								let error_msg = format!("Stop Sentinel Arrived In {i}th Event!");
-								backtrace_error!("{}", error_msg);
+								crate::backtrace_error!("{}", error_msg);
 								break;
 							}
 							BaseError::StopSentinelWithEvent(event) => {
 								let error_msg = format!("Stop Sentinel With Event Arrived In {i}th Event!");
-								backtrace_error!("{}", error_msg);
+								crate::backtrace_error!("{}", error_msg);
 								context_manager.write().await.push_back(event);
 								break;
 							}
 							err => {
 								let error_msg = format!("Error Occurred While Handling Event In {i}th Event! Error:{:?}", err);
-								backtrace_error!("{}", error_msg);
+								crate::backtrace_error!("{}", error_msg);
 							}
 						}
 					}
@@ -104,7 +103,7 @@ where
 				}
 				if let Err(err) = futures::future::try_join_all(futures).await {
 					let error_msg = format!("Error Occurred While Handling Event! Error:{:?}", err);
-					backtrace_error!("{}", error_msg);
+					crate::backtrace_error!("{}", error_msg);
 				}
 			}
 		}
