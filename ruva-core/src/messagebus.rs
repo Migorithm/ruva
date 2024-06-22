@@ -66,7 +66,7 @@ where
 		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
 		let handlers = self.event_handler().get(&msg.metadata().topic).ok_or_else(|| {
-			eprintln!("Unprocessable Event Given! {:?}", msg);
+			tracing::error!("Unprocessable Event Given! {:?}", msg);
 			BaseError::NotFound
 		})?;
 
@@ -77,17 +77,17 @@ where
 						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
 						match err.into() {
 							BaseError::StopSentinel => {
-								eprintln!("Stop Sentinel Arrived!");
+								tracing::error!("Stop Sentinel Arrived!");
 
 								break;
 							}
 							BaseError::StopSentinelWithEvent(event) => {
-								eprintln!("Stop Sentinel With Event Arrived!");
+								tracing::error!("Stop Sentinel With Event Arrived!");
 								context_manager.write().await.push_back(event);
 								break;
 							}
 							err => {
-								eprintln!("Error Occurred While Handling Event! Error:{:?}", err);
+								tracing::error!("Error Occurred While Handling Event! Error:{:?}", err);
 							}
 						}
 					}
@@ -107,7 +107,7 @@ where
 		if let Some(event) = incoming_event {
 			if let Err(err) = self._handle_event(event, context_manager.clone()).await {
 				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-				eprintln!("{:?}", err);
+				tracing::error!("{:?}", err);
 			}
 		}
 		Ok(())

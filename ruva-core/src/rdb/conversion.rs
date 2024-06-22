@@ -41,7 +41,7 @@ impl PgHasArrayType for SnowFlake {
 
 impl From<sqlx::Error> for BaseError {
 	fn from(value: sqlx::Error) -> Self {
-		eprintln!("{:?}", value);
+		tracing::error!("{:?}", value);
 		Self::DatabaseError(value.to_string())
 	}
 }
