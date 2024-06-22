@@ -19,6 +19,7 @@ static_assertions="1.1.0"
 serde = {version="1.0.179",features=["derive"]}
 
 [features]
+backtrace = ["ruva-core/backtrace"]
 sqlx-postgres = ["ruva-core/sqlx-postgres"]
 
 

@@ -33,7 +33,7 @@ impl TUnitOfWork for SQLExecutor {
 				Ok(())
 			}
 			Some(_trx) => {
-				println!("Transaction Begun Already!");
+				tracing::warn!("Transaction Begun Already!");
 				Err(BaseError::TransactionError)?
 			}
 		}
