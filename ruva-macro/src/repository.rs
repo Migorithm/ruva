@@ -45,8 +45,8 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 				self.0.begin().await
 			}
 
-			async fn commit(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
-				self.0.commit().await
+			async fn _commit(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
+				self.0._commit().await
 			}
 
 			async fn rollback(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
@@ -56,14 +56,15 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 			async fn close(&mut self) {
 				self.0.close().await;
 			}
-		}
-
-
-		impl ruva::ruva_core::unit_of_work::TCommitHook for #name {
-			async fn commit_hook(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
-				self.0.commit_hook().await
+			async fn process_internal_events(&mut self) ->  Result<(), ruva::ruva_core::responses::BaseError> {
+				self.0.process_internal_events().await
+			}
+			async fn process_external_events(&mut self) -> Result<(), ruva::ruva_core::responses::BaseError> {
+				self.0.process_external_events().await
 			}
 		}
+
+
 
 
 	)
