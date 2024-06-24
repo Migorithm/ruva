@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-	prelude::{AtomicContextManager, BaseError, TAggregate, TCommitHook, TEvent, TUnitOfWork},
+	prelude::{AtomicContextManager, BaseError, TAggregate, TEvent, TUnitOfWork},
 	prepare_bulk_operation,
 	repository::TRepository,
 };
@@ -70,31 +70,31 @@ impl TRepository for SqlRepository {
 		self.events.extend(events)
 	}
 }
-impl TCommitHook for SqlRepository {
-	async fn commit_hook(&mut self) -> Result<(), BaseError> {
-		self.save_outbox().await?;
-		self.send_internally_notifiable_messages().await;
-		Ok(())
-	}
-}
 
 impl TUnitOfWork for SqlRepository {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		self.executor.begin().await
 	}
 
-	async fn commit(&mut self) -> Result<(), BaseError> {
-		// run commit hook
-		self.commit_hook().await?;
-
-		// commit
+	async fn _commit(&mut self) -> Result<(), BaseError> {
 		self.executor.commit().await
 	}
 
 	async fn rollback(&mut self) -> Result<(), BaseError> {
+		self.events.clear();
 		self.executor.rollback().await
 	}
 	async fn close(&mut self) {
 		self.executor.close().await;
+	}
+
+	async fn process_internal_events(&mut self) -> Result<(), BaseError> {
+		self.send_internally_notifiable_messages().await;
+		Ok(())
+	}
+
+	async fn process_external_events(&mut self) -> Result<(), BaseError> {
+		self.save_outbox().await?;
+		Ok(())
 	}
 }

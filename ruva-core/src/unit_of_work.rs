@@ -47,18 +47,35 @@
 
 use crate::prelude::BaseError;
 
-pub trait TUnitOfWork: Send + Sync {
-	/// Creeate UOW object with context manager.
+/// Template for Unit of Work
+/// Concrete implementation must implement `_commit` method
+/// If you want to add hooks on events, you can implement `process_internal_events` and `process_external_events`
 
+pub trait TUnitOfWork: Send + Sync {
 	fn begin(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 
-	fn commit(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
+	// Template method
+	fn commit(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send {
+		async {
+			self.process_internal_events().await?;
+			self.process_external_events().await?;
+			self._commit().await?;
+			Ok(())
+		}
+	}
+	// Actual commit which concrete implementation must implement
+	fn _commit(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 
 	fn rollback(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
 
 	fn close(&mut self) -> impl std::future::Future<Output = ()> + Send;
-}
 
-pub trait TCommitHook {
-	fn commit_hook(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send;
+	// Hook
+	fn process_internal_events(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send {
+		async { Ok(()) }
+	}
+	// Hook
+	fn process_external_events(&mut self) -> impl std::future::Future<Output = Result<(), BaseError>> + Send {
+		async { Ok(()) }
+	}
 }

@@ -1,8 +1,8 @@
-use crate::prelude::{TCommitHook, TEvent};
+use crate::prelude::TEvent;
 
 use std::collections::VecDeque;
 
-pub trait TRepository: Send + Sync + TCommitHook {
+pub trait TRepository: Send + Sync {
 	fn set_events(&mut self, events: VecDeque<std::sync::Arc<dyn TEvent>>);
 }
 

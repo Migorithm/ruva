@@ -1,4 +1,4 @@
-use crate::prelude::{AtomicContextManager, BaseError, OutBox, TCommitHook, TEvent, TRepository, TUnitOfWork};
+use crate::prelude::{AtomicContextManager, BaseError, OutBox, TEvent, TRepository, TUnitOfWork};
 
 pub fn outbox_table() -> &'static std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>>> {
 	static GROUP_TABLE: std::sync::OnceLock<std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>>>> = std::sync::OnceLock::new();
@@ -35,27 +35,30 @@ impl TRepository for MockDb {
 		self.events.extend(events)
 	}
 }
-impl TCommitHook for MockDb {
-	async fn commit_hook(&mut self) -> Result<(), crate::prelude::BaseError> {
-		self.save_outbox().await?;
-		self.send_internally_notifiable_messages().await;
-		Ok(())
-	}
-}
 
 impl TUnitOfWork for MockDb {
 	async fn begin(&mut self) -> Result<(), crate::prelude::BaseError> {
 		Ok(())
 	}
 
-	async fn commit(&mut self) -> Result<(), crate::prelude::BaseError> {
-		self.commit_hook().await?;
+	async fn _commit(&mut self) -> Result<(), crate::prelude::BaseError> {
 		Ok(())
 	}
 
 	async fn rollback(&mut self) -> Result<(), crate::prelude::BaseError> {
+		self.events.clear();
 		Ok(())
 	}
 
 	async fn close(&mut self) {}
+
+	async fn process_internal_events(&mut self) -> Result<(), BaseError> {
+		self.send_internally_notifiable_messages().await;
+		Ok(())
+	}
+
+	async fn process_external_events(&mut self) -> Result<(), BaseError> {
+		self.save_outbox().await?;
+		Ok(())
+	}
 }

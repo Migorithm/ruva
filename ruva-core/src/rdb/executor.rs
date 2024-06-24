@@ -1,4 +1,4 @@
-use crate::prelude::{BaseError, TUnitOfWork};
+use crate::prelude::BaseError;
 
 use sqlx::{postgres::PgPool, PgConnection, Postgres, Transaction};
 
@@ -25,8 +25,8 @@ impl SQLExecutor {
 	}
 }
 
-impl TUnitOfWork for SQLExecutor {
-	async fn begin(&mut self) -> Result<(), BaseError> {
+impl SQLExecutor {
+	pub async fn begin(&mut self) -> Result<(), BaseError> {
 		match self.transaction.as_mut() {
 			None => {
 				self.transaction = Some(self.pool.begin().await?);
@@ -39,20 +39,20 @@ impl TUnitOfWork for SQLExecutor {
 		}
 	}
 
-	async fn commit(&mut self) -> Result<(), BaseError> {
+	pub async fn commit(&mut self) -> Result<(), BaseError> {
 		match self.transaction.take() {
 			None => panic!("Tranasction Has Not Begun!"),
 			Some(trx) => Ok(trx.commit().await?),
 		}
 	}
-	async fn rollback(&mut self) -> Result<(), BaseError> {
+	pub async fn rollback(&mut self) -> Result<(), BaseError> {
 		match self.transaction.take() {
 			None => panic!("Tranasction Has Not Begun!"),
 			Some(trx) => Ok(trx.rollback().await?),
 		}
 	}
 
-	async fn close(&mut self) {
+	pub async fn close(&mut self) {
 		match self.transaction.take() {
 			None => (),
 			Some(trx) => {
