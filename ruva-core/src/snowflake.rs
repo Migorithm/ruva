@@ -103,18 +103,20 @@ impl NumericalUniqueIdGenerator {
 	pub fn generate(&self) -> i64 {
 		self.sequence_num.store((self.sequence_num.load(Ordering::Relaxed) + 1) % 4096, Ordering::Relaxed);
 
-		// Maintenance `timestamp` for every 4096 ids generated.
-		if self.sequence_num.load(Ordering::Relaxed) == 0 {
-			let mut now_millis = current_time_in_milli(self.epoch);
+		let mut now_millis = current_time_in_milli(self.epoch);
 
-			// If the following is true, then check if sequence has been created 4092 times,
-			// and then busy wait until the next millisecond
-			// to prevent 'clock is moving backwards' situation.
-			if now_millis == self.timestamp.load(Ordering::Relaxed) {
+		// If the following is true, then check if sequence has been created 4092 times,
+		// and then busy wait until the next millisecond
+		// to prevent 'clock is moving backwards' situation.
+		if self.timestamp.load(Ordering::Relaxed) == now_millis {
+			// Maintenance `timestamp` for every 4096 ids generated.
+			if self.sequence_num.load(Ordering::Relaxed) == 0 {
 				now_millis = race_next_milli(self.timestamp.load(Ordering::Relaxed), self.epoch);
+				self.timestamp.store(now_millis, Ordering::Relaxed);
 			}
-
+		} else {
 			self.timestamp.store(now_millis, Ordering::Relaxed);
+			self.sequence_num.store(0, Ordering::Relaxed);
 		}
 
 		self.get_snowflake()
@@ -334,6 +336,17 @@ fn test_generate() {
 		ids.clear();
 	}
 }
+#[test]
+fn test_generate_not_sequential_value_when_sleep() {
+	let id_generator = NumericalUniqueIdGenerator::new(1, 2);
+	let first = id_generator.generate();
+
+	std::thread::sleep(std::time::Duration::from_millis(1));
+	let second = id_generator.generate();
+
+	assert!(first < second);
+	assert_ne!(first + 1, second);
+}
 
 #[test]
 fn test_singleton_generate() {
@@ -351,9 +364,4 @@ fn test_singleton_generate() {
 
 		ids.clear();
 	}
-}
-
-#[test]
-fn test_json() {
-	println!("{}", serde_json::json!(i64::MAX));
 }
