@@ -264,7 +264,7 @@ mod test {
 		}
 		let aggregate = SerializeTest::default();
 		let serialized = serde_json::to_string(&aggregate).unwrap();
-		assert_eq!(serialized, "{\"id\":0,\"some_other_field\":0,\"version\":0}");
+		assert_eq!(serialized, "{\"id\":0,\"foo\":0}");
 	}
 
 	#[test]
@@ -280,7 +280,7 @@ mod test {
 		}
 		let adapter = TestStructAdapter::default();
 		let serialized = serde_json::to_string(&adapter).unwrap();
-		assert_eq!(serialized, "{\"some_other_field\":0}");
+		assert_eq!(serialized, "{\"foo\":0}");
 	}
 
 	#[test]
@@ -323,7 +323,7 @@ mod test {
 
 		let non_adapter = TestStruct::default();
 		let non_adapter_serialized = serde_json::to_string(&non_adapter).unwrap();
-		assert_eq!(non_adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0,\"version\":0}");
+		assert_eq!(non_adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0}");
 
 		let adapter = TestStructAdapter::default();
 		let adapter_serialized = serde_json::to_string(&adapter).unwrap();
