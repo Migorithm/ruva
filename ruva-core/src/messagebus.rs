@@ -1,5 +1,6 @@
 use crate::prelude::{TCommand, TCommandService, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
+use async_recursion::async_recursion;
 use async_trait::async_trait;
 
 use hashbrown::HashMap;
@@ -59,65 +60,69 @@ where
 	crate::responses::BaseError: std::convert::From<E>,
 {
 	fn event_handler(&self) -> &'static TEventHandler<R, E>;
-	async fn handle_event(&self, msg: Arc<dyn TEvent>) -> Result<(), E> {
-		let context_manager = ContextManager::new();
-		self._handle_event(msg, context_manager.clone()).await
-	}
-	async fn _handle_event(&self, msg: Arc<dyn TEvent>, context_manager: AtomicContextManager) -> Result<(), E> {
-		// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
+}
 
-		let handlers = self.event_handler().get(&msg.metadata().topic).ok_or_else(|| {
-			tracing::error!("Unprocessable Event Given! {:?}", msg);
-			BaseError::NotFound
-		})?;
+/// This function is used to handle event. It is called recursively until there is no event left in the queue.
+#[async_recursion]
+async fn handle_event<R, E>(msg: Arc<dyn TEvent>, context_manager: AtomicContextManager, event_handler: &'static TEventHandler<R, E>) -> Result<(), E>
+where
+	R: ApplicationResponse,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
+	crate::responses::BaseError: std::convert::From<E>,
+{
+	// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 
-		match handlers {
-			EventHandlers::Sync(h) => {
-				for (i, handler) in h.iter().enumerate() {
-					if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
-						// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-						match err.into() {
-							BaseError::StopSentinel => {
-								let error_msg = format!("Stop Sentinel Arrived In {i}th Event!");
-								crate::backtrace_error!("{}", error_msg);
-								break;
-							}
-							BaseError::StopSentinelWithEvent(event) => {
-								let error_msg = format!("Stop Sentinel With Event Arrived In {i}th Event!");
-								crate::backtrace_error!("{}", error_msg);
-								context_manager.write().await.push_back(event);
-								break;
-							}
-							err => {
-								let error_msg = format!("Error Occurred While Handling Event In {i}th Event! Error:{:?}", err);
-								crate::backtrace_error!("{}", error_msg);
-							}
+	let handlers = event_handler.get(&msg.metadata().topic).ok_or_else(|| {
+		tracing::error!("Unprocessable Event Given! {:?}", msg);
+		BaseError::NotFound
+	})?;
+
+	match handlers {
+		EventHandlers::Sync(h) => {
+			for (i, handler) in h.iter().enumerate() {
+				if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
+					// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+					match err.into() {
+						BaseError::StopSentinel => {
+							let error_msg = format!("Stop Sentinel Arrived In {i}th Event!");
+							crate::backtrace_error!("{}", error_msg);
+							break;
+						}
+						BaseError::StopSentinelWithEvent(event) => {
+							let error_msg = format!("Stop Sentinel With Event Arrived In {i}th Event!");
+							crate::backtrace_error!("{}", error_msg);
+							context_manager.write().await.push_back(event);
+							break;
+						}
+						err => {
+							let error_msg = format!("Error Occurred While Handling Event In {i}th Event! Error:{:?}", err);
+							crate::backtrace_error!("{}", error_msg);
 						}
 					}
 				}
 			}
-			EventHandlers::Async(h) => {
-				let mut futures = Vec::new();
-				for handler in h.iter() {
-					futures.push(handler(msg.clone(), context_manager.clone()));
-				}
-				if let Err(err) = futures::future::try_join_all(futures).await {
-					let error_msg = format!("Error Occurred While Handling Event! Error:{:?}", err);
-					crate::backtrace_error!("{}", error_msg);
-				}
+		}
+		EventHandlers::Async(h) => {
+			let mut futures = Vec::new();
+			for handler in h.iter() {
+				futures.push(handler(msg.clone(), context_manager.clone()));
+			}
+			if let Err(err) = futures::future::try_join_all(futures).await {
+				let error_msg = format!("Error Occurred While Handling Event! Error:{:?}", err);
+				crate::backtrace_error!("{}", error_msg);
 			}
 		}
-
-		// Resursive case
-		let incoming_event = context_manager.write().await.event_queue.pop_front();
-		if let Some(event) = incoming_event {
-			if let Err(err) = self._handle_event(event, context_manager.clone()).await {
-				// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
-				tracing::error!("{:?}", err);
-			}
-		}
-		Ok(())
 	}
+
+	// Resursive case
+	let incoming_event = context_manager.write().await.event_queue.pop_front();
+	if let Some(event) = incoming_event {
+		if let Err(err) = handle_event(event, context_manager.clone(), event_handler).await {
+			// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
+			tracing::error!("{:?}", err);
+		}
+	}
+	Ok(())
 }
 
 #[async_trait]
@@ -130,15 +135,65 @@ where
 {
 	fn command_handler(&self, context_manager: AtomicContextManager) -> impl TCommandService<R, E, C>;
 
-	async fn handle(&self, message: C) -> Result<R, E> {
+	/// This method is used to handle command and return result.
+	/// ## Example
+	/// ```rust,no_run
+	/// let res = service.handle_command(message).await?;
+	/// ```
+	async fn execute_and_wait(&self, message: C) -> Result<R, E> {
 		let context_manager = ContextManager::new();
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
-		// Trigger event
+
+		// Trigger event handler
 		if !context_manager.read().await.event_queue.is_empty() {
 			let event = context_manager.write().await.event_queue.pop_front();
-			let _ = self._handle_event(event.unwrap(), context_manager.clone()).await;
+			let _s = handle_event(event.unwrap(), context_manager.clone(), self.event_handler()).await?;
 		}
 		Ok(res)
+	}
+
+	/// This method is used to handle command and return result proxy which holds the result and join handler.
+	/// ## Example
+	/// ```rust,no_run
+	/// let res = service.handle_command(message).await?;
+	/// let res = res.wait_until_event_processing_done().await?;
+	/// let res = res.result();
+	/// ```
+	async fn execute_and_forget(&self, message: C) -> Result<CommandResponseWithEventFutures<R, E>, E> {
+		let context_manager = ContextManager::new();
+		let res = self.command_handler(context_manager.clone()).execute(message).await?;
+		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
+
+		// Trigger event handler
+		if !context_manager.read().await.event_queue.is_empty() {
+			let event = context_manager.write().await.event_queue.pop_front();
+			res.join_handler = Some(tokio::spawn(handle_event(event.unwrap(), context_manager.clone(), self.event_handler())));
+		}
+		Ok(res)
+	}
+}
+
+pub struct CommandResponseWithEventFutures<T, E> {
+	result: T,
+	join_handler: Option<tokio::task::JoinHandle<std::result::Result<(), E>>>,
+}
+impl<T, E> CommandResponseWithEventFutures<T, E>
+where
+	responses::BaseError: std::convert::From<E>,
+	T: ApplicationResponse,
+	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
+{
+	pub async fn wait_until_event_processing_done(mut self) -> Result<Self, E> {
+		if let Some(join_handler) = self.join_handler.take() {
+			join_handler.await.map_err(|err| {
+				tracing::error!("{:?}", err);
+				BaseError::ServiceError(Box::new("error occurred while handling event".to_string()))
+			})??;
+		}
+		Ok(self)
+	}
+	pub fn result(self) -> T {
+		self.result
 	}
 }
 
