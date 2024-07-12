@@ -3,9 +3,11 @@ use syn::{parse_quote, Data, DataStruct, DeriveInput, Fields, FieldsNamed, FnArg
 
 use crate::utils::{get_attributes, get_trait_checking_stmts, locate_crate_on_derive_macro};
 
-pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<TokenStream>, identifier: TokenStream, impl_assertion: TokenStream) -> TokenStream {
+pub(crate) fn render_message_token(ast: &DeriveInput, visibilities: Vec<TokenStream>, externally_notifiable_event_req: Option<(TokenStream, TokenStream)>) -> TokenStream {
 	let name = &ast.ident;
 	let crates = locate_crate_on_derive_macro(ast);
+
+	let (identifier, impl_assertion) = externally_notifiable_event_req.unwrap_or_else(|| (TokenStream::new(), TokenStream::new()));
 
 	quote! {
 		impl #crates::prelude::TEvent for #name {
@@ -16,7 +18,7 @@ pub(crate) fn render_message_token(ast: &DeriveInput, propagatability: Vec<Token
 				serde_json::to_string(&self).expect("Failed to serialize")
 			}
 
-			#(#propagatability)*
+			#(#visibilities)*
 		}
 		impl #name{
 			pub(crate) fn to_message(self)->  ::std::sync::Arc<dyn #crates::prelude::TEvent> {
@@ -31,31 +33,36 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<TokenStream> {
 	let propagatability = ast
 		.attrs
 		.iter()
-		.flat_map(|attr| {
-			if let Meta::Path(Path { segments, .. }) = &attr.meta {
-				segments
-					.iter()
-					.filter_map(|s| {
-						if s.ident.to_string().as_str() == "internally_notifiable" {
-							Some(quote!(
-								fn internally_notifiable(&self) -> bool {
-									true
-								}
-							))
-						} else if s.ident.to_string().as_str() == "externally_notifiable" {
-							Some(quote!(
-								fn externally_notifiable(&self) -> bool {
-									true
-								}
-							))
-						} else {
-							None
+		.flat_map(|attr| match &attr.meta {
+			Meta::Path(Path { segments, .. }) => segments
+				.iter()
+				.filter_map(|s| {
+					let name = s.ident.to_string();
+					if name == "internally_notifiable" {
+						Some(quote!(
+							fn internally_notifiable(&self) -> bool {
+								true
+							}
+						))
+					} else if name == "externally_notifiable" {
+						panic!("Wrong use of externally_notifiable annotation\rExample: #[externally_notifiable(SomeAggregate)]")
+					} else {
+						None
+					}
+				})
+				.collect::<Vec<_>>(),
+			Meta::List(MetaList { path, .. }) => {
+				if path.get_ident().unwrap().to_string().as_str() == "externally_notifiable" {
+					vec![quote!(
+						fn externally_notifiable(&self) -> bool {
+							true
 						}
-					})
-					.collect::<Vec<_>>()
-			} else {
-				panic!("Error!")
+					)]
+				} else {
+					vec![quote!()]
+				}
 			}
+			_ => panic!("Notifiability was not specified!"),
 		})
 		.collect::<Vec<_>>();
 	if propagatability.is_empty() {
@@ -64,50 +71,45 @@ pub(crate) fn render_event_visibility(ast: &DeriveInput) -> Vec<TokenStream> {
 	propagatability
 }
 
-pub(crate) fn get_aggregate_metadata(ast: &mut DeriveInput) -> (TokenStream, String) {
-	let mut idx = 10000;
-	let mut aggregate_name: Option<String> = None;
-
-	let res = ast
-		.attrs
-		.iter_mut()
-		.enumerate()
-		.flat_map(|(order, attr)| {
-			if let Meta::List(MetaList { path, tokens, .. }) = &mut attr.meta {
-				let ident = path.get_ident();
-				if ident.unwrap() != "aggregate" {
-					panic!("MetaList is allowed only for aggregate!");
-				}
-				let quote = quote!(
-					ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::TAggregate);
-				);
-
-				tokens.clone().into_iter().for_each(|t| {
-					if let proc_macro2::TokenTree::Ident(ident) = t {
-						aggregate_name = Some(ident.to_string());
-					}
-				});
-
-				if aggregate_name.is_none() || aggregate_name.as_ref().unwrap().is_empty() {
-					panic!("TAggregate name must be given!");
-				}
-
-				idx = order;
-
-				Some((quote, aggregate_name.clone().unwrap()))
-			} else {
-				None
+// first return token is for identifier, second return token is for aggregate assertion
+pub(crate) fn extract_externally_notifiable_event_req(ast: &mut DeriveInput) -> Option<(TokenStream, TokenStream)> {
+	let mut token: Option<(TokenStream, TokenStream)> = None;
+	for attr in ast.attrs.iter_mut() {
+		if let Meta::List(MetaList { path, tokens, .. }) = &mut attr.meta {
+			let ident = path.get_ident();
+			if ident.unwrap() != "externally_notifiable" {
+				panic!("MetaList is allowed only for aggregate!");
 			}
-		})
-		.collect::<Vec<_>>();
 
-	let res = res.first().expect("aggregate must be specified! \rExample: #[aggregate(CustomAggregate)]\n").clone();
-	ast.attrs.remove(idx);
+			// * Asserting that the given type is TAggregate
+			let quote = quote!(
+				ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::TAggregate);
+			);
 
-	res
+			let mut aggregate_name = String::new();
+			tokens.clone().into_iter().for_each(|t| {
+				if let proc_macro2::TokenTree::Ident(ident) = t {
+					aggregate_name.push_str(ident.to_string().as_str());
+				}
+			});
+
+			if aggregate_name.is_empty() {
+				panic!("TAggregate name must be given for externally notifiable event!");
+			}
+
+			// ! Event Metadata is required only when it is externally notifiable
+			token = Some((generate_event_metadata(ast, aggregate_name), quote));
+			break;
+		}
+	}
+
+	// let res = res.first().expect("aggregate must be specified! \rExample: #[aggregate(CustomAggregate)]\n").clone();
+	// ast.attrs.remove(idx);
+
+	token
 }
 
-pub(crate) fn find_identifier(ast: &DeriveInput, aggregate_metadata: String) -> TokenStream {
+pub(crate) fn generate_event_metadata(ast: &DeriveInput, aggregate_metadata: String) -> TokenStream {
 	let name = &ast.ident;
 	let crates = locate_crate_on_derive_macro(ast);
 

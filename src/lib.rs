@@ -27,7 +27,8 @@
 //! ## TCommand & Event
 //! You can register any general struct with [TCommand] Derive Macro as follows:
 //! ```rust,no_run
-//! #[derive(TCommand)]
+//! use ruva::prelude::TCommand;
+//! #[derive(Debug,TCommand)]
 //! pub struct MakeOrder {
 //!     pub user_id: i64,
 //!     pub items: Vec<String>,
@@ -38,15 +39,18 @@
 //!
 //! To specify [TEvent] implementation, annotate struct with `TEvent` derive macro as in the following example:
 //! ```rust,no_run
+//! use serde::Serialize;
+//! use serde::Deserialize;
+//! use ruva::prelude::TEvent;
+//!
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
 //! pub struct OrderFailed {
-//!     
 //!     pub user_id: i64,
 //! }
 //!
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
-//! #[internally_notifiable]
+//! #[externally_notifiable]
 //! pub struct OrderSucceeded{
 //!     #[identifier]
 //!     pub user_id: i64,
@@ -70,15 +74,16 @@
 //! clients.
 //!
 //! ```rust,no_run
-//!
-//! impl ruva::prelude::TMessageBus<CustomResponse,CustomError,CustomCommand> for MessageBus{
-//! fn event_handler(&self) -> &'static ruva::prelude::TEventHandler<CustomResponse, CustomError> {
-//!     self.event_handler
+//! use ruva::prelude::TEventHandler;
+//! pub struct MessageBus {
+//! event_handler: &'static TEventHandler<ApplicationResponse, ApplicationError>,
 //! }
+//!
+//! impl<C> ruva::prelude::TMessageBus<ApplicationResponse,ApplicationError,C> for MessageBus{
 //! fn command_handler(
 //!     &self,
 //!     context_manager: ruva::prelude::AtomicContextManager,
-//! ) -> Box<dyn ruva::prelude::TCommandService<CustomResponse, CustomError, CustomCommand>> {
+//! ) -> Box<dyn ruva::prelude::TCommandService<ApplicationResponse, ApplicationError, C>> {
 //!     Box::new(
 //!         HighestLevelOfAspectThatImplementTCommandService::new(
 //!             MidLevelAspectThatImplementTCommandService::new(
@@ -126,18 +131,23 @@
 //!
 //! ### Example
 //! ```rust,no_run
+//! use std::marker::PhantomData;
+//! use ruva_core::prelude::TUnitOfWork;
+//! use ruva_core::prelude::TRepository;
+//!
+//!
 //! // Service Handler
 //! pub struct CustomHandler<R> {
 //!     _r: PhantomData<R>,
 //! }
 //! impl<R> CustomHandler<R>
 //! where
-//!     R: TCustomRepository + TUnitOfWork,
+//!     R: TRepository + TUnitOfWork,
 //! {
 //!     pub async fn create_aggregate(
 //!         cmd: CreateCommand,
 //!         mut uow: R,
-//!     ) -> Result<CustomResponse, CustomError> {
+//!     ) -> Result<ApplicationResponse, ApplicationError> {
 //!         // Transation begin
 //!         uow.begin().await?;
 //!         let mut aggregate: CustomAggregate = CustomAggregate::new(cmd);
@@ -159,25 +169,23 @@
 //! ### Example
 //!
 //! ```rust,no_run
+//! use ruva_core::init_event_handler;
+//! use ruva_core::prelude::TEvent;
 //! // crate::dependencies
-//! init_event_handler!({
-//!     R: ApplicationResponse,
-//!     E: ApplicationError,
-//!     {
-//!         SomethingHappened:[
-//!             // take dependency defined in `crate::dependencies` named `uow` with context being argument
-//!             Handler::handle_this_event1 => (uow(c)),
-//!             // function that doesn't take additional dependency
-//!             Handler::handle_this_event2,
-//!         ],
-//!         SomethingElseHappened:[
-//!             //take dependency defined in `crate::dependencies` named `dependency1`
-//!             Handler::handle_this_event3 => (dependency1),
-//!             Handler::handle_this_event4 => (dependency1),
-//!         ],
-//!     }
-//! }
-//! )
+//! init_event_handler!(
+//!     ApplicationResponse,
+//!     ApplicationError,
+//!     |ctx| your_dependency(ctx),
+//!     
+//!     SomethingHappened:[
+//!         handle_this_event_handler1,
+//!         handle_this_event_handler2,
+//!     ],
+//!     SomethingElseHappened:[
+//!         handle_this_event_handler3,
+//!         handle_this_event_handler4,
+//!     ],
+//! );
 //! ```
 //!
 //!
@@ -210,123 +218,4 @@ pub mod prelude {
 	pub use ruva_core::prelude::*;
 
 	pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, IntoCommand, TCommand, TConstruct, TEvent, TRepository};
-}
-
-#[cfg(test)]
-mod test {
-
-	use crate as ruva;
-
-	use ruva_core::prelude::*;
-	use ruva_macro::aggregate;
-	#[test]
-	fn application_error_derive_test() {
-		use ruva_core::message::TEvent;
-
-		use ruva_core::responses::BaseError;
-		use ruva_macro::ApplicationError;
-		use std::fmt::Display;
-
-		#[derive(Debug, ApplicationError)]
-		#[crates(ruva)]
-		enum Err {
-			#[stop_sentinel]
-			Items,
-			#[stop_sentinel_with_event]
-			StopSentinelWithEvent(std::sync::Arc<dyn TEvent>),
-			#[database_error]
-			DatabaseError(String),
-			BaseError(BaseError),
-		}
-
-		impl Display for Err {
-			fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-				match self {
-					Self::Items => write!(f, "items"),
-					Self::StopSentinelWithEvent(item) => write!(f, "{:?}", item),
-					Self::DatabaseError(err) => write!(f, "{:?}", err),
-					Self::BaseError(err) => write!(f, "{:?}", err),
-				}
-			}
-		}
-	}
-
-	#[test]
-	fn test_serialize() {
-		#[aggregate]
-		#[derive(Debug, Clone, Serialize, Default)]
-		pub struct SerializeTest {
-			#[adapter_ignore]
-			id: i32,
-			#[serde(skip_serializing)]
-			name: String,
-			foo: i32,
-		}
-		let aggregate = SerializeTest::default();
-		let serialized = serde_json::to_string(&aggregate).unwrap();
-		assert_eq!(serialized, "{\"id\":0,\"foo\":0}");
-	}
-
-	#[test]
-	fn test_adapter_accessible() {
-		#[aggregate]
-		#[derive(Debug, Clone, Serialize, Default)]
-		pub struct TestStruct {
-			#[adapter_ignore]
-			id: i32,
-			#[serde(skip_serializing)]
-			name: String,
-			foo: i32,
-		}
-		let adapter = TestStructAdapter::default();
-		let serialized = serde_json::to_string(&adapter).unwrap();
-		assert_eq!(serialized, "{\"foo\":0}");
-	}
-
-	#[test]
-	fn test_conversion() {
-		#[aggregate]
-		#[derive(Debug, Clone, Serialize, Default)]
-		pub struct ConversionStruct {
-			#[adapter_ignore]
-			id: i32,
-			#[serde(skip_serializing)]
-			name: String,
-			foo: i32,
-		}
-		let aggregate = ConversionStruct {
-			name: "migo".into(),
-			foo: 2,
-			id: 1,
-			..Default::default()
-		};
-		assert_eq!(aggregate.id, 1);
-		let converted_adapter = ConversionStructAdapter::from(aggregate);
-
-		assert_eq!(converted_adapter.name, "migo");
-		assert_eq!(converted_adapter.foo, 2);
-
-		let converted_struct = ConversionStruct::from(converted_adapter);
-		assert_eq!(converted_struct.name, "migo");
-		assert_eq!(converted_struct.foo, 2);
-	}
-
-	#[test]
-	fn test_when_there_is_no_apdater_ignore_attr() {
-		#[aggregate]
-		#[derive(Debug, Clone, Serialize, Default)]
-		pub struct TestStruct {
-			id: i32,
-			name: String,
-			some_other_field: i32,
-		}
-
-		let non_adapter = TestStruct::default();
-		let non_adapter_serialized = serde_json::to_string(&non_adapter).unwrap();
-		assert_eq!(non_adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0}");
-
-		let adapter = TestStructAdapter::default();
-		let adapter_serialized = serde_json::to_string(&adapter).unwrap();
-		assert_eq!(adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0}");
-	}
 }

@@ -1,5 +1,5 @@
 use command::derive_into_command;
-use message::{find_identifier, get_aggregate_metadata, render_event_visibility, render_message_token};
+use message::{extract_externally_notifiable_event_req, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
 use proc_macro::TokenStream;
@@ -20,11 +20,10 @@ mod utils;
 #[proc_macro_derive(TEvent, attributes(internally_notifiable, externally_notifiable, identifier, aggregate))]
 pub fn message_derive(attr: TokenStream) -> TokenStream {
 	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
-	let aggregate_metadata = get_aggregate_metadata(&mut ast);
-	let propagatability = render_event_visibility(&ast);
-	let identifier = find_identifier(&ast, aggregate_metadata.1);
+	let externally_notifiable_event_req = extract_externally_notifiable_event_req(&mut ast);
+	let visibilities = render_event_visibility(&ast);
 
-	render_message_token(&ast, propagatability, identifier, aggregate_metadata.0).into()
+	render_message_token(&ast, visibilities, externally_notifiable_event_req).into()
 }
 
 /// Define TAggregate root
