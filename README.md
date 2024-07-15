@@ -1,7 +1,7 @@
 [ruva-core]: https://docs.rs/ruva-core
 [ruva-macro]: https://docs.rs/ruva-macro
 [TCommand]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TCommand.html
-[Event]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
+[TEvent]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
 [MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/messagebus/index.html
 [Context]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/contexts/struct.ContextManager.html
 
@@ -37,44 +37,25 @@ Likewise, you can do the same thing for Event:
 #[derive(Serialize, Deserialize, Clone, TEvent)]
 #[internally_notifiable]
 pub struct OrderFailed {
-    #[identifier]
     pub user_id: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, TEvent)]
-#[internally_notifiable]
+#[externally_notifiable(OrderAggregate)]
 pub struct OrderSucceeded{
     #[identifier]
+    pub id: i64,
     pub user_id: i64,
     pub items: Vec<String>
 }
 ```
-Note that use of `internally_notifiable`(or `externally_notifiable`) and `identifier` is MUST.
+Notice that `internally_notifiable` event doesn't require aggregate specification while `externally_notifiable` event does along with its id with `identifier` attribute.
 
-* `internally_notifiable` is marker to let the system know that the event should be handled
-within the application
-* `externally_notifiable` is to leave `OutBox`.
-* `identifier` is to record aggregate id.
+* `internally_notifiable` is marker to let the system know that the event should be handled within the application
+* `externally_notifiable` event is stored as `OutBox`.
 
-## Initializing TCommand Handlers
-TCommand handlers are responsible for handling commands in an application, the response of which is sent directly to
-clients. Commands are imperative in nature, meaning they specify what should be done.
+## Initializing TCommand Handlers (Doc required)
 
-```rust
-use ruva::prelude::{init_command_handler, init_event_handler};
-
-
-init_command_handler!(
-{
-   MakeOrder: OrderHandler::make_order,
-   CancelOrder: OrderHandler::cancel_order
-}
-);
-```
-In the example above, you see `MakeOrder` is mapped to `OrderHandler::make_order`, handler in application layer.
-
-At this point, imagine you want to handle both success/failure case of the `MakeOrder` command processing.
-Then you have to think about using event handlers.  
 
 ## Registering Event
 
@@ -84,6 +65,8 @@ You can register as many handlers as possible as long as they all consume same t
 ### Example
 
 ```rust
+use ruva::ruva_core::init_event_handler;
+
 init_event_handler!(
 {
     Response,
@@ -106,70 +89,9 @@ In the `MakeOrder` TCommand Handling, we have either `OrderFailed` or `OrderSucc
 Events are raised in the handlers that are thrown to [MessageBus] by [Context].
 [MessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
 
-## Handler API Example
+## Handler API Example(Doc required)
 
-Handlers can be located anywhere as long as they accept two argument:
 
-* msg - either [TCommand] or [Event]
-* context - [AtomicContextManager]
-
-### Example
-```rust
-pub async fn make_order(
-    cmd: MakeOrder,
-    context: AtomicContextManager,
-) -> Result<ServiceResponse, ServiceError> {
-    let mut uow = UnitOfWork::<Repository<OrderAggregate>, SQLExecutor>::new(context).await;
-
-    let mut order_aggregate = OrderAggregate::new(cmd);
-    uow.repository().add(&mut task_aggregate).await?;
-
-    uow.commit::<ServiceOutBox>().await?;
-
-    Ok(().into())
-}
-
-```
-But sometimes, you may want to add yet another dependencies. For that, Dependency Injection mechanism has been implemented.
-So, you can also do something along the lines of:
-
-```rust
-pub async fn make_order(
-    cmd: MakeOrder,
-    context: AtomicContextManager,
-    payment_gateway_caller: Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> //injected dependency
-) -> Result<ServiceResponse, ServiceError> {
-    let mut uow = UnitOfWork::<Repository<OrderAggregate>, SQLExecutor>::new(context).await;
-
-    let mut order_aggregate = OrderAggregate::new(cmd,payment_gateway_caller);
-    uow.repository().add(&mut task_aggregate).await?;
-
-    uow.commit::<ServiceOutBox>().await?;
-
-    Ok(().into())
-}
-```
-
-How is this possible? because we preprocess handlers so it can allow for `DI container`.
-
-## Dependency Injection
-You can simply register dependencies by putting attribute on top of free function.
-
-### Example
-
-```rust
-#[dependency]
-pub fn payment_gateway_caller() -> Box<dyn Fn(String, Value) -> Future<(), ServiceError> + Send + Sync + 'static> {
-    if cfg!(test) {
-        __test_payment_gateway_caller()  //Dependency For Test
-    } else {
-        __actual_payment_gateway_caller() //Real Dependency
-    }
-}
-
-```
-
-This is great as you can take your mind off static nature of the language.
 
 ## MessageBus
 At the core is event driven library is [MessageBus], which gets command and gets raised event from
@@ -188,7 +110,7 @@ pub struct MakeOrder { // Test TCommand
 async fn test_func(){
     let bus = MessageBus::new(command_handler(), event_handler())
     let command = MakeOrder{user_id:1, items:vec!["shirts","jeans"]}
-    match bus.handle(command).await{
+    match bus.execute_and_wait(command).await{
         Err(err)=> { // test for error case }
         Ok(val)=> { // test for happy case }
     }
