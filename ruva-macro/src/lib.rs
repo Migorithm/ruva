@@ -1,4 +1,3 @@
-use command::derive_into_command;
 use message::{extract_externally_notifiable_event_req, render_event_visibility, render_message_token};
 // use outbox::render_outbox_token;
 
@@ -11,6 +10,7 @@ extern crate quote;
 mod command;
 mod construct;
 mod domain;
+mod generic_helpers;
 mod handler;
 mod message;
 mod repository;
@@ -255,20 +255,14 @@ pub fn entity(_: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(TCommand)]
 pub fn command_derive(attr: TokenStream) -> TokenStream {
-	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
-	let name = ast.ident;
-
-	quote!(
-		impl TCommand for #name{}
-	)
-	.into()
+	command::declare_command(attr).into()
 }
 
 #[proc_macro_derive(IntoCommand, attributes(required_input))]
 pub fn into_command_derive(attr: TokenStream) -> TokenStream {
 	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
 
-	let quote = derive_into_command(&mut ast);
+	let quote = command::derive_into_command(&mut ast);
 
 	quote!(
 		#quote

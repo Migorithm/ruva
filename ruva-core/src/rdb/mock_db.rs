@@ -1,4 +1,7 @@
-use crate::prelude::{AtomicContextManager, BaseError, OutBox, TEvent, TRepository, TUnitOfWork};
+use crate::{
+	bus_components::contexts::AtomicContextManager,
+	prelude::{BaseError, OutBox, TEvent, TRepository, TUnitOfWork},
+};
 
 pub fn outbox_table() -> &'static std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>>> {
 	static GROUP_TABLE: std::sync::OnceLock<std::sync::Arc<tokio::sync::RwLock<Vec<OutBox>>>> = std::sync::OnceLock::new();

@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 
 use crate::{
-	prelude::{AtomicContextManager, BaseError, TAggregate, TEvent, TUnitOfWork},
+	bus_components::contexts::AtomicContextManager,
+	prelude::{BaseError, TAggregate, TEvent, TUnitOfWork},
 	prepare_bulk_operation,
 	repository::TRepository,
 };

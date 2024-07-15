@@ -1,56 +1,10 @@
-use crate::prelude::{TCommand, TCommandService, TEvent};
+use super::contexts::*;
+use super::handler::{EventHandlers, TCommandService, TEventHandler};
+use crate::prelude::{TCommand, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
-
-use hashbrown::HashMap;
-use std::collections::VecDeque;
-use std::ops::{Deref, DerefMut};
-use std::{pin::Pin, sync::Arc};
-use tokio::sync::RwLock;
-
-pub type Future<T, E> = Pin<Box<dyn futures::Future<Output = Result<T, E>> + Send>>;
-pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
-
-pub type Handlers<R, E> = Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<R, E> + Send + Sync>>;
-pub enum EventHandlers<R, E> {
-	Sync(Handlers<R, E>),
-	Async(Handlers<R, E>),
-}
-impl<R, E> EventHandlers<R, E> {
-	pub fn extend(&mut self, handlers: Handlers<R, E>) {
-		match self {
-			Self::Sync(h) => h.extend(handlers),
-			Self::Async(h) => h.extend(handlers),
-		}
-	}
-}
-pub type TEventHandler<R, E> = HashMap<String, EventHandlers<R, E>>;
-
-/// Task Local Context Manager
-/// This is called for every time `handle` method is invoked.
-pub struct ContextManager {
-	pub event_queue: VecDeque<Arc<dyn TEvent>>,
-}
-
-impl ContextManager {
-	/// Creation of context manager returns context manager AND event receiver
-	pub fn new() -> AtomicContextManager {
-		Arc::new(RwLock::new(Self { event_queue: VecDeque::new() }))
-	}
-}
-
-impl Deref for ContextManager {
-	type Target = VecDeque<Arc<dyn TEvent>>;
-	fn deref(&self) -> &Self::Target {
-		&self.event_queue
-	}
-}
-impl DerefMut for ContextManager {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.event_queue
-	}
-}
+use std::sync::Arc;
 
 #[async_trait]
 pub trait TEventBus<R, E>
@@ -138,7 +92,7 @@ where
 	/// This method is used to handle command and return result.
 	/// ## Example
 	/// ```rust,no_run
-	/// let res = service.handle_command(message).await?;
+	/// let res = service.execute_and_wait(message).await?;
 	/// ```
 	async fn execute_and_wait(&self, message: C) -> Result<R, E> {
 		let context_manager = ContextManager::new();
@@ -155,7 +109,7 @@ where
 	/// This method is used to handle command and return result proxy which holds the result and join handler.
 	/// ## Example
 	/// ```rust,no_run
-	/// let res = service.handle_command(message).await?;
+	/// let res = service.execute_and_forget(message).await?;
 	/// let res = res.wait_until_event_processing_done().await?;
 	/// let res = res.result();
 	/// ```
@@ -237,7 +191,7 @@ macro_rules! init_event_handler {
 				handlers.extend(vec![
 					$(
 						Box::new(
-							|e: ::std::sync::Arc<dyn TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> ::std::pin::Pin<Box<dyn futures::Future<Output = Result<$R, $E>> + Send>>{
+							|e: ::std::sync::Arc<dyn ::ruva::prelude::TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> ::std::pin::Pin<Box<dyn futures::Future<Output = Result<$R, $E>> + Send>>{
 								let event_handler = $context_handler(context_manager);
 								Box::pin(event_handler.$handler(
 									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.

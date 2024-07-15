@@ -78,3 +78,44 @@ fn test_when_there_is_no_apdater_ignore_attr() {
 	let adapter_serialized = serde_json::to_string(&adapter).unwrap();
 	assert_eq!(adapter_serialized, "{\"id\":0,\"name\":\"\",\"some_other_field\":0}");
 }
+
+#[test]
+fn test_generic_aggregate() {
+	#[derive(Default, Debug, Serialize, Deserialize)]
+	struct Unset;
+
+	#[aggregate]
+	#[derive(Default, Debug, Serialize, Clone)]
+	struct MyStruct<T = Unset> {
+		name: String,
+		age: i32,
+
+		#[adapter_ignore]
+		sub_type: T,
+	}
+
+	impl MyStruct<String> {
+		fn do_something_with_string(&self) -> String {
+			self.sub_type.clone()
+		}
+	}
+
+	let my_struct = MyStruct::<String> {
+		name: "migo".into(),
+		age: 2,
+		sub_type: "sub_type".into(),
+		..Default::default()
+	};
+	assert_eq!(my_struct.do_something_with_string(), "sub_type");
+	assert_eq!(my_struct.name, "migo");
+	assert_eq!(my_struct.age, 2);
+
+	let adapter = MyStructAdapter::from(my_struct);
+	assert_eq!(adapter.name, "migo");
+	assert_eq!(adapter.age, 2);
+
+	let my_struct: MyStruct<String> = adapter.into();
+	assert_eq!(my_struct.name, "migo");
+	assert_eq!(my_struct.age, 2);
+	assert!(my_struct.sub_type.is_empty());
+}
