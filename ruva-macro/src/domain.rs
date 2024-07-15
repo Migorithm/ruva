@@ -3,14 +3,19 @@ use proc_macro::TokenStream;
 use quote::ToTokens;
 use syn::{parse::Parser, parse_macro_input, punctuated::Punctuated, token::Comma, Data, DataStruct, DeriveInput, Field, GenericParam, Generics, Ident, Type, WherePredicate};
 
-use crate::utils::{
-	check_if_field_has_attribute_and_return_field_name, extracts_field_names_from_derive_input, locate_crate_on_derive_macro, remove_fields_from_fields_based_on_field_name, skip_over_attributes,
+use crate::{
+	generic_helpers::add_aggregate_generic_defaults_on_where_clause,
+	utils::{
+		check_if_field_has_attribute_and_return_field_name, extracts_field_names_from_derive_input, locate_crate_on_derive_macro, remove_fields_from_fields_based_on_field_name, skip_over_attributes,
+	},
 };
 
 pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 	let mut ast = parse_macro_input!(input as DeriveInput);
 	let name = ast.ident.clone();
-	let generics = &ast.generics;
+
+	add_aggregate_generic_defaults_on_where_clause(&mut ast.generics);
+	let generics: &Generics = &ast.generics;
 	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
 	let crates = locate_crate_on_derive_macro(&ast);
@@ -146,6 +151,7 @@ fn get_setters(data: &Data) -> proc_macro2::TokenStream {
 pub fn create_struct_adapter_quote(input: &DeriveInput, for_aggregate: bool) -> proc_macro2::TokenStream {
 	let aggregate_name = input.ident.clone();
 	let mut generics = input.generics.clone();
+	add_aggregate_generic_defaults_on_where_clause(&mut generics);
 
 	let adapter_name = Ident::new(&(input.ident.to_string() + "Adapter"), proc_macro2::Span::call_site());
 

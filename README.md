@@ -2,8 +2,8 @@
 [ruva-macro]: https://docs.rs/ruva-macro
 [TCommand]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TCommand.html
 [Event]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
-[MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/index.html
-[Context]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
+[MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/messagebus/index.html
+[Context]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/contexts/struct.ContextManager.html
 
 
 A event-driven framework for writing reliable and scalable system.

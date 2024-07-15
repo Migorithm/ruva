@@ -1,7 +1,10 @@
 use proc_macro2::TokenStream;
 use syn::{punctuated::Punctuated, Data, DataStruct, DeriveInput, Fields};
 
-use crate::utils::{get_attributes, get_type_name};
+use crate::{
+	generic_helpers::add_sync_trait_bounds,
+	utils::{get_attributes, get_type_name},
+};
 
 pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 	let name = &ast.ident;
@@ -105,4 +108,18 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 		}
 		_ => panic!("Only Struct Allowed!"),
 	}
+}
+
+pub fn declare_command(attr: proc_macro::TokenStream) -> TokenStream {
+	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
+	let name = ast.ident;
+
+	// add `Send`, `Sync`, `'static` and `std::fmt::Debug` to TypeGenerics if it doesn't have it
+	add_sync_trait_bounds(&mut ast.generics);
+
+	let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+
+	quote!(
+		impl #impl_generics #where_clause  TCommand for #name #ty_generics{}
+	)
 }
