@@ -1,4 +1,6 @@
 use super::contexts::*;
+
+use super::executor::TConnection;
 use super::handler::{EventHandlers, TCommandService, TEventHandler};
 use crate::prelude::{TCommand, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
@@ -80,7 +82,7 @@ where
 }
 
 #[async_trait]
-pub trait TMessageBus<R, E, C>: TEventBus<R, E>
+pub trait TMessageBus<R, E, C, T>: TEventBus<R, E>
 where
 	responses::BaseError: std::convert::From<E>,
 	R: ApplicationResponse,
@@ -94,8 +96,8 @@ where
 	/// ```rust,no_run
 	/// let res = service.execute_and_wait(message).await?;
 	/// ```
-	async fn execute_and_wait(&self, message: C) -> Result<R, E> {
-		let context_manager = ContextManager::new();
+	async fn execute_and_wait(&self, message: C, conn: Box<dyn TConnection>) -> Result<R, E> {
+		let context_manager = ContextManager::new(conn);
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
 
 		// Trigger event handler
@@ -113,8 +115,8 @@ where
 	/// let res = res.wait_until_event_processing_done().await?;
 	/// let res = res.result();
 	/// ```
-	async fn execute_and_forget(&self, message: C) -> Result<CommandResponseWithEventFutures<R, E>, E> {
-		let context_manager = ContextManager::new();
+	async fn execute_and_forget(&self, message: C, conn: Box<dyn TConnection>) -> Result<CommandResponseWithEventFutures<R, E>, E> {
+		let context_manager = ContextManager::new(conn);
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
 
@@ -191,7 +193,7 @@ macro_rules! init_event_handler {
 				handlers.extend(vec![
 					$(
 						Box::new(
-							|e: ::std::sync::Arc<dyn ::ruva::prelude::TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> ::std::pin::Pin<Box<dyn futures::Future<Output = Result<$R, $E>> + Send>>{
+							|e: ::std::sync::Arc<dyn ::ruva::prelude::TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> ::ruva::prelude::Future<$R, $E> {
 								let event_handler = $context_handler(context_manager);
 								Box::pin(event_handler.$handler(
 									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.

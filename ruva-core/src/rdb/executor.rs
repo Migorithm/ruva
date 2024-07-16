@@ -1,6 +1,5 @@
 use crate::prelude::BaseError;
-
-use sqlx::{postgres::PgPool, PgConnection, Postgres, Transaction};
+use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 
 #[derive(Debug)]
 pub struct SQLExecutor {
