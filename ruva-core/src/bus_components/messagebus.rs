@@ -82,7 +82,7 @@ where
 }
 
 #[async_trait]
-pub trait TMessageBus<R, E, C, T>: TEventBus<R, E>
+pub trait TMessageBus<R, E, C>: TEventBus<R, E>
 where
 	responses::BaseError: std::convert::From<E>,
 	R: ApplicationResponse,
