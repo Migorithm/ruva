@@ -3,10 +3,11 @@ use syn::DeriveInput;
 
 pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 	let name = &ast.ident;
+	let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
 	quote!(
 
-		impl #name {
+		impl #impl_generics #ty_generics #name #where_clause {
 			pub fn event_hook<A:TAggregate>(
 				&mut self,
 				aggregate: &mut A,
@@ -17,7 +18,7 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 
 
 
-		impl ruva::ruva_core::repository::TRepository for #name {
+		impl #impl_generics #ty_generics ruva::ruva_core::repository::TRepository for #name #impl_generics #where_clause {
 			fn set_events(
 				&mut self,
 				events: std::collections::VecDeque<std::sync::Arc<dyn TEvent>>,
@@ -26,14 +27,14 @@ pub fn render_repository_token(ast: &DeriveInput) -> TokenStream {
 			}
 		}
 
-		impl ::std::ops::Deref for #name {
+		impl #impl_generics #ty_generics ::std::ops::Deref for #name #impl_generics #ty_generics #where_clause {
 			type Target = ruva::ruva_core::rdb::repository::SqlRepository;
 			fn deref(&self) -> &Self::Target {
 				&self.0
 			}
 		}
-		impl ::std::ops::DerefMut for #name {
-			fn deref_mut(&mut self) -> &mut Self::Target {
+		impl #impl_generics #ty_generics ::std::ops::DerefMut for #name #impl_generics #ty_generics #where_clause {
+			fn deref_mut(&mut self) -> &mut Self::Target<'a> {
 				&mut self.0
 			}
 		}

@@ -6,18 +6,21 @@ use std::{
 };
 use tokio::sync::RwLock;
 
+use super::executor::TConnection;
+
 pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 
 /// Task Local Context Manager
 /// This is called for every time `handle` method is invoked.
 pub struct ContextManager {
 	pub event_queue: VecDeque<Arc<dyn TEvent>>,
+	pub conn: Box<dyn TConnection>,
 }
 
 impl ContextManager {
 	/// Creation of context manager returns context manager AND event receiver
-	pub fn new() -> AtomicContextManager {
-		Arc::new(RwLock::new(Self { event_queue: VecDeque::new() }))
+	pub fn new(conn: Box<dyn TConnection>) -> AtomicContextManager {
+		Arc::new(RwLock::new(Self { event_queue: VecDeque::new(), conn }))
 	}
 }
 

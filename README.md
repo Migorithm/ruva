@@ -101,6 +101,7 @@ when you invoke it. Everything else is done magically.
 
 ### Example
 ```rust
+
 #[derive(TCommand)]
 pub struct MakeOrder { // Test TCommand
     pub user_id: i64,
@@ -110,7 +111,7 @@ pub struct MakeOrder { // Test TCommand
 async fn test_func(){
     let bus = MessageBus::new(command_handler(), event_handler())
     let command = MakeOrder{user_id:1, items:vec!["shirts","jeans"]}
-    match bus.execute_and_wait(command).await{
+    match bus.execute_and_wait(command,Box::new(connection_pool())).await{
         Err(err)=> { // test for error case }
         Ok(val)=> { // test for happy case }
     }

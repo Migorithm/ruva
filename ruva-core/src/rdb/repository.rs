@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use sqlx::{PgConnection, PgPool, Postgres, Transaction};
+
 use crate::{
 	bus_components::contexts::AtomicContextManager,
 	prelude::{BaseError, TAggregate, TEvent, TUnitOfWork},
@@ -7,20 +9,24 @@ use crate::{
 	repository::TRepository,
 };
 
-use super::executor::SQLExecutor;
-
 pub struct SqlRepository {
-	pub executor: SQLExecutor,
 	events: VecDeque<std::sync::Arc<dyn TEvent>>,
 	context: AtomicContextManager,
+	transaction: Option<Transaction<'static, Postgres>>,
 }
 
 impl SqlRepository {
-	pub fn new(context: AtomicContextManager, executor: SQLExecutor) -> Self {
+	pub fn new(context: AtomicContextManager) -> Self {
 		Self {
-			executor,
 			events: Default::default(),
 			context,
+			transaction: None,
+		}
+	}
+	pub fn transaction(&mut self) -> &mut PgConnection {
+		match self.transaction.as_mut() {
+			Some(trx) => trx,
+			None => panic!("Transaction Has Not Begun!"),
 		}
 	}
 	pub fn event_hook<A: TAggregate>(&mut self, aggregate: &mut A) {
@@ -56,7 +62,7 @@ impl SqlRepository {
 		.bind(&topic)
 		.bind(&state)
 		.bind(&aggregate_name)
-		.execute(self.executor.transaction())
+		.execute(self.transaction())
 		.await
 		.map_err(|err| {
 			tracing::error!("failed to insert outbox! {}", err);
@@ -74,19 +80,48 @@ impl TRepository for SqlRepository {
 
 impl TUnitOfWork for SqlRepository {
 	async fn begin(&mut self) -> Result<(), BaseError> {
-		self.executor.begin().await
+		match self.transaction.as_mut() {
+			None => {
+				let trx = &self.context.write().await.conn;
+
+				if let Some(trx) = trx.downcast_ref::<&PgPool>().or(trx.downcast_ref::<PgPool>().as_ref()) {
+					self.transaction = Some(trx.begin().await?);
+				} else {
+					tracing::error!("Transaction Error!");
+					return Err(BaseError::TransactionError);
+				}
+				// simplify above
+
+				Ok(())
+			}
+			Some(_trx) => {
+				tracing::warn!("Transaction Begun Already!");
+				Err(BaseError::TransactionError)?
+			}
+		}
 	}
 
 	async fn _commit(&mut self) -> Result<(), BaseError> {
-		self.executor.commit().await
+		match self.transaction.take() {
+			None => panic!("Tranasction Has Not Begun!"),
+			Some(trx) => Ok(trx.commit().await?),
+		}
 	}
 
 	async fn rollback(&mut self) -> Result<(), BaseError> {
 		self.events.clear();
-		self.executor.rollback().await
+		match self.transaction.take() {
+			None => panic!("Tranasction Has Not Begun!"),
+			Some(trx) => Ok(trx.rollback().await?),
+		}
 	}
 	async fn close(&mut self) {
-		self.executor.close().await;
+		match self.transaction.take() {
+			None => (),
+			Some(trx) => {
+				let _ = trx.rollback().await;
+			}
+		}
 	}
 
 	async fn process_internal_events(&mut self) -> Result<(), BaseError> {
