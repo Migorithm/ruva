@@ -96,7 +96,7 @@ where
 	/// ```rust,no_run
 	/// let res = service.execute_and_wait(message).await?;
 	/// ```
-	async fn execute_and_wait(&self, message: C, conn: Box<dyn TConnection>) -> Result<R, E> {
+	async fn execute_and_wait(&self, message: C, conn: &'static dyn TConnection) -> Result<R, E> {
 		let context_manager = ContextManager::new(conn);
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
 
@@ -115,7 +115,7 @@ where
 	/// let res = res.wait_until_event_processing_done().await?;
 	/// let res = res.result();
 	/// ```
-	async fn execute_and_forget(&self, message: C, conn: Box<dyn TConnection>) -> Result<CommandResponseWithEventFutures<R, E>, E> {
+	async fn execute_and_forget(&self, message: C, conn: &'static dyn TConnection) -> Result<CommandResponseWithEventFutures<R, E>, E> {
 		let context_manager = ContextManager::new(conn);
 		let res = self.command_handler(context_manager.clone()).execute(message).await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
