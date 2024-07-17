@@ -14,12 +14,12 @@ pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 /// This is called for every time `handle` method is invoked.
 pub struct ContextManager {
 	pub event_queue: VecDeque<Arc<dyn TEvent>>,
-	pub conn: Box<dyn TConnection>,
+	pub conn: &'static dyn TConnection,
 }
 
 impl ContextManager {
 	/// Creation of context manager returns context manager AND event receiver
-	pub fn new(conn: Box<dyn TConnection>) -> AtomicContextManager {
+	pub fn new(conn: &'static dyn TConnection) -> AtomicContextManager {
 		Arc::new(RwLock::new(Self { event_queue: VecDeque::new(), conn }))
 	}
 }
