@@ -77,7 +77,9 @@ pub(crate) fn get_attributes(field: &Field) -> Vec<Ident> {
 			.iter()
 			.flat_map(|attr| match &attr.meta {
 				Meta::Path(Path { segments, .. }) => segments.iter().map(|segment| segment.ident.clone()).collect::<Vec<Ident>>(),
-				_ => panic!("Only Path"),
+				_ => {
+					vec![]
+				}
 			})
 			.collect::<Vec<_>>();
 		attributes.sort();
