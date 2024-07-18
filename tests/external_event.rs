@@ -1,4 +1,4 @@
-use ruva::prelude::*;
+use ruva::*;
 
 /// ### Externally Notifiable Event
 /// when annotated with externally notifiable, it is stored as outbox.

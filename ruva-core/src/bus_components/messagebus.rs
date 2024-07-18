@@ -179,21 +179,21 @@ macro_rules! init_event_handler {
 			$(,)?
 
     ) =>{
-		pub fn event_handler() -> &'static ::ruva::prelude::TEventHandler<$R, $E>  {
-			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::prelude::TEventHandler<$R, $E>> = ::std::sync::OnceLock::new();
+		pub fn event_handler() -> &'static ::ruva::TEventHandler<$R, $E>  {
+			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::TEventHandler<$R, $E>> = ::std::sync::OnceLock::new();
 			EVENT_HANDLER.get_or_init(||{
-				let mut _map : ::ruva::prelude::TEventHandler<$R, $E> = ::ruva::prelude::HandlerMapper::new();
+				let mut _map : ::ruva::TEventHandler<$R, $E> = ::ruva::HandlerMapper::new();
 				$(
 
 				let mut handlers = if stringify!($asc) == "asynchronous" {
-					::ruva::prelude::EventHandlers::Async(vec![])
+					::ruva::EventHandlers::Async(vec![])
 				} else {
-					::ruva::prelude::EventHandlers::Sync(vec![])
+					::ruva::EventHandlers::Sync(vec![])
 				};
 				handlers.extend(vec![
 					$(
 						Box::new(
-							|e: ::std::sync::Arc<dyn ::ruva::prelude::TEvent>, context_manager: ::ruva::prelude::AtomicContextManager| -> ::ruva::prelude::Future<$R, $E> {
+							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ::ruva::AtomicContextManager| -> ::ruva::Future<$R, $E> {
 								let event_handler = $context_handler(context_manager);
 								Box::pin(event_handler.$handler(
 									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.

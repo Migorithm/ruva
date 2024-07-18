@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! This is to generate global identifier
 
 use std::hint::spin_loop;

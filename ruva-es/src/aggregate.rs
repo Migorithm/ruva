@@ -1,4 +1,4 @@
-use ruva_core::responses::ApplicationError;
+use ruva_core::prelude::ApplicationError;
 
 use crate::event::TEvent;
 

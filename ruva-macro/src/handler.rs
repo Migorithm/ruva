@@ -50,10 +50,10 @@ pub fn parse_handler(ast: ItemFn) -> TokenStream {
 
 		// ::ruva::static_assertions::assert_impl_any!(
 		// 	#message_type:
-		// 	::ruva::prelude::TEvent,
-		// 	::ruva::prelude::TCommand
+		// 	::ruva::TEvent,
+		// 	::ruva::TCommand
 		// );
-		pub #asyncness fn #ident (#message,context: ::ruva::prelude::AtomicContextManager)-> #var {
+		pub #asyncness fn #ident (#message,context: ::ruva::AtomicContextManager)-> #var {
 
 			#asyncness fn inner #generics (#message,#args)->#var #generic_where{
 

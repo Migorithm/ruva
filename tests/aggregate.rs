@@ -1,4 +1,4 @@
-use ruva::prelude::*;
+use ruva::*;
 
 #[test]
 fn test_serialize() {

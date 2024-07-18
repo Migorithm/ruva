@@ -1,14 +1,13 @@
-pub mod aggregate;
-pub mod backtrace;
-pub mod bus_components;
-
-pub mod message;
-pub mod outbox;
-pub mod rdb;
-pub mod repository;
-pub mod responses;
-pub mod snowflake;
-pub mod unit_of_work;
+mod aggregate;
+mod backtrace;
+mod bus_components;
+mod message;
+mod outbox;
+mod rdb;
+mod repository;
+mod responses;
+mod snowflake;
+mod unit_of_work;
 
 pub mod prelude {
 	pub use crate::aggregate::*;
@@ -19,9 +18,10 @@ pub mod prelude {
 	pub use crate::message::*;
 	pub use crate::outbox::OutBox;
 	#[cfg(feature = "sqlx-postgres")]
-	pub use crate::rdb;
+	pub use crate::rdb::repository::SqlRepository;
 	pub use crate::repository::TRepository;
 	pub use crate::responses::*;
+	pub use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
 	pub use crate::snowflake::SnowFlake;
 	pub use crate::unit_of_work::*;
 

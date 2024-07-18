@@ -1,4 +1,4 @@
-use ruva::prelude::*;
+use ruva::*;
 
 #[test]
 fn application_error_derive_test() {
