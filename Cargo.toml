@@ -1,6 +1,6 @@
 [package]
 name = "ruva"
-version = "0.11.3"
+version = "0.12.0"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven Message Handling"
@@ -10,9 +10,9 @@ repository = "https://github.com/BeringLab/ruva"
 
 
 [dependencies]
-ruva-core= {version="0.11.3", path="./ruva-core"}
-ruva-macro= {version="0.11.3", path="./ruva-macro"}
-ruva-es = {version="0.11.3",path="./ruva-es"}
+ruva-core= {version="0.12.0", path="./ruva-core"}
+ruva-macro= {version="0.12.0", path="./ruva-macro"}
+ruva-es = {version="0.12.0",path="./ruva-es"}
 static_assertions="1.1.0"
 
 [dev-dependencies]

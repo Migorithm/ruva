@@ -27,7 +27,7 @@
 //! ## TCommand & Event
 //! You can register any general struct with [TCommand] Derive Macro as follows:
 //! ```rust,no_run
-//! use ruva::prelude::TCommand;
+//! use ruva::TCommand;
 //! #[derive(Debug,TCommand)]
 //! pub struct MakeOrder {
 //!     pub user_id: i64,
@@ -41,7 +41,7 @@
 //! ```rust,no_run
 //! use serde::Serialize;
 //! use serde::Deserialize;
-//! use ruva::prelude::TEvent;
+//! use ruva::TEvent;
 //!
 //! #[derive(Serialize, Deserialize, Clone, TEvent)]
 //! #[internally_notifiable]
@@ -74,16 +74,16 @@
 //! clients.
 //!
 //! ```rust,no_run
-//! use ruva::prelude::TEventHandler;
+//! use ruva::TEventHandler;
 //! pub struct MessageBus {
 //! event_handler: &'static TEventHandler<ApplicationResponse, ApplicationError>,
 //! }
 //!
-//! impl<C> ruva::prelude::TMessageBus<ApplicationResponse,ApplicationError,C> for MessageBus{
+//! impl<C> ruva::TMessageBus<ApplicationResponse,ApplicationError,C> for MessageBus{
 //! fn command_handler(
 //!     &self,
-//!     context_manager: ruva::prelude::AtomicContextManager,
-//! ) -> Box<dyn ruva::prelude::TCommandService<ApplicationResponse, ApplicationError, C>> {
+//!     context_manager: ruva::AtomicContextManager,
+//! ) -> Box<dyn ruva::TCommandService<ApplicationResponse, ApplicationError, C>> {
 //!     Box::new(
 //!         HighestLevelOfAspectThatImplementTCommandService::new(
 //!             MidLevelAspectThatImplementTCommandService::new(
@@ -203,17 +203,9 @@
 //! When command has not yet been regitered, it returns an error - `BaseError::NotFound`
 //! Be mindful that bus does NOT return the result of event processing as in distributed event processing.
 
-pub extern crate ruva_core;
-pub extern crate ruva_macro;
 pub extern crate static_assertions;
 
-pub mod prelude {
-	pub use ruva_core::event_macros::*;
-	pub use ruva_core::message::{EventMetadata, TCommand, TEvent};
-	#[cfg(feature = "sqlx-postgres")]
-	pub use ruva_core::rdb;
-
-	pub use ruva_core::prelude::*;
-
-	pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, IntoCommand, TCommand, TConstruct, TEvent, TRepository};
-}
+pub use ruva_core::init_event_handler;
+pub use ruva_core::prelude::*;
+pub use ruva_core::prepare_bulk_operation;
+pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, IntoCommand, TCommand, TConstruct, TEvent, TRepository};

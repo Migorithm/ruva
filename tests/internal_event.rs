@@ -1,4 +1,4 @@
-use ruva::prelude::*;
+use ruva::*;
 
 /// ### Internally Notifiable Event
 /// when annotated with internally notifiable, the event will be handled internally by `MessageBus`.
@@ -24,7 +24,7 @@ fn test_declare_internal_event() {
 
 	let event = SomeInternalEvent { id: 1, name: "migo".into(), foo: 2 }.to_message();
 	let metadata = event.metadata();
-	assert_eq!(metadata.aggregate_id,"");
-	assert_eq!(metadata.aggregate_name,"");
-	assert_eq!(metadata.topic,"SomeInternalEvent");
+	assert_eq!(metadata.aggregate_id, "");
+	assert_eq!(metadata.aggregate_name, "");
+	assert_eq!(metadata.topic, "SomeInternalEvent");
 }

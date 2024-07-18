@@ -11,7 +11,7 @@ pub(crate) fn render_response_token(ast: &DeriveInput) -> TokenStream {
 	let crates = locate_crate_on_derive_macro(ast);
 
 	quote! {
-		impl #crates::ruva_core::responses::ApplicationResponse for #name{}
+		impl #crates::ApplicationResponse for #name{}
 
 	}
 	.into()
@@ -91,32 +91,32 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 	};
 
 	quote!(
-		impl #crates::ruva_core::responses::ApplicationError for #name {}
+		impl #crates::ApplicationError for #name {}
 
-		impl ::std::convert::From<#crates::ruva_core::responses::BaseError> for #name {
-			fn from(value: #crates::ruva_core::responses::BaseError) -> Self {
+		impl ::std::convert::From<#crates::BaseError> for #name {
+			fn from(value: #crates::BaseError) -> Self {
 				match value {
-					#crates::ruva_core::responses::BaseError::StopSentinel => Self::#stop_sentinel,
-					#crates::ruva_core::responses::BaseError::StopSentinelWithEvent(event) => Self::#stop_sentinel_with_event(event),
-					#crates::ruva_core::responses::BaseError::DatabaseError(error) => Self::#database_error(error),
+					#crates::BaseError::StopSentinel => Self::#stop_sentinel,
+					#crates::BaseError::StopSentinelWithEvent(event) => Self::#stop_sentinel_with_event(event),
+					#crates::BaseError::DatabaseError(error) => Self::#database_error(error),
 					err => Self::BaseError(err),
 				}
 			}
 		}
 
-		impl ::std::convert::From<#name> for #crates::ruva_core::responses::BaseError {
+		impl ::std::convert::From<#name> for #crates::BaseError {
 			fn from(value: #name) -> Self {
 				let data = match value {
-					#name::#stop_sentinel => #crates::ruva_core::responses::BaseError::StopSentinel,
-					#name::#stop_sentinel_with_event(event) => #crates::ruva_core::responses::BaseError::StopSentinelWithEvent(event),
-					#name::#database_error(error) => #crates::ruva_core::responses::BaseError::DatabaseError(error),
-					_ => #crates::ruva_core::responses::BaseError::ServiceError(::std::boxed::Box::new(value)),
+					#name::#stop_sentinel => #crates::BaseError::StopSentinel,
+					#name::#stop_sentinel_with_event(event) => #crates::BaseError::StopSentinelWithEvent(event),
+					#name::#database_error(error) => #crates::BaseError::DatabaseError(error),
+					_ => #crates::BaseError::ServiceError(::std::boxed::Box::new(value)),
 				};
 				data
 			}
 		}
-		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: ::std::sync::Arc<dyn #crates::prelude::TEvent>);
-		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, ::std::sync::Arc<dyn #crates::prelude::TEvent>);
+		// #crates::static_assertions::assert_impl_all!(#stop_sentinel_with_event_type: ::std::sync::Arc<dyn #crates::TEvent>);
+		#crates::static_assertions::assert_type_eq_all!(#stop_sentinel_with_event_type, ::std::sync::Arc<dyn #crates::TEvent>);
 	)
 	.into()
 }

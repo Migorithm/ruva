@@ -26,16 +26,16 @@ pub(crate) fn render_aggregate(input: TokenStream) -> TokenStream {
 
 	quote!(
 		#ast
-		impl #impl_generics  #crates::prelude::TAggregate for #name #ty_generics #where_clause {
+		impl #impl_generics  #crates::TAggregate for #name #ty_generics #where_clause {
 			// type Identifier = #aggregate_identifier_type;
 
-			fn events(&self) -> &::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>> {
+			fn events(&self) -> &::std::collections::VecDeque<::std::sync::Arc<dyn #crates::TEvent>> {
 				&self.events
 			}
-			fn take_events(&mut self) -> ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::prelude::TEvent>> {
+			fn take_events(&mut self) -> ::std::collections::VecDeque<::std::sync::Arc<dyn #crates::TEvent>> {
 				::std::mem::take(&mut self.events)
 			}
-			fn raise_event(&mut self, event: ::std::sync::Arc<dyn #crates::prelude::TEvent>) {
+			fn raise_event(&mut self, event: ::std::sync::Arc<dyn #crates::TEvent>) {
 				tracing::info!("event raised! {:?}", event.metadata());
 				self.events.push_back(event)
 			}
@@ -114,7 +114,7 @@ pub(crate) fn set_entity_fields(input_data: &mut syn::Data, for_aggregate: bool)
 				syn::Field::parse_named
 					.parse2(quote! {
 					   #[serde(skip_deserializing, skip_serializing)]
-					   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn ruva::prelude::TEvent>>
+					   pub(crate) events: ::std::collections::VecDeque<::std::sync::Arc<dyn ruva::TEvent>>
 					})
 					.unwrap(),
 			)

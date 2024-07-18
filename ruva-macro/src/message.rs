@@ -10,7 +10,7 @@ pub(crate) fn render_message_token(ast: &DeriveInput, visibilities: Vec<TokenStr
 	let (identifier, impl_assertion) = externally_notifiable_event_req.unwrap_or_else(|| (TokenStream::new(), TokenStream::new()));
 
 	quote! {
-		impl #crates::prelude::TEvent for #name {
+		impl #crates::TEvent for #name {
 
 			#identifier
 
@@ -21,7 +21,7 @@ pub(crate) fn render_message_token(ast: &DeriveInput, visibilities: Vec<TokenStr
 			#(#visibilities)*
 		}
 		impl #name{
-			pub(crate) fn to_message(self)->  ::std::sync::Arc<dyn #crates::prelude::TEvent> {
+			pub(crate) fn to_message(self)->  ::std::sync::Arc<dyn #crates::TEvent> {
 				::std::sync::Arc::new(self)
 			}
 		}
@@ -83,7 +83,7 @@ pub(crate) fn extract_externally_notifiable_event_req(ast: &mut DeriveInput) -> 
 
 			// * Asserting that the given type is TAggregate
 			let quote = quote!(
-				ruva::static_assertions::assert_impl_any!(#tokens: ruva::prelude::TAggregate);
+				ruva::static_assertions::assert_impl_any!(#tokens: ruva::TAggregate);
 			);
 
 			let mut aggregate_name = String::new();
@@ -126,8 +126,8 @@ pub(crate) fn generate_event_metadata(ast: &DeriveInput, aggregate_metadata: Str
 			let ident = identifier.first().unwrap().ident.clone().unwrap().clone();
 
 			quote!(
-				fn metadata(&self) -> #crates::prelude::EventMetadata {
-					#crates::prelude::EventMetadata{
+				fn metadata(&self) -> #crates::EventMetadata {
+					#crates::EventMetadata{
 					aggregate_id: self.#ident.to_string(),
 					aggregate_name: #aggregate_metadata.into(),
 					topic: stringify!(#name).into()
@@ -144,7 +144,7 @@ pub(crate) fn event_hook(mut ast: ItemFn) -> TokenStream {
 		panic!("There must be message argument!");
 	};
 
-	let mut stmts = get_trait_checking_stmts("::ruva::prelude::TAggregate");
+	let mut stmts = get_trait_checking_stmts("::ruva::TAggregate");
 
 	for aggregate in &ast.sig.inputs.iter().skip(1).collect::<Vec<_>>() {
 		if let FnArg::Typed(PatType { pat, ty, .. }) = aggregate {
