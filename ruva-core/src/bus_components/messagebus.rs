@@ -15,14 +15,13 @@ where
 	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
 	crate::responses::BaseError: std::convert::From<E>,
 {
-	fn event_handler(&self) -> &'static TEventHandler<R, E>;
+	fn event_handler(&self) -> &'static TEventHandler<E>;
 }
 
 /// This function is used to handle event. It is called recursively until there is no event left in the queue.
 #[async_recursion]
-async fn handle_event<R, E>(msg: Arc<dyn TEvent>, context_manager: AtomicContextManager, event_handler: &'static TEventHandler<R, E>) -> Result<(), E>
+async fn handle_event<E>(msg: Arc<dyn TEvent>, context_manager: AtomicContextManager, event_handler: &'static TEventHandler<E>) -> Result<(), E>
 where
-	R: ApplicationResponse,
 	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
 	crate::responses::BaseError: std::convert::From<E>,
 {
@@ -169,9 +168,8 @@ where
 #[macro_export]
 macro_rules! init_event_handler {
     (
-		$R:ty,
 		$E:ty,
-		$context_handler :expr,
+		$event_handler :expr,
 			$(
 				$(#[$asynchrony:ident])?
 				$event:ty:[$($handler:ident $(=>($($injectable:ident $(( $($arg:ident),* ))? ),*))?),* $(,)? ]
@@ -179,10 +177,9 @@ macro_rules! init_event_handler {
 			$(,)?
 
     ) =>{
-		pub fn event_handler() -> &'static ::ruva::TEventHandler<$R, $E>  {
-			static EVENT_HANDLER: ::std::sync::OnceLock<::ruva::TEventHandler<$R, $E>> = ::std::sync::OnceLock::new();
-			EVENT_HANDLER.get_or_init(||{
-				let mut _map : ::ruva::TEventHandler<$R, $E> = ::ruva::HandlerMapper::new();
+		pub(crate) static EVENT_HANDLERS: std::sync::LazyLock<ruva::TEventHandler<$E>> = std::sync::LazyLock::new(
+			||{
+				let mut _map : ::ruva::TEventHandler<$E> = ::ruva::HandlerMapper::new();
 				$(
 
 				let mut handlers = if stringify!($asc) == "asynchronous" {
@@ -193,8 +190,8 @@ macro_rules! init_event_handler {
 				handlers.extend(vec![
 					$(
 						Box::new(
-							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ::ruva::AtomicContextManager| -> ::ruva::Future<$R, $E> {
-								let event_handler = $context_handler(context_manager);
+							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ::ruva::AtomicContextManager| -> ::ruva::Future<$E> {
+								let event_handler = $event_handler(context_manager);
 								Box::pin(event_handler.$handler(
 									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
 									// Safety:: client should access this vector of handlers by providing the corresponding event name
@@ -211,8 +208,8 @@ macro_rules! init_event_handler {
                 );
             )*
             _map
-        })
-    }
+			}
+		);
 }
 
 }
