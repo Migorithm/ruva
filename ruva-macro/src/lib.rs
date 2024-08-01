@@ -10,8 +10,9 @@ extern crate quote;
 mod command;
 mod construct;
 mod domain;
-mod generic_helpers;
+
 mod handler;
+mod helpers;
 mod message;
 mod repository;
 mod result;
@@ -26,11 +27,10 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 	render_message_token(&ast, visibilities, externally_notifiable_event_req).into()
 }
 
-/// Define TAggregate root
+/// Define Aggregate root
 /// ## Example
 /// ```rust,no_run
 /// #[aggregate]
-/// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
 ///     pub(crate) age: i64,
 /// }
@@ -46,7 +46,6 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 ///
 /// ```rust,no_run
 /// #[aggregate]
-/// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
 ///     pub(crate) age: i64,
 ///     pub(crate) name: String,
@@ -56,7 +55,6 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// Likewise, not specifying `identifier` will also error out
 /// ```rust,no_run
 /// #[aggregate]
-/// #[derive(Debug, Default, Serialize, Deserialize)]
 /// pub struct TestAggregate {
 ///     pub(crate) age: i64,
 ///     pub(crate) name: String,
@@ -67,7 +65,6 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// ```rust,no_run```
 ///
 /// #[aggregate]
-/// #[derive(Debug, Clone, Serialize, Default)]
 /// pub struct AggregateStruct {
 ///     #[adapter_ignore]
 ///     id: i32,
@@ -84,6 +81,20 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 /// assert_eq!(serialized, "{\"some_other_field\":0}");
 ///
 /// ```
+///
+/// ## Automatic derive macro
+/// `#[derive(Default, Debug, Serialize, Deserialize)]` will be automatically added to the struct.
+/// ```rust,no_run
+/// #[aggregate]
+/// pub struct AggregateStruct {
+///    #[adapter_ignore]
+///   id: i32,
+///  #[serde(skip_serializing)]
+/// name: String,
+/// some_other_field: i32,
+/// }
+/// ```
+/// Even if you add `Default`, `Debug`, `Serialize`, `Deserialize` there won't be any conflict.
 ///
 /// Conversion is automatically done as follows:
 /// ```rust,no_run```
@@ -146,8 +157,8 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 ///
 /// ```
 #[proc_macro_attribute]
-pub fn aggregate(_: TokenStream, input: TokenStream) -> TokenStream {
-	domain::render_aggregate(input)
+pub fn aggregate(attrs: TokenStream, input: TokenStream) -> TokenStream {
+	domain::render_aggregate(input, attrs)
 }
 
 /// Define ApplicationResponse so that could be recognized by messagebus
@@ -249,8 +260,8 @@ pub fn error_derive(attr: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn entity(_: TokenStream, input: TokenStream) -> TokenStream {
-	domain::render_entity_token(input)
+pub fn entity(attrs: TokenStream, input: TokenStream) -> TokenStream {
+	domain::render_entity_token(input, attrs)
 }
 
 #[proc_macro_derive(TCommand)]

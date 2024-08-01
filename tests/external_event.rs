@@ -4,8 +4,7 @@ use ruva::*;
 /// when annotated with externally notifiable, it is stored as outbox.
 #[test]
 fn test_declare_external_event() {
-	#[aggregate]
-	#[derive(Debug, Clone, Serialize, Default)]
+	#[aggregate(Serialize, Debug)]
 	pub struct SomeAggregate {
 		#[adapter_ignore]
 		id: i32,

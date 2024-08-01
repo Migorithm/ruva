@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use syn::{punctuated::Punctuated, Data, DataStruct, DeriveInput, Fields};
 
 use crate::{
-	generic_helpers::add_sync_trait_bounds,
+	helpers::generic_helpers::add_sync_trait_bounds,
 	utils::{get_attributes, get_type_name},
 };
 

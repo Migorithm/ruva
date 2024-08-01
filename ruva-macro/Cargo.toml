@@ -1,6 +1,6 @@
 [package]
 name = "ruva-macro"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven TEvent Handling"
@@ -12,6 +12,6 @@ repository = "https://github.com/BeringLab/ruva"
 proc-macro=true
 
 [dependencies]
-syn = {version="2", features=["full"]}
+syn = {version="2", features=["full","derive"]}
 quote = "1"
 proc-macro2="1"
