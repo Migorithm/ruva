@@ -11,7 +11,7 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 
 	let name = &ast.ident;
 
-	let body_name = ident_generator(&ast.ident.to_string());
+	let body_name = ident_generator(&(ast.ident.to_string() + "Body"));
 
 	let Data::Struct(DataStruct {
 		fields: Fields::Named(syn::FieldsNamed { named, brace_token }),
@@ -89,22 +89,23 @@ pub(crate) fn derive_into_command(ast: &mut DeriveInput) -> TokenStream {
 		.join(",");
 
 	let into_statement: proc_macro2::TokenStream = format!(
-		"    
-			impl {body_name} {{
-				pub fn into_command(self,{input_parameters}) -> {name}  {{
-					{name}{{
-						{input_keys}
-						{self_parameters}
-					}}
+		"     
+		impl {body_name} {{
+			pub fn into_command(self,{input_parameters}) -> {name}  {{
+				{name}{{
+					{input_keys}
+					{self_parameters}
 				}}
 			}}
+		}}
 		"
 	)
 	.parse()
 	.unwrap();
 
 	quote!(
-		#[derive(Debug, serde::Deserialize, Clone, utoipa::ToSchema)]
+
+		#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 		#body_ast
 		#into_statement
 	)
