@@ -1,3 +1,23 @@
+//! # Message Bus
+//! ### example
+//! ```rust,no_run
+//! impl ruva::TMessageBus<YourResponse,YourErrorError,YourCommand> for MessageBus{
+//!     fn command_handler(
+//!         &self,
+//!         context_manager: ruva::AtomicContextManager,
+//!         cmd: YourCommand,
+//!
+//!     ) -> impl ruva::TCommandService<YourResponse, YourError> {
+//!             LoggingAspect(
+//!                 UnitOfWorkHandler::new(
+//!                 ::ruva::SqlRepository::new(context_manager),
+//!                 cmd
+//!             )
+//!       )
+//!     }
+//! }
+//! ```
+
 use super::contexts::*;
 
 use super::executor::TConnection;
@@ -88,7 +108,7 @@ where
 	E: ApplicationError + std::convert::From<crate::responses::BaseError>,
 	C: TCommand,
 {
-	fn command_handler(&self, context_manager: AtomicContextManager) -> impl TCommandService<R, E, C>;
+	fn command_handler(&self, context_manager: AtomicContextManager, cmd: C) -> impl TCommandService<R, E>;
 
 	/// This method is used to handle command and return result.
 	/// ## Example
@@ -97,7 +117,7 @@ where
 	/// ```
 	async fn execute_and_wait(&self, message: C, conn: &'static dyn TConnection) -> Result<R, E> {
 		let context_manager = ContextManager::new(conn);
-		let res = self.command_handler(context_manager.clone()).execute(message).await?;
+		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 
 		// Trigger event handler
 		if !context_manager.read().await.event_queue.is_empty() {
@@ -116,7 +136,7 @@ where
 	/// ```
 	async fn execute_and_forget(&self, message: C, conn: &'static dyn TConnection) -> Result<CommandResponseWithEventFutures<R, E>, E> {
 		let context_manager = ContextManager::new(conn);
-		let res = self.command_handler(context_manager.clone()).execute(message).await?;
+		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
 
 		// Trigger event handler
