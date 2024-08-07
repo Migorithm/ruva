@@ -43,5 +43,5 @@ where
 	R: ApplicationResponse,
 	E: ApplicationError,
 {
-	fn execute(&mut self) -> impl std::future::Future<Output = Result<R, E>> + Send;
+	fn execute(self) -> impl std::future::Future<Output = Result<R, E>> + Send;
 }
