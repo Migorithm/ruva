@@ -23,3 +23,7 @@ impl From<BaseError> for Box<dyn ApplicationError> {
 		Box::new(value)
 	}
 }
+
+impl ApplicationResponse for () {}
+
+impl ApplicationError for () {}
