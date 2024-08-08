@@ -1,6 +1,5 @@
 use crate::prelude::TEvent;
 
-use hashbrown::HashMap;
 use std::pin::Pin;
 
 use crate::bus_components::contexts::AtomicContextManager;
@@ -8,7 +7,6 @@ use crate::bus_components::contexts::AtomicContextManager;
 pub type Future<E> = Pin<Box<dyn futures::Future<Output = Result<(), E>> + Send>>;
 pub type FutureResult<E> = Result<Future<E>, E>;
 
-pub type TEventHandler<E> = HashMap<String, EventHandlers<E>>;
 pub type Handlers<E> = Vec<Box<dyn Fn(std::sync::Arc<dyn TEvent>, AtomicContextManager) -> Future<E> + Send + Sync>>;
 
 pub enum EventHandlers<E> {

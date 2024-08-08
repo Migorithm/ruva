@@ -21,12 +21,15 @@
 use super::contexts::*;
 
 use super::executor::TConnection;
-use super::handler::{EventHandlers, TCommandService, TEventHandler};
+use super::handler::EventHandlers;
 use crate::prelude::{TCommand, TEvent};
 use crate::responses::{self, ApplicationError, ApplicationResponse, BaseError};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use std::sync::Arc;
+
+/// Event handlers `TEventBus` work on
+pub type TEventHandler<E> = hashbrown::HashMap<String, EventHandlers<E>>;
 
 #[async_trait]
 pub trait TEventBus<R, E>
@@ -100,6 +103,15 @@ where
 	Ok(())
 }
 
+/// Interface for messagebus to work on
+pub trait TCommandService<R, E>: Send + Sync
+where
+	R: ApplicationResponse,
+	E: ApplicationError,
+{
+	fn execute(self) -> impl std::future::Future<Output = Result<R, E>> + Send;
+}
+
 #[async_trait]
 pub trait TMessageBus<R, E, C>: TEventBus<R, E>
 where
@@ -162,7 +174,7 @@ where
 		if let Some(join_handler) = self.join_handler.take() {
 			join_handler.await.map_err(|err| {
 				tracing::error!("{:?}", err);
-				BaseError::ServiceError(Box::new("error occurred while handling event".to_string()))
+				BaseError::ServiceError
 			})??;
 		}
 		Ok(self)
