@@ -1,16 +1,13 @@
 use crate::prelude::TEvent;
-use std::any::Any;
 
-pub type AnyError = dyn Any + Send + Sync;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BaseError {
 	NotFound,
 	StopSentinel,
 	TransactionError,
 	StopSentinelWithEvent(std::sync::Arc<dyn TEvent>),
 	DatabaseError(String),
-	ServiceError(Box<AnyError>),
+	ServiceError,
 }
 
 pub trait ApplicationResponse: 'static + Send + Sync {}

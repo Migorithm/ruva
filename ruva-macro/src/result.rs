@@ -110,7 +110,8 @@ pub(crate) fn render_error_token(ast: &DeriveInput) -> TokenStream {
 					#name::#stop_sentinel => #crates::BaseError::StopSentinel,
 					#name::#stop_sentinel_with_event(event) => #crates::BaseError::StopSentinelWithEvent(event),
 					#name::#database_error(error) => #crates::BaseError::DatabaseError(error),
-					_ => #crates::BaseError::ServiceError(::std::boxed::Box::new(value)),
+					// _ => #crates::BaseError::ServiceError(::std::boxed::Box::new(value)),
+					_=> #crates::BaseError::ServiceError,
 				};
 				data
 			}

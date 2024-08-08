@@ -206,6 +206,8 @@
 pub extern crate static_assertions;
 
 pub use ruva_core::init_event_handler;
+
 pub use ruva_core::prelude::*;
 pub use ruva_core::prepare_bulk_operation;
+pub use ruva_core::register_uow_services;
 pub use ruva_macro::{aggregate, entity, event_hook, ApplicationError, ApplicationResponse, IntoCommand, TCommand, TConstruct, TEvent, TRepository};
