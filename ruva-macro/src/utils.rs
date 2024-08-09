@@ -65,8 +65,23 @@ pub(crate) fn remove_fields_from_fields_based_on_field_name(given_fields: &mut s
 	*given_fields = res;
 }
 
-pub(crate) fn skip_over_attributes(field: &mut Field, attribute_name: &str) {
+pub(crate) fn skip_over_attributes(field: &mut Field, attribute_name: &str) -> bool {
+	let original_length = field.attrs.len();
+
 	field.attrs.retain(|attr| !attr.path().is_ident(attribute_name));
+	original_length != field.attrs.len()
+}
+pub(crate) fn skip_over_attribute_from_derive_input(ast: &mut DeriveInput, attribute_name: &str) {
+	match &mut ast.data {
+		syn::Data::Struct(syn::DataStruct {
+			fields: syn::Fields::Named(fields), ..
+		}) => {
+			fields.named.iter_mut().for_each(|f| {
+				skip_over_attributes(f, attribute_name);
+			});
+		}
+		_ => panic!("Only Struct Is supported"),
+	}
 }
 
 // get attributes from field
@@ -122,4 +137,32 @@ pub(crate) fn get_trait_checking_stmts(trait_path: &str) -> Vec<Stmt> {
 			}
 		),
 	]
+}
+
+pub fn sort_macros_to_inject(macros_to_inject: &mut Vec<String>, attrs: proc_macro::TokenStream) {
+	let normalized = macros_to_inject.iter().map(|x| x.split("::").last().unwrap().to_string()).collect::<Vec<String>>();
+	let macro_attrs = attrs.to_string();
+	if !attrs.is_empty() {
+		for macro_to_add in macro_attrs.split(",") {
+			let trimmed = macro_to_add.trim().split("::").last().unwrap();
+			if !normalized.contains(&trimmed.to_string()) {
+				macros_to_inject.push(macro_to_add.into());
+			}
+		}
+	}
+}
+
+pub(crate) fn strip_generic_constraints(generics: &str) -> String {
+	// Remove the angle brackets and split by comma to get each generic parameter
+	let params: Vec<&str> = generics
+		.trim_matches(|c| c == '<' || c == '>')
+		.split(',')
+		.map(|param| param.trim()) // Trim whitespace around each param
+		.collect();
+
+	// Split each parameter on `:` and take the left side
+	let stripped_params: Vec<&str> = params.iter().map(|param| param.split(':').next().unwrap().trim()).collect();
+
+	// Join them back with commas and wrap in angle brackets
+	format!("<{}>", stripped_params.join(", "))
 }

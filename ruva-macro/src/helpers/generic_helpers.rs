@@ -4,7 +4,7 @@ use syn::{punctuated::Punctuated, token::Plus, Generics, TypeParamBound, WherePr
 // Add `Send`, `Sync`, `'static` and `std::fmt::Debug` to TypeGenerics if it doesn't have them
 // If they have, then selectively add `Send`, `Sync`, `'static` and `std::fmt::Debug` to TypeGenerics
 // Plus, move T type constraints to where clause
-pub fn add_sync_trait_bounds(generics: &mut syn::Generics) {
+pub fn add_sync_trait_bounds(generics: &mut syn::Generics, contraints: &[&str]) {
 	generics
 		.params
 		.iter_mut()
@@ -14,7 +14,7 @@ pub fn add_sync_trait_bounds(generics: &mut syn::Generics) {
 		})
 		.for_each(|ty| {
 			// optimize the above code
-			add_type_param_bounds(&mut ty.bounds, &["Send", "Sync", "'static", "std::fmt::Debug"]);
+			add_type_param_bounds(&mut ty.bounds, contraints);
 		})
 }
 

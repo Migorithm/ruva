@@ -264,21 +264,10 @@ pub fn entity(attrs: TokenStream, input: TokenStream) -> TokenStream {
 	domain::render_entity_token(input, attrs)
 }
 
-#[proc_macro_derive(TCommand)]
-pub fn command_derive(attr: TokenStream) -> TokenStream {
-	command::declare_command(attr).into()
-}
-
-#[proc_macro_derive(IntoCommand, attributes(required_input))]
-pub fn into_command_derive(attr: TokenStream) -> TokenStream {
-	let mut ast: DeriveInput = syn::parse(attr.clone()).unwrap();
-
-	let quote = command::derive_into_command(&mut ast);
-
-	quote!(
-		#quote
-	)
-	.into()
+// TODO - enable treating body specific and command specific attributes
+#[proc_macro_attribute]
+pub fn into_command(attrs: TokenStream, input: TokenStream) -> TokenStream {
+	command::render_into_command(input, attrs)
 }
 
 #[proc_macro_derive(TRepository)]
