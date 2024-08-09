@@ -7,21 +7,9 @@ use crate::{
 	helpers::{derive_helpers::add_derive_macros_struct_or_enum, generic_helpers::add_aggregate_generic_defaults_on_where_clause},
 	utils::{
 		check_if_field_has_attribute_and_return_field_name, extracts_field_names_from_derive_input, locate_crate_on_derive_macro, remove_fields_from_fields_based_on_field_name, skip_over_attributes,
+		sort_macros_to_inject,
 	},
 };
-
-fn sort_macros_to_inject(macros_to_inject: &mut Vec<String>, attrs: TokenStream) {
-	let normalized = macros_to_inject.iter().map(|x| x.split("::").last().unwrap().to_string()).collect::<Vec<String>>();
-	let macro_attrs = attrs.to_string();
-	if !attrs.is_empty() {
-		for macro_to_add in macro_attrs.split(",") {
-			let trimmed = macro_to_add.trim().split("::").last().unwrap();
-			if !normalized.contains(&trimmed.to_string()) {
-				macros_to_inject.push(macro_to_add.into());
-			}
-		}
-	}
-}
 
 pub(crate) fn render_aggregate(input: TokenStream, attrs: TokenStream) -> TokenStream {
 	let mut macros_to_inject = vec!["ruva::Serialize".to_string(), "Debug".to_string(), "Default".to_string()];
