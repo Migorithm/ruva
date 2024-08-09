@@ -57,81 +57,67 @@ where
 }
 
 #[macro_export]
-macro_rules! register_uow_services {
-	(
-		$messagebus :ty,
-		$response:ty,
-		$error:ty,
-
-		$(
-			$command:ty => $handler:expr
-		),*
-
-
-	) => {
-		use ruva::TUnitOfWorkCommandHandler;
-		type ApplicationResult = std::result::Result<$response,$error>;
-
-		$(
-
-			impl<'a> ruva::TGetHandler<&'a mut ::ruva::SqlRepository, ApplicationResult> for $command {
-				fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::SqlRepository, ApplicationResult > {
-					$handler
-				}
-			}
-
-			impl ::ruva::TMessageBus<$response,$error,$command> for $messagebus{
-				fn command_handler(
-					&self,
-					context_manager: ruva::AtomicContextManager,
-					cmd: $command,
-
-				) -> impl ::ruva::TCommandService<$response, $error> {
-						::ruva::CommandHandler((cmd, ::ruva::SqlRepository::new(context_manager)))
-
-				}
-			}
-
-		)*
-	};
-
-	(
-		$messagebus :ty,
-		$response:ty,
-		$error:ty,
+#[doc(hidden)]
+macro_rules! __register_uow_services_internal {
+    (
+        $messagebus:ty,
+        $response:ty,
+        $error:ty,
         $h:expr,
 
-		$(
-			$command:ty => $handler:expr
-		),*
+        $(
+            $command:ty => $handler:expr
+        ),*
+    ) => {
+        use ruva::TUnitOfWorkCommandHandler;
+        type ApplicationResult = std::result::Result<$response,$error>;
 
+        $(
+            impl<'a> ruva::TGetHandler<&'a mut ::ruva::SqlRepository, ApplicationResult> for $command {
+                fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::SqlRepository, ApplicationResult > {
+                    $handler
+                }
+            }
 
-	) => {
-		use ruva::TUnitOfWorkCommandHandler;
-		type ApplicationResult = std::result::Result<$response,$error>;
+            impl ::ruva::TMessageBus<$response,$error,$command> for $messagebus{
+                fn command_handler(
+                    &self,
+                    context_manager: ruva::AtomicContextManager,
+                    cmd: $command,
+                ) -> impl ::ruva::TCommandService<$response, $error> {
+                    $h(::ruva::CommandHandler((cmd, ::ruva::SqlRepository::new(context_manager))))
+                }
+            }
+        )*
+    };
+}
 
-		$(
+#[macro_export]
+macro_rules! register_uow_services {
+    // Case with custom handler function
+    (
+        $messagebus:ty,
+        $response:ty,
+        $error:ty,
+        $h:expr,
 
-			impl<'a> ruva::TGetHandler<&'a mut ::ruva::SqlRepository, ApplicationResult> for $command {
-				fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::SqlRepository, ApplicationResult > {
-					$handler
-				}
-			}
+        $(
+            $command:ty => $handler:expr
+        ),*
+    ) => {
+       	ruva::__register_uow_services_internal!($messagebus, $response, $error, $h, $($command => $handler),*);
+    };
 
-			impl ::ruva::TMessageBus<$response,$error,$command> for $messagebus{
-				fn command_handler(
-					&self,
-					context_manager: ruva::AtomicContextManager,
-					cmd: $command,
+    // Default case
+    (
+        $messagebus:ty,
+        $response:ty,
+        $error:ty,
 
-				) -> impl ::ruva::TCommandService<$response, $error> {
-						$h(::ruva::CommandHandler((cmd, ::ruva::SqlRepository::new(context_manager))))
-
-				}
-			}
-
-		)*
-	};
-
-
+        $(
+            $command:ty => $handler:expr
+        ),*
+    ) => {
+        ruva::__register_uow_services_internal!($messagebus, $response, $error, ::std::convert::identity, $($command => $handler),*);
+    };
 }
