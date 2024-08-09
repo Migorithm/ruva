@@ -3,7 +3,7 @@ use quote::ToTokens;
 use syn::{parse_macro_input, punctuated::Punctuated, Data, DataStruct, DeriveInput, Fields};
 
 use crate::{
-	helpers::{derive_helpers::add_derive_macros_struct_or_enum, generic_helpers::add_sync_trait_bounds},
+	helpers::{derive_helpers::add_derive_macros, generic_helpers::add_sync_trait_bounds},
 	utils::{get_attributes, get_type_name, skip_over_attribute_from_derive_input, skip_over_attributes, sort_macros_to_inject, strip_generic_constraints},
 };
 
@@ -146,10 +146,10 @@ pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::To
 	let mut ast = parse_macro_input!(input as DeriveInput);
 
 	let (mut body_ast, into_statement) = into_command_body(&ast);
-	add_derive_macros_struct_or_enum(&mut body_ast, &macros_to_inject_to_body);
+	add_derive_macros(&mut body_ast, &macros_to_inject_to_body);
 
 	let macros_to_inject_to_original = ["Debug".to_string(), "ruva::Serialize".to_string()];
-	add_derive_macros_struct_or_enum(&mut ast, &macros_to_inject_to_original);
+	add_derive_macros(&mut ast, &macros_to_inject_to_original);
 	skip_over_attribute_from_derive_input(&mut ast, "required_input");
 	add_sync_trait_bounds(&mut ast.generics, &COMMAND_CONSTRAINT);
 
