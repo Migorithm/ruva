@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use syn::{parse::Parser, parse_quote, punctuated::Punctuated, DataEnum, DeriveInput, Field, FieldsNamed, Ident, Meta, Path, Stmt, Type, Variant};
+use syn::{parse_quote, punctuated::Punctuated, token::Comma, DataEnum, DeriveInput, Field, FieldsNamed, Ident, Meta, Path, Stmt, Type, Variant};
 
 pub(crate) fn locate_crate_on_derive_macro(ast: &DeriveInput) -> Ident {
 	let crates = ast.attrs.iter().find(|x| x.path().is_ident("crates"));
@@ -28,41 +28,32 @@ pub(crate) fn find_attr_and_locate_its_type_from_field(field: &mut Field, attrib
 	types_found
 }
 
-pub(crate) fn check_if_field_has_attribute_and_return_field_name(field: &Field, attribute_name: &str) -> Option<String> {
-	let mut field_name = None;
-	for attr in field.attrs.iter() {
-		if attr.path().is_ident(attribute_name) {
-			field_name = Some(field.ident.as_ref().unwrap().to_string());
-		}
-	}
-	field_name
+pub(crate) fn check_if_field_has_attribute(field: &Field, attribute_name: &str) -> Option<String> {
+	field.attrs.iter().find(|attr| attr.path().is_ident(attribute_name)).map(|_| field.ident.as_ref().unwrap().to_string())
 }
 
-pub(crate) fn extracts_field_names_from_derive_input(ast: &DeriveInput) -> Vec<String> {
+pub(crate) fn extract_field_names(ast: &DeriveInput) -> Vec<String> {
 	match &ast.data {
 		syn::Data::Struct(syn::DataStruct {
 			fields: syn::Fields::Named(fields), ..
-		}) => fields.named.iter().map(|f| f.ident.clone().unwrap().to_string()).collect(),
-		_ => panic!("Only Struct Is supported"),
+		}) => fields.named.iter().filter_map(|f| f.ident.as_ref().map(|ident| ident.to_string())).collect(),
+		_ => panic!("Only Struct is supported"),
 	}
 }
 
-pub(crate) fn remove_fields_from_fields_based_on_field_name(given_fields: &mut syn::FieldsNamed, fields_to_remove: impl Borrow<Vec<String>>) {
-	let fields_borrow = fields_to_remove.borrow();
-
-	let new_fields = given_fields
+pub(crate) fn remove_fields_based_on_field_name(given_fields: &mut syn::FieldsNamed, fields_to_remove: impl Borrow<Vec<String>>) {
+	let fields_to_remove = fields_to_remove.borrow();
+	let new_fields: Punctuated<Field, Comma> = given_fields
 		.named
 		.iter()
-		.filter(|f| if let Some(ident) = &f.ident { !fields_borrow.contains(&ident.to_string()) } else { true })
-		.map(|f| syn::Field::parse_named.parse2(quote!( #f )).unwrap())
-		.collect::<Punctuated<Field, _>>();
+		.filter(|f| f.ident.as_ref().map_or(true, |ident| !fields_to_remove.contains(&ident.to_string())))
+		.cloned()
+		.collect();
 
-	let res = FieldsNamed {
+	*given_fields = FieldsNamed {
 		brace_token: syn::token::Brace::default(),
 		named: new_fields,
 	};
-
-	*given_fields = res;
 }
 
 pub(crate) fn skip_over_attributes(field: &mut Field, attribute_name: &str) -> bool {

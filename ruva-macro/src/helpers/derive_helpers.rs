@@ -1,6 +1,6 @@
 use syn::Attribute;
 
-pub fn add_derive_macros_struct_or_enum(input: &mut syn::DeriveInput, macros_to_add: &[String]) {
+pub fn add_derive_macros(input: &mut syn::DeriveInput, macros_to_add: &[String]) {
 	let mut derive_paths = vec![];
 	// extract meta from input
 	let meta_vec = input.attrs.iter().map(|attr| &attr.meta).collect::<Vec<_>>();

@@ -4,11 +4,8 @@ use quote::ToTokens;
 use syn::{parse::Parser, parse_macro_input, punctuated::Punctuated, token::Comma, Data, DataStruct, DeriveInput, Field, GenericParam, Generics, Ident, Type, WherePredicate};
 
 use crate::{
-	helpers::{derive_helpers::add_derive_macros_struct_or_enum, generic_helpers::add_aggregate_generic_defaults_on_where_clause},
-	utils::{
-		check_if_field_has_attribute_and_return_field_name, extracts_field_names_from_derive_input, locate_crate_on_derive_macro, remove_fields_from_fields_based_on_field_name, skip_over_attributes,
-		sort_macros_to_inject,
-	},
+	helpers::{derive_helpers::add_derive_macros, generic_helpers::add_aggregate_generic_defaults},
+	utils::{check_if_field_has_attribute, extract_field_names, locate_crate_on_derive_macro, remove_fields_based_on_field_name, skip_over_attributes, sort_macros_to_inject},
 };
 
 pub(crate) fn render_aggregate(input: TokenStream, attrs: TokenStream) -> TokenStream {
@@ -19,8 +16,8 @@ pub(crate) fn render_aggregate(input: TokenStream, attrs: TokenStream) -> TokenS
 
 	let name = ast.ident.clone();
 
-	add_aggregate_generic_defaults_on_where_clause(&mut ast.generics);
-	add_derive_macros_struct_or_enum(&mut ast, &macros_to_inject);
+	add_aggregate_generic_defaults(&mut ast.generics);
+	add_derive_macros(&mut ast, &macros_to_inject);
 	let generics: &Generics = &ast.generics;
 	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -62,7 +59,7 @@ pub(crate) fn render_entity_token(input: TokenStream, attrs: TokenStream) -> Tok
 	sort_macros_to_inject(&mut macros_to_inject, attrs);
 
 	let mut ast = parse_macro_input!(input as DeriveInput);
-	add_derive_macros_struct_or_enum(&mut ast, &macros_to_inject);
+	add_derive_macros(&mut ast, &macros_to_inject);
 	let name = &ast.ident;
 	let generics = &ast.generics;
 	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -161,7 +158,7 @@ fn get_setters(data: &Data) -> proc_macro2::TokenStream {
 pub fn create_struct_adapter_quote(input: &DeriveInput, for_aggregate: bool) -> proc_macro2::TokenStream {
 	let aggregate_name = input.ident.clone();
 	let mut generics = input.generics.clone();
-	add_aggregate_generic_defaults_on_where_clause(&mut generics);
+	add_aggregate_generic_defaults(&mut generics);
 
 	let adapter_name = Ident::new(&(input.ident.to_string() + "Adapter"), proc_macro2::Span::call_site());
 
@@ -176,7 +173,7 @@ pub fn create_struct_adapter_quote(input: &DeriveInput, for_aggregate: bool) -> 
 	}) = &mut adapter_input.data
 	{
 		fields.named.iter_mut().for_each(|f: &mut Field| {
-			if let Some(ignorable_field) = check_if_field_has_attribute_and_return_field_name(f, "adapter_ignore") {
+			if let Some(ignorable_field) = check_if_field_has_attribute(f, "adapter_ignore") {
 				// if the field's type is generic, skip over
 
 				fields_to_ignore.push(ignorable_field);
@@ -185,13 +182,13 @@ pub fn create_struct_adapter_quote(input: &DeriveInput, for_aggregate: bool) -> 
 				try_remove_generic_type(&mut generics, f.ty.clone());
 			}
 		});
-		remove_fields_from_fields_based_on_field_name(fields, &fields_to_ignore);
+		remove_fields_based_on_field_name(fields, &fields_to_ignore);
 	}
 
 	let mut aggregates_fields: Vec<String> = vec![];
 	let mut adapter_fields: Vec<String> = vec![];
 
-	extracts_field_names_from_derive_input(input).into_iter().for_each(|field_name| {
+	extract_field_names(input).into_iter().for_each(|field_name| {
 		// ignorable field means that the field is not compatible with adapter
 		if !fields_to_ignore.contains(&field_name) {
 			adapter_fields.push(format!("{}: value.{}", field_name, field_name));
