@@ -7,7 +7,7 @@
 //! [AtomicContextManager]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/type.AtomicContextManager.html
 //! [TCommandService]: https://docs.rs/ruva-core/latest/ruva_core/handler/trait.TCommandService.html
 //! [TCommitHook]: https://docs.rs/ruva-core/latest/ruva_core/unit_of_work/trait.TCommitHook.html
-
+//! [into_command]: https://docs.rs/ruva-macro/latest/ruva_macro/attr.into_command.html
 //!
 //! A event-driven framework for writing reliable and scalable system.
 //!
@@ -24,17 +24,16 @@
 //! section, we will take a brief tour, summarizing the major APIs and
 //! their uses.
 //!
-//! ## TCommand & Event
-//! You can register any general struct with [TCommand] Derive Macro as follows:
+//! ## Command & Event
+//! You can register any general struct with [into_command] attribute macro as follows:
 //! ```rust,no_run
-//! use ruva::TCommand;
-//! #[derive(Debug,TCommand)]
+//! #[ruva::into_command]
 //! pub struct MakeOrder {
 //!     pub user_id: i64,
 //!     pub items: Vec<String>,
 //! }
 //! ```
-//! As you attach [TCommand] derive macro, MessageBus now is going to be able to understand how and where it should
+//! Only when you attach [into_command] attribute macro, [TMessageBus] will be able to understand how and where it should
 //! dispatch the command to.
 //!
 //! To specify [TEvent] implementation, annotate struct with `TEvent` derive macro as in the following example:
