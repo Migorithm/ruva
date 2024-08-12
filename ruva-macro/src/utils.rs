@@ -62,7 +62,7 @@ pub(crate) fn skip_over_attributes(field: &mut Field, attribute_name: &str) -> b
 	field.attrs.retain(|attr| !attr.path().is_ident(attribute_name));
 	original_length != field.attrs.len()
 }
-pub(crate) fn skip_over_attribute_from_derive_input(ast: &mut DeriveInput, attribute_name: &str) {
+pub(crate) fn skip_given_attribute(ast: &mut DeriveInput, attribute_name: &str) {
 	match &mut ast.data {
 		syn::Data::Struct(syn::DataStruct {
 			fields: syn::Fields::Named(fields), ..
@@ -71,7 +71,10 @@ pub(crate) fn skip_over_attribute_from_derive_input(ast: &mut DeriveInput, attri
 				skip_over_attributes(f, attribute_name);
 			});
 		}
-		_ => panic!("Only Struct Is supported"),
+		syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Unit, .. }) => {}
+		_ => {
+			panic!("Only Struct is supported");
+		}
 	}
 }
 

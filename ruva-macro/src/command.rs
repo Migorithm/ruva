@@ -4,25 +4,19 @@ use syn::{parse_macro_input, punctuated::Punctuated, Data, DataStruct, DeriveInp
 
 use crate::{
 	helpers::{derive_helpers::add_derive_macros, generic_helpers::add_sync_trait_bounds},
-	utils::{get_attributes, get_type_name, skip_over_attribute_from_derive_input, skip_over_attributes, sort_macros_to_inject, strip_generic_constraints},
+	utils::{get_attributes, get_type_name, skip_given_attribute, skip_over_attributes, strip_generic_constraints},
 };
 
 const COMMAND_CONSTRAINT: [&str; 4] = ["Send", "Sync", "'static", "std::fmt::Debug"];
 
-fn into_command_body(derive_input: &DeriveInput) -> (DeriveInput, proc_macro2::TokenStream) {
-	let original_name = &derive_input.ident;
+fn craete_into_statement_from_struct_command(original_name: &syn::Ident, body_derive: &mut DeriveInput, data_struct: DataStruct) -> proc_macro2::TokenStream {
+	let body_name = syn::Ident::new(&(original_name.to_string() + "Body"), original_name.span());
 
-	let mut body_derive = derive_input.clone();
-
-	let ident_generator = |ident: &str| syn::Ident::new(ident, proc_macro2::Span::call_site());
-
-	let body_name = ident_generator(&(derive_input.ident.to_string() + "Body"));
-
-	let Data::Struct(DataStruct {
+	let DataStruct {
 		fields: Fields::Named(syn::FieldsNamed { named, brace_token }),
 		struct_token,
 		semi_token,
-	}) = &body_derive.data
+	} = &data_struct
 	else {
 		panic!("Only Struct Allowed!");
 	};
@@ -109,20 +103,42 @@ fn into_command_body(derive_input: &DeriveInput) -> (DeriveInput, proc_macro2::T
 
 	let into_statement: proc_macro2::TokenStream = format!(
 		"     
-		impl {generics} {body_name}{generics_with_out_contraints} {where_clause} {{
-			pub fn into_command(self,{input_parameters}) -> {original_name}{generics_with_out_contraints}  {{
-				{original_name}{{
-					{input_keys}
-					{self_parameters}
-				}}
+	impl {generics} {body_name}{generics_with_out_contraints} {where_clause} {{
+		pub fn into_command(self,{input_parameters}) -> {original_name}{generics_with_out_contraints}  {{
+			{original_name}{{
+				{input_keys}
+				{self_parameters}
 			}}
 		}}
-		"
+	}}
+	"
 	)
 	.parse()
 	.unwrap();
 
-	(body_derive, into_statement)
+	into_statement
+}
+
+fn into_command_body(derive_input: &DeriveInput) -> (Option<DeriveInput>, proc_macro2::TokenStream) {
+	let original_name = &derive_input.ident;
+
+	let mut body_derive = derive_input.clone();
+
+	match body_derive.data.clone() {
+		// Data::Struct(data_struct) => {
+		// 	let into_statement = craete_into_statement_from_struct_command(original_name, &mut body_derive, data_struct);
+		// 	(Some(body_derive), into_statement)
+		// }
+		Data::Struct(data_struct @ DataStruct { fields: Fields::Named(_), .. }) => {
+			let into_statement = craete_into_statement_from_struct_command(original_name, &mut body_derive, data_struct);
+			(Some(body_derive), into_statement)
+		}
+		Data::Struct(DataStruct { fields: Fields::Unit, .. }) => (None, quote!()),
+
+		_ => {
+			panic!("Such type not supported!");
+		}
+	}
 }
 
 pub fn declare_command(ast: &mut DeriveInput) -> TokenStream {
@@ -138,33 +154,63 @@ pub fn declare_command(ast: &mut DeriveInput) -> TokenStream {
 	)
 }
 
-pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn parse_attributes(attrs: &proc_macro::TokenStream) -> (Vec<String>, Vec<String>) {
 	let mut macros_to_inject_to_body = vec!["Debug".to_string(), "ruva::Deserialize".to_string()];
+	let normalized_body_macro = macros_to_inject_to_body.iter().map(|x| x.split("::").last().unwrap().to_string()).collect::<Vec<String>>();
 
-	sort_macros_to_inject(&mut macros_to_inject_to_body, attrs);
+	let mut macros_to_inject_to_original = vec!["Debug".to_string(), "ruva::Serialize".to_string()];
+	let normalized_command_macro = macros_to_inject_to_original.iter().map(|x| x.split("::").last().unwrap().to_string()).collect::<Vec<String>>();
+
+	let attr = attrs.to_string();
+
+	if attr.is_empty() {
+		return (macros_to_inject_to_body, macros_to_inject_to_original);
+	}
+
+	let re = regex::Regex::new(r"(command|body)\(([^)]+)\)").unwrap();
+	for cap in re.captures_iter(&attr) {
+		// Capture the type (either command or body)
+		let where_to_place = &cap[1];
+		// Capture the content inside the parentheses
+		let content = &cap[2];
+		for macro_to_add in content.split(',') {
+			let trimmed = macro_to_add.trim().split("::").last().unwrap();
+
+			if where_to_place == "body" && !normalized_body_macro.contains(&trimmed.to_string()) {
+				macros_to_inject_to_body.push(macro_to_add.to_string());
+			} else if where_to_place == "command" && !normalized_command_macro.contains(&trimmed.to_string()) {
+				macros_to_inject_to_original.push(macro_to_add.to_string());
+			}
+		}
+	}
+
+	(macros_to_inject_to_body, macros_to_inject_to_original)
+}
+
+pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	let (macros_to_inject_to_body, macros_to_inject_to_original) = parse_attributes(&attrs);
 
 	let mut ast = parse_macro_input!(input as DeriveInput);
 
-	let (mut body_ast, into_statement) = into_command_body(&ast);
-	add_derive_macros(&mut body_ast, &macros_to_inject_to_body);
+	let mut quotes = vec![];
 
-	let macros_to_inject_to_original = ["Debug".to_string(), "ruva::Serialize".to_string()];
+	let (body_ast, into_statement) = into_command_body(&ast);
+	if let Some(mut body_ast) = body_ast {
+		add_derive_macros(&mut body_ast, &macros_to_inject_to_body);
+		quotes.push(quote!(#body_ast));
+		quotes.push(quote!(#into_statement));
+	}
+
 	add_derive_macros(&mut ast, &macros_to_inject_to_original);
-	skip_over_attribute_from_derive_input(&mut ast, "required_input");
+	skip_given_attribute(&mut ast, "required_input");
 	add_sync_trait_bounds(&mut ast.generics, &COMMAND_CONSTRAINT);
 
-	let t_commnad = declare_command(&mut ast);
+	let t_command = declare_command(&mut ast);
+	quotes.push(quote!(#ast));
+	quotes.push(quote!(#t_command));
 
 	quote!(
-		#ast
-
-		#t_commnad
-
-
-		#body_ast
-
-
-		#into_statement
+		#(#quotes)*
 	)
 	.into()
 }
