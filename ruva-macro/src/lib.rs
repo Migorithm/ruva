@@ -24,8 +24,6 @@ pub fn message_derive(attr: TokenStream) -> TokenStream {
 	let visibilities = render_event_visibility(&ast);
 
 	render_message_token(&ast, visibilities, externally_notifiable_event_req).into()
-
-	
 }
 
 /// Define Aggregate root

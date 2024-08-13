@@ -20,7 +20,7 @@ pub mod prelude {
 	pub use crate::outbox::OutBox;
 
 	pub use crate::repository::Context;
-	pub use crate::repository::TRepository;
+	pub use crate::repository::TSetCurrentEvents;
 
 	pub use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
 	pub use crate::snowflake::SnowFlake;

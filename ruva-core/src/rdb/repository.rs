@@ -15,7 +15,7 @@ impl Context {
 	}
 
 	pub(crate) async fn save_outbox(&mut self) -> Result<(), BaseError> {
-		let outboxes = self.events.iter().filter(|e| e.externally_notifiable()).map(|o| o.outbox()).collect::<Vec<_>>();
+		let outboxes = self.curr_events.iter().filter(|e| e.externally_notifiable()).map(|o| o.outbox()).collect::<Vec<_>>();
 
 		prepare_bulk_operation!(
 			&outboxes,
@@ -52,7 +52,7 @@ impl TUnitOfWork for Context {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		match self.pg_transaction.as_mut() {
 			None => {
-				let trx = &self.inner.write().await.conn;
+				let trx = &self.super_ctx.write().await.conn;
 
 				if let Some(trx) = trx.downcast_ref::<&PgPool>().or(trx.downcast_ref::<PgPool>().as_ref()) {
 					self.pg_transaction = Some(trx.begin().await?);
@@ -79,7 +79,7 @@ impl TUnitOfWork for Context {
 	}
 
 	async fn rollback(&mut self) -> Result<(), BaseError> {
-		self.events.clear();
+		self.curr_events.clear();
 		match self.pg_transaction.take() {
 			None => panic!("Tranasction Has Not Begun!"),
 			Some(trx) => Ok(trx.rollback().await?),
