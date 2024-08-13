@@ -1,9 +1,10 @@
 [ruva-core]: https://docs.rs/ruva-core
 [ruva-macro]: https://docs.rs/ruva-macro
-[TCommand]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TCommand.html
+[into_command]: https://docs.rs/ruva-macro/latest/ruva_macro/attr.into_command.html
 [TEvent]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
 [MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/messagebus/index.html
 [Context]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/contexts/struct.ContextManager.html
+[TCommandService]: https://docs.rs/ruva-core/latest/ruva_core/handler/trait.TCommandService.html
 
 
 A event-driven framework for writing reliable and scalable system.
@@ -21,15 +22,15 @@ section, we will take a brief tour, summarizing the major APIs and
 their uses.
 
 ## TCommand & Event
-You can register any general struct with [TCommand] Derive Macro as follows:
+You can register any general struct with [into_command] Derive Macro as follows:
 ```rust
-#[derive(TCommand)]
+#[ruva::into_command]
 pub struct MakeOrder {
     pub user_id: i64,
     pub items: Vec<String>,
 }
 ```
-As you attach [TCommand] derive macro, MessageBus now is going to be able to understand how and where it should
+As you attach [into_command] derive macro, [MessageBus] now is going to be able to understand how and where it should
 dispatch the command to.
 
 Likewise, you can do the same thing for Event:
@@ -54,12 +55,51 @@ Notice that `internally_notifiable` event doesn't require aggregate specificatio
 * `internally_notifiable` is marker to let the system know that the event should be handled within the application
 * `externally_notifiable` event is stored as `OutBox`.
 
-## Initializing TCommand Handlers (Doc required)
+## Initializing TCommandService
+For messagebus to recognize service handler, [TCommandService] must be implemented, the response of which is sent directly to
+clients.
+```rust 
+pub struct MessageBus {
+event_handler: &'static TEventHandler<ApplicationResponse, ApplicationError>,
+}
+impl ruva::TMessageBus<ApplicationResponse,ApplicationError, Command> for MessageBus{
+fn command_handler(
+    &self,
+    context_manager: ruva::AtomicContextManager,
+    cmd: Command,
+) -> impl ruva::TCommandService<ApplicationResponse, ApplicationError> {
+    HighestLevelOfAspectThatImplementTCommandService::new(
+        MidLevelAspectThatImplementTCommandService::new(
+            TargetServiceThatImplementTCommandService::new(
+                cmd, other_dependency
+            )
+        )
+    )
+}
+}
+```
+
+For your convenience, Ruva provides declarative macros that handles transaction unit of work as you can use it as follows:
+
+```rust
+ruva::register_uow_services!(
+	MessageBus,
+	ServiceResponse,
+	ServiceError,
+
+	//Command => handler mapping
+	CreateUserAccount => create_user_account,
+	UpdatePassword => update_password,
+    MakeOrder => make_order,
+    DeliverProduct => deliver_product
+)
+
+```
 
 
 ## Registering Event
 
-`Event` is a side effect of [TCommand] or yet another [Event] processing.
+`Event` is a side effect of command handling or yet another event processing.
 You can register as many handlers as possible as long as they all consume same type of Event as follows:
 
 ### Example
@@ -102,7 +142,7 @@ when you invoke it. Everything else is done magically.
 ### Example
 ```rust
 
-#[derive(TCommand)]
+#[ruva::into_command]
 pub struct MakeOrder { // Test TCommand
     pub user_id: i64,
     pub items: Vec<String>

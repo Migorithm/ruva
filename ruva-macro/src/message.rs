@@ -7,12 +7,12 @@ pub(crate) fn render_message_token(ast: &DeriveInput, visibilities: Vec<TokenStr
 	let name = &ast.ident;
 	let crates = locate_crate_on_derive_macro(ast);
 
-	let (identifier, impl_assertion) = externally_notifiable_event_req.unwrap_or_else(|| (TokenStream::new(), TokenStream::new()));
+	let (metadata_generator, impl_assertion) = externally_notifiable_event_req.unwrap_or_else(|| (TokenStream::new(), TokenStream::new()));
 
 	quote! {
 		impl #crates::TEvent for #name {
 
-			#identifier
+			#metadata_generator
 
 			fn state(&self) -> ::std::string::String {
 				serde_json::to_string(&self).expect("Failed to serialize")
@@ -78,7 +78,7 @@ pub(crate) fn extract_externally_notifiable_event_req(ast: &mut DeriveInput) -> 
 		if let Meta::List(MetaList { path, tokens, .. }) = &mut attr.meta {
 			let ident = path.get_ident();
 			if ident.unwrap() != "externally_notifiable" {
-				panic!("MetaList is allowed only for aggregate!");
+				return None;
 			}
 
 			// * Asserting that the given type is TAggregate

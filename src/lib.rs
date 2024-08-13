@@ -73,7 +73,6 @@
 //! clients.
 //!
 //! ```rust,no_run
-//! use ruva::TEventHandler;
 //! pub struct MessageBus {
 //! event_handler: &'static TEventHandler<ApplicationResponse, ApplicationError>,
 //! }
@@ -82,16 +81,31 @@
 //! fn command_handler(
 //!     &self,
 //!     context_manager: ruva::AtomicContextManager,
-//! ) -> Box<dyn ruva::TCommandService<ApplicationResponse, ApplicationError, C>> {
-//!     Box::new(
+//!     cmd: C,
+//! ) -> impl ruva::TCommandService<ApplicationResponse, ApplicationError> {
 //!         HighestLevelOfAspectThatImplementTCommandService::new(
 //!             MidLevelAspectThatImplementTCommandService::new(
-//!                 TargetServiceThatImplementTCommandService
+//!                 TargetServiceThatImplementTCommandService::new(cmd,other_depdendency)
 //!             )
 //!         )
-//!     )
 //! }
 //! }
+//! ```
+//! For your convenience, Ruva provides declarative macros that handles transaction unit of work as you can use it as follows:
+//!
+//! ```rust
+//! ruva::register_uow_services!(
+//!     MessageBus,
+//!     ServiceResponse,
+//!     ServiceError,
+//!
+//!     //Command => handler mapping
+//!     CreateUserAccount => create_user_account,
+//!     UpdatePassword => update_password,
+//!     MakeOrder => make_order,
+//!     DeliverProduct => deliver_product
+//! )
+//!
 //! ```
 //!
 //! ## Registering Event
