@@ -89,3 +89,37 @@ fn test_unit_command() {
 	fn fn_accept_t_command<T: ruva::TCommand>(_: T) {}
 	fn_accept_t_command(UnitCommand);
 }
+
+#[test]
+fn test_into_command_with_tevent() {
+	#[aggregate]
+	struct SomeOtherThing {
+		id: i32,
+	}
+
+	#[allow(dead_code)]
+	#[warn(deprecated)]
+	#[deny(invalid_atomic_ordering)]
+	#[into_command(command(ruva::TEvent, Clone,))]
+	#[externally_notifiable(SomeOtherThing)]
+	#[internally_notifiable]
+	struct SomeCommand {
+		#[required_input]
+		#[identifier]
+		id: i32,
+		name: String,
+		foo: i32,
+	}
+
+	let command = SomeCommand { id: 1, name: "migo".into(), foo: 2 };
+
+	let metadata = command.metadata();
+	assert_eq!(metadata.aggregate_id, "1");
+	assert_eq!(metadata.aggregate_name, "SomeOtherThing");
+	assert_eq!(metadata.topic, "SomeCommand");
+	assert!(command.externally_notifiable());
+	assert!(command.internally_notifiable());
+
+	let serilaized = serde_json::to_string(&command).unwrap();
+	assert_eq!(serilaized, "{\"id\":1,\"Name\":\"migo\",\"foo\":2}".to_string());
+}

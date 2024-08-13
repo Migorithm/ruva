@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::{parse_macro_input, punctuated::Punctuated, Data, DataStruct, DeriveInput, Fields};
+use syn::{parse_macro_input, punctuated::Punctuated, Attribute, Data, DataStruct, DeriveInput, Fields};
 
 use crate::{
 	helpers::{derive_helpers::add_derive_macros, generic_helpers::add_sync_trait_bounds},
@@ -168,18 +168,21 @@ fn parse_attributes(attrs: &proc_macro::TokenStream) -> (Vec<String>, Vec<String
 	}
 
 	let re = regex::Regex::new(r"(command|body)\(([^)]+)\)").unwrap();
+
 	for cap in re.captures_iter(&attr) {
 		// Capture the type (either command or body)
 		let where_to_place = &cap[1];
 		// Capture the content inside the parentheses
-		let content = &cap[2];
+		let content = &cap[2].trim_end_matches(',');
+
 		for macro_to_add in content.split(',') {
-			let trimmed = macro_to_add.trim().split("::").last().unwrap();
+			let mcr = macro_to_add.trim();
+			let trimmed = mcr.split("::").last().unwrap();
 
 			if where_to_place == "body" && !normalized_body_macro.contains(&trimmed.to_string()) {
-				macros_to_inject_to_body.push(macro_to_add.to_string());
+				macros_to_inject_to_body.push(mcr.to_string());
 			} else if where_to_place == "command" && !normalized_command_macro.contains(&trimmed.to_string()) {
-				macros_to_inject_to_original.push(macro_to_add.to_string());
+				macros_to_inject_to_original.push(mcr.to_string());
 			}
 		}
 	}
@@ -187,7 +190,47 @@ fn parse_attributes(attrs: &proc_macro::TokenStream) -> (Vec<String>, Vec<String
 	(macros_to_inject_to_body, macros_to_inject_to_original)
 }
 
+fn reorder_attributes(input: &mut DeriveInput) {
+	const LINT_GROUPS: [&str; 3] = ["allow", "warn", "deny"];
+
+	// Temporary storage for the attributes we care about
+	let mut derive_attr: Option<Attribute> = None;
+	let internally_notifiable_attr: Option<Attribute> = None;
+
+	// Collect the other attributes
+	let mut other_attrs = vec![];
+
+	for attr in input.attrs.drain(..) {
+		if let syn::Meta::List(meta_list) = &attr.meta {
+			if meta_list.path.is_ident("derive") {
+				derive_attr = Some(attr);
+			}
+			// If LINT-related attribute, skip it
+			else if LINT_GROUPS.contains(&meta_list.path.get_ident().unwrap().to_string().as_str()) {
+			} else {
+				other_attrs.push(attr);
+			}
+		} else {
+			other_attrs.push(attr);
+		}
+	}
+
+	// Add the `#[derive(...)]` attribute first, if it exists
+	if let Some(attr) = derive_attr {
+		input.attrs.push(attr);
+	}
+
+	// Then add the `#[internally_notifiable]` attribute, if it exists
+	if let Some(attr) = internally_notifiable_attr {
+		input.attrs.push(attr);
+	}
+
+	// Finally, add any other attributes
+	input.attrs.extend(other_attrs);
+}
+
 pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	// println!("{:?}", input);
 	let (macros_to_inject_to_body, macros_to_inject_to_original) = parse_attributes(&attrs);
 
 	let mut ast = parse_macro_input!(input as DeriveInput);
@@ -197,6 +240,13 @@ pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::To
 	let (body_ast, into_statement) = into_command_body(&ast);
 	if let Some(mut body_ast) = body_ast {
 		add_derive_macros(&mut body_ast, &macros_to_inject_to_body);
+
+		if macros_to_inject_to_original.contains(&"ruva::TEvent".to_string()) {
+			body_ast.attrs.retain(|attr| !attr.path().is_ident("externally_notifiable"));
+			skip_given_attribute(&mut body_ast, "identifier");
+			body_ast.attrs.retain(|attr| !attr.path().is_ident("internally_notifiable"));
+		}
+
 		quotes.push(quote!(#body_ast));
 		quotes.push(quote!(#into_statement));
 	}
@@ -206,8 +256,15 @@ pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::To
 	add_sync_trait_bounds(&mut ast.generics, &COMMAND_CONSTRAINT);
 
 	let t_command = declare_command(&mut ast);
-	quotes.push(quote!(#ast));
 	quotes.push(quote!(#t_command));
+
+	if macros_to_inject_to_original.contains(&"ruva::TEvent".to_string()) {
+		reorder_attributes(&mut ast);
+	}
+
+	quotes.push(quote!(
+		#ast
+	));
 
 	quote!(
 		#(#quotes)*
