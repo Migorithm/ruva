@@ -73,8 +73,8 @@ macro_rules! __register_uow_services_internal {
         type ApplicationResult = std::result::Result<$response,$error>;
 
         $(
-            impl<'a> ruva::TGetHandler<&'a mut ::ruva::SqlRepository, ApplicationResult> for $command {
-                fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::SqlRepository, ApplicationResult > {
+            impl<'a> ruva::TGetHandler<&'a mut ::ruva::Context, ApplicationResult> for $command {
+                fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::Context, ApplicationResult > {
                     $handler
                 }
             }
@@ -85,7 +85,7 @@ macro_rules! __register_uow_services_internal {
                     context_manager: ruva::AtomicContextManager,
                     cmd: $command,
                 ) -> impl ::ruva::TCommandService<$response, $error> {
-                    $h(::ruva::CommandHandler((cmd, ::ruva::SqlRepository::new(context_manager))))
+                    $h(::ruva::CommandHandler((cmd, ::ruva::Context::new(context_manager))))
                 }
             }
         )*

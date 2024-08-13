@@ -18,8 +18,8 @@ pub mod prelude {
 	pub use crate::bus_components::messagebus::*;
 	pub use crate::message::*;
 	pub use crate::outbox::OutBox;
-	#[cfg(feature = "sqlx-postgres")]
-	pub use crate::rdb::repository::SqlRepository;
+
+	pub use crate::repository::Context;
 	pub use crate::repository::TRepository;
 
 	pub use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
