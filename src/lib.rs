@@ -224,4 +224,4 @@ pub use ruva_core::register_uow_services;
 pub use ruva_core::prelude::*;
 pub use ruva_core::prepare_bulk_operation;
 
-pub use ruva_macro::{aggregate, entity, event_hook, into_command, ApplicationError, ApplicationResponse, TConstruct, TEvent, TRepository};
+pub use ruva_macro::{aggregate, entity, event_hook, into_command, ApplicationError, ApplicationResponse, TConstruct, TEvent};

@@ -1,7 +1,5 @@
 use message::{extract_externally_notifiable_event_req, render_event_visibility, render_message_token};
-
 use proc_macro::TokenStream;
-
 use syn::{parse_macro_input, DeriveInput, ItemFn};
 
 #[macro_use]
@@ -9,11 +7,9 @@ extern crate quote;
 mod command;
 mod construct;
 mod domain;
-
 mod handler;
 mod helpers;
 mod message;
-mod repository;
 mod result;
 mod utils;
 
@@ -201,20 +197,17 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 /// }
 ///
 /// async fn test_event_hook() {
-///     '_given: {
+///     //GIVEN
 ///         let mut repo = SqlRepository::new(SQLExecutor::new());
 ///         let mut aggregate = TestAggregate::default().set_age(64);
 ///         aggregate.raise_event(SomeEvent { id: aggregate.age }.to_message());
 ///
-///         '_when: {
-///             let _ = repo.update(&mut aggregate).await;
-///             let events = repo.get_events();
+///     //WHEN
+///         let _ = repo.update(&mut aggregate).await;
+///         let events = repo.get_events();
 ///
-///             '_then: {
-///                 assert!(!events.is_empty())
-///             }
-///         }
-///     }
+///     //THEN
+///         assert!(!events.is_empty())
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -281,13 +274,6 @@ pub fn entity(attrs: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn into_command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 	command::render_into_command(input, attrs)
-}
-
-#[proc_macro_derive(TRepository)]
-pub fn repository_derive(attr: TokenStream) -> TokenStream {
-	let ast: DeriveInput = syn::parse(attr.clone()).unwrap();
-
-	repository::render_repository_token(&ast)
 }
 
 // what if I want attribute to be #[ruva(except)]?
