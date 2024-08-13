@@ -3,7 +3,7 @@
 //! [TCommand]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TCommand.html
 //! [TEvent]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
 //! [TMessageBus]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/trait.TMessageBus.html
-//! [Context]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
+//! [ContextManager]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/struct.ContextManager.html
 //! [AtomicContextManager]: https://docs.rs/ruva-core/latest/ruva_core/messagebus/type.AtomicContextManager.html
 //! [TCommandService]: https://docs.rs/ruva-core/latest/ruva_core/handler/trait.TCommandService.html
 //! [TCommitHook]: https://docs.rs/ruva-core/latest/ruva_core/unit_of_work/trait.TCommitHook.html
@@ -40,15 +40,14 @@
 //! ```rust,no_run
 //! use serde::Serialize;
 //! use serde::Deserialize;
-//! use ruva::TEvent;
 //!
-//! #[derive(Serialize, Deserialize, Clone, TEvent)]
+//! #[derive(Serialize, Deserialize, Clone, ruva::TEvent)]
 //! #[internally_notifiable]
 //! pub struct OrderFailed {
 //!     pub user_id: i64,
 //! }
 //!
-//! #[derive(Serialize, Deserialize, Clone, TEvent)]
+//! #[derive(Serialize, Deserialize, Clone, ruva::TEvent)]
 //! #[externally_notifiable]
 //! pub struct OrderSucceeded{
 //!     #[identifier]
@@ -132,7 +131,7 @@
 //! );
 //! ```
 //! In the `MakeOrder` TCommand Handling, we have either `OrderFailed` or `OrderSucceeded` event with their own processing handlers.
-//! Events are raised in the handlers that are thrown to [TMessageBus] by [Context].
+//! Events are raised in the handlers that are thrown to [TMessageBus] by [ContextManager].
 //! [TMessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
 //!
 //! ## Handler API Example
@@ -189,7 +188,7 @@
 //!     ApplicationResponse,
 //!     ApplicationError,
 //!     |ctx| your_dependency(ctx),
-//!     
+//!
 //!     SomethingHappened:[
 //!         handle_this_event_handler1,
 //!         handle_this_event_handler2,

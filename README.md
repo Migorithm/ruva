@@ -3,7 +3,7 @@
 [into_command]: https://docs.rs/ruva-macro/latest/ruva_macro/attr.into_command.html
 [TEvent]: https://docs.rs/ruva-core/latest/ruva_core/message/trait.TEvent.html
 [MessageBus]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/messagebus/index.html
-[Context]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/contexts/struct.ContextManager.html
+[ContextManager]: https://docs.rs/ruva-core/latest/ruva_core/bus_components/contexts/struct.ContextManager.html
 [TCommandService]: https://docs.rs/ruva-core/latest/ruva_core/handler/trait.TCommandService.html
 
 
@@ -126,7 +126,7 @@ init_event_handler!(
 );
 ```
 In the `MakeOrder` TCommand Handling, we have either `OrderFailed` or `OrderSucceeded` event with their own processing handlers.
-Events are raised in the handlers that are thrown to [MessageBus] by [Context].
+Events are raised in the handlers that are thrown to [MessageBus] by [ContextManager].
 [MessageBus] then loops through the handlers UNLESS `StopSentinel` is received.
 
 ## Handler API Example(Doc required)

@@ -107,6 +107,7 @@ fn test_into_command_with_tevent() {
 		#[required_input]
 		#[identifier]
 		id: i32,
+		#[serde(rename = "Name")]
 		name: String,
 		foo: i32,
 	}

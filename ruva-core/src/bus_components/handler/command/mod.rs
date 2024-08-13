@@ -16,7 +16,7 @@
 pub mod uow;
 use crate::{
 	message::TCommand,
-	prelude::{ApplicationError, ApplicationResponse, BaseError, TCommandService, TRepository, TUnitOfWork},
+	prelude::{ApplicationError, ApplicationResponse, BaseError, TCommandService, TSetCurrentEvents, TUnitOfWork},
 };
 pub use uow::*;
 

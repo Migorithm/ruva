@@ -8,7 +8,7 @@ pub trait TUnitOfWorkCommandHandler: Send + Sync {
 impl<D1, D2> TUnitOfWorkCommandHandler for CommandHandler<(D1, D2)>
 where
 	D1: crate::prelude::TCommand,
-	D2: crate::prelude::TRepository + crate::prelude::TUnitOfWork,
+	D2: crate::prelude::TSetCurrentEvents + crate::prelude::TUnitOfWork,
 {
 	type Dependency = (D1, D2);
 
@@ -22,7 +22,7 @@ where
 	R: ApplicationResponse,
 	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::Into<BaseError> + Clone,
 	D1: TCommand + for<'a> TGetHandler<&'a mut D2, Result<R, E>>,
-	D2: TRepository + TUnitOfWork,
+	D2: TSetCurrentEvents + TUnitOfWork,
 	T: TUnitOfWorkCommandHandler<Dependency = (D1, D2)>,
 {
 	async fn execute(self) -> Result<R, E> {
@@ -44,7 +44,7 @@ where
 				dep.close().await;
 
 				if let BaseError::StopSentinelWithEvent(event) = err.clone().into() {
-					dep.set_events(vec![event.clone()].into());
+					dep.set_current_events(vec![event.clone()].into());
 					dep.process_internal_events().await?;
 					dep.process_external_events().await?;
 					Err(BaseError::StopSentinelWithEvent(event).into())
@@ -73,8 +73,8 @@ macro_rules! __register_uow_services_internal {
         type ApplicationResult = std::result::Result<$response,$error>;
 
         $(
-            impl<'a> ruva::TGetHandler<&'a mut ::ruva::SqlRepository, ApplicationResult> for $command {
-                fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::SqlRepository, ApplicationResult > {
+            impl<'a> ruva::TGetHandler<&'a mut ::ruva::Context, ApplicationResult> for $command {
+                fn get_handler() -> impl ::ruva::AsyncFunc<$command, &'a mut ::ruva::Context, ApplicationResult > {
                     $handler
                 }
             }
@@ -85,7 +85,7 @@ macro_rules! __register_uow_services_internal {
                     context_manager: ruva::AtomicContextManager,
                     cmd: $command,
                 ) -> impl ::ruva::TCommandService<$response, $error> {
-                    $h(::ruva::CommandHandler((cmd, ::ruva::SqlRepository::new(context_manager))))
+                    $h(::ruva::CommandHandler((cmd, ::ruva::Context::new(context_manager))))
                 }
             }
         )*
