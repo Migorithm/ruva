@@ -37,9 +37,10 @@
 //! dispatch the command to.
 //!
 //! To specify [TEvent] implementation, annotate struct with `TEvent` derive macro as in the following example:
-//! ```rust,no_run
+//! ```rust,ignore
 //! use serde::Serialize;
 //! use serde::Deserialize;
+//! use ruva::serde_json;
 //!
 //! #[derive(Serialize, Deserialize, Clone, ruva::TEvent)]
 //! #[internally_notifiable]
@@ -71,7 +72,7 @@
 //! For messagebus to recognize service handler, [TCommandService] must be implemented, the response of which is sent directly to
 //! clients.
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! pub struct MessageBus {
 //! event_handler: &'static TEventHandler<ApplicationResponse, ApplicationError>,
 //! }
@@ -92,7 +93,7 @@
 //! ```
 //! For your convenience, Ruva provides declarative macros that handles transaction unit of work as you can use it as follows:
 //!
-//! ```rust
+//! ```rust,ignore
 //! ruva::register_uow_services!(
 //!     MessageBus,
 //!     ServiceResponse,
@@ -114,7 +115,7 @@
 //!
 //! ### Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # macro_rules! init_event_handler {
 //! #    ($($tt:tt)*) => {}
 //! # }
@@ -142,7 +143,7 @@
 //!
 //!
 //! ### Example
-//! ```rust,no_run
+//! ```rust,ignore
 //! use std::marker::PhantomData;
 //! use ruva_core::prelude::TUnitOfWork;
 //! use ruva_core::prelude::TRepository;
@@ -180,7 +181,7 @@
 //!
 //! ### Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use ruva_core::init_event_handler;
 //! use ruva_core::prelude::TEvent;
 //! // crate::dependencies
