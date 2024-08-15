@@ -1,6 +1,7 @@
 mod aggregate;
 mod backtrace;
 mod bus_components;
+
 mod message;
 mod outbox;
 mod rdb;
@@ -16,6 +17,7 @@ pub mod prelude {
 
 	pub use crate::bus_components::handler::*;
 	pub use crate::bus_components::messagebus::*;
+
 	pub use crate::message::*;
 	pub use crate::outbox::OutBox;
 
