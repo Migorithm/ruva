@@ -1,9 +1,9 @@
 name: CI Test
-on: 
+on:
   push:
     branches-ignore:
-      - "main"
-      
+      - main  
+
 jobs:
   ci-test:
     runs-on: ubuntu-latest
