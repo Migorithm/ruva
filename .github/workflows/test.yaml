@@ -17,8 +17,7 @@ jobs:
         toolchain: stable
         components: rustfmt, clippy
         override: true
-
-
+        
     - name: formatting
       uses: actions-rs/cargo@v1
       with:
