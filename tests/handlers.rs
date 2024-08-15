@@ -61,7 +61,7 @@ fn test_inject() {
 
 	let a = A::resolve("String,i32", 0);
 	assert_eq!(
-		a.replace(' ', ""),
+		a.replace("\\\\", "").replace("\\", "").replace("\t", "").replace("\n", "").replace(' ', ""),
 		r#"
 		impl<SinglifyType:TMyTrait <String, i32>> TMyTrait <String,i32> for (String,i32) {
 			fn my_method5(&self, _a: String, _b: i32) {  

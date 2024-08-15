@@ -86,17 +86,16 @@ pub(crate) fn render_inject(input: TokenStream, _attrs: TokenStream) -> TokenStr
 				.sig
 				.inputs
 				.iter()
-				.skip(1)
-				.map(|arg| match arg {
+				.flat_map(|arg| match arg {
 					FnArg::Typed(pat_type) => {
 						let pat = pat_type.pat.to_token_stream().to_string();
 						if pat.contains("self") {
-							"".to_string()
+							None
 						} else {
-							pat
+							Some(pat)
 						}
 					}
-					_ => "".to_string(),
+					_ => None,
 				})
 				.collect::<Vec<String>>()
 				.join(", ");
