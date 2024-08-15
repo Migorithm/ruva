@@ -3,10 +3,13 @@ on:
   push:
     branches-ignore:
       - "main"
-
+    branches:
+      - "*"
+      
 jobs:
   ci-test:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -19,24 +22,20 @@ jobs:
         components: rustfmt, clippy
         override: true
 
-    - name: formatting
+    - name: Formatting
       uses: actions-rs/cargo@v1
       with:
         command: fmt
         args: --all -- --check
 
-
-    - name: linting
+    - name: Linting
       uses: actions-rs/cargo@v1
       with:
         command: clippy
         args: -- -D warnings
 
-    - name: Test 
+    - name: Test
       uses: actions-rs/cargo@v1
       with:
         command: test
         args: --locked -- --test-threads 1 --nocapture
-        
-
-    
