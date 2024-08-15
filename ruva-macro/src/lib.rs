@@ -9,6 +9,7 @@ mod construct;
 mod domain;
 mod handler;
 mod helpers;
+mod injectable;
 mod message;
 mod result;
 mod utils;
@@ -282,4 +283,9 @@ pub fn derive_construct(input: TokenStream) -> TokenStream {
 	let mut input = parse_macro_input!(input as DeriveInput);
 
 	construct::expand_derive_construct(&mut input).unwrap_or_else(syn::Error::into_compile_error).into()
+}
+
+#[proc_macro_attribute]
+pub fn injectable(attrs: TokenStream, input: TokenStream) -> TokenStream {
+	injectable::render_injectable(input, attrs)
 }
