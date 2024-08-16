@@ -43,7 +43,7 @@ fn test_resolve() {
 fn test_message_handler_without_generic() {
 	//WHEN
 	#[ruva::message_handler]
-	async fn my_handler(a: String, b: i32, c: i32) -> (i32, i32) {
+	fn my_handler(a: String, b: i32, c: i32) -> (i32, i32) {
 		(b, c)
 	}
 
@@ -60,7 +60,7 @@ fn test_message_handler_with_generic() {
 	#[ruva::message_handler]
 	async fn my_handler_with_generic<T: TMyTrait<i32, i32>>(a: String, b: i32, c: T) {
 		c.my_method5(b, b);
-		(c, b).my_method5(b, b)
+		(c, b).my_method5(b, b);
 	}
 
 	//THEN input tuplified

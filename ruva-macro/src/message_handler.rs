@@ -6,6 +6,10 @@ use quote::ToTokens;
 use syn::{parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, FnArg, ImplItem, ItemFn, ItemImpl};
 
 static TRAIT_IMPL_COUNTER: LazyLock<std::sync::Arc<std::sync::RwLock<HashMap<String, i8>>>> = LazyLock::new(Default::default);
+fn raise_impl_counter(key: &str) {
+	let mut guard = TRAIT_IMPL_COUNTER.write().unwrap();
+	*guard.entry(key.to_string()).or_insert(0) += 1;
+}
 
 fn impl_generator(trait_info: &syn::Path, redeined_methods: &[String]) -> TokenStream2 {
 	(2..6)
@@ -21,11 +25,6 @@ fn impl_generator(trait_info: &syn::Path, redeined_methods: &[String]) -> TokenS
 			}
 		})
 		.collect()
-}
-
-fn raise_impl_counter(key: &str) {
-	let mut guard = TRAIT_IMPL_COUNTER.write().unwrap();
-	*guard.entry(key.to_string()).or_insert(0) += 1;
 }
 
 pub(crate) fn render_inject(input: TokenStream, _attrs: TokenStream) -> TokenStream {
@@ -114,12 +113,38 @@ fn render_proxy_handler(input: &ItemFn, tuple_dep: &FnArg) -> ItemFn {
 	let first_arg: syn::FnArg = input.sig.inputs.first().cloned().unwrap();
 
 	let args: Punctuated<FnArg, Comma> = [first_arg.clone(), tuple_dep.clone()].into_iter().collect();
+	let mut dedupled_args: Vec<syn::Ident> = vec![];
+
+	args.iter().for_each(|arg| match arg {
+		FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
+			syn::Pat::Ident(pat) => dedupled_args.push(pat.ident.clone()),
+			syn::Pat::Tuple(tuple) => dedupled_args.extend(tuple.elems.iter().map(|elem| syn::parse_quote! { #elem }).collect::<Vec<_>>()),
+			_ => panic!("Error!"),
+		},
+
+		_ => panic!("Error!"),
+	});
 
 	// render message_handler
 	// change the name of message_handler to __original_name
 	let mut message_handler = input.clone();
+	let asyncness = input.sig.asyncness;
+
 	message_handler.sig.ident = syn::Ident::new(&format!("__{}", message_handler.sig.ident), proc_macro2::Span::call_site());
 	message_handler.sig.inputs = args;
+
+	// ! Optimization - change body so it internally calls original method
+	let original_name = &input.sig.ident;
+	let token = format!(
+		"{}({}){}",
+		original_name,
+		dedupled_args.iter().map(|d| d.to_string()).collect::<Vec<_>>().join(","),
+		if asyncness.is_some() { ".await" } else { "" }
+	);
+
+	let expr = syn::parse_str::<syn::Expr>(&token).expect("Error!");
+
+	message_handler.block = parse_quote!( { #expr });
 	message_handler
 }
 
@@ -131,11 +156,8 @@ pub(crate) fn render_message_handler(input: TokenStream) -> TokenStream {
 	let proxy_handler = render_proxy_handler(&input, &tuple_dep);
 
 	let quote = quote!(
-
 		#input
-
 		#proxy_handler
-
 	);
 
 	quote.into()
