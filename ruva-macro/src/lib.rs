@@ -10,8 +10,8 @@ mod construct;
 mod domain;
 mod handler;
 mod helpers;
-mod injectable;
 mod message;
+mod message_handler;
 mod result;
 mod utils;
 
@@ -287,40 +287,11 @@ pub fn derive_construct(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn injectable(attrs: TokenStream, input: TokenStream) -> TokenStream {
-	injectable::render_injectable(input, attrs)
+pub fn inject(attrs: TokenStream, input: TokenStream) -> TokenStream {
+	message_handler::render_inject(input, attrs)
 }
 
-//pub(crate) trait __TMyTraitStringi32Resolver {
-//	fn resolve(types: &str, order: usize) -> String;
-//}
-//
-//impl<T: TMyTrait<String, i32>> __TMyTraitStringi32Resolver for T {
-//	fn resolve(types: &str, order: usize) -> String {
-//		format!(
-//			r#"""
-//			impl<T: MyTrait<String,i32>> TMyTrait<String,i32> for ({types}) {{
-//				fn my_method(&self) {{
-//					self.{order}.my_method()
-//				}}
-//				fn my_method2(&mut self) {{
-//					self.{order}.my_method2()
-//				}}
-//				fn my_method3(&self,_a:i32) {{
-//					self.{order}.my_method3(_a)
-//				}}
-//				fn my_method4(self,_a:i32) {{
-//					self.{order}.my_method4(_a)
-//				}}
-//				fn my_method5(&self,_a:String,_b:i32) {{
-//					self.{order}.my_method5(_a,_b)
-//				}}
-//			}}
-//		"""#
-//		)
-//	}
-//}
 #[proc_macro_attribute]
-pub fn inject(attrs: TokenStream, input: TokenStream) -> TokenStream {
-	injectable::render_inject(input, attrs)
+pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
+	message_handler::render_message_handler(input)
 }

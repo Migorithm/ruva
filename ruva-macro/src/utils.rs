@@ -1,5 +1,4 @@
 use std::borrow::Borrow;
-
 use syn::{parse_quote, punctuated::Punctuated, token::Comma, DataEnum, DeriveInput, Field, FieldsNamed, Ident, Meta, Path, Stmt, Type, Variant};
 
 pub(crate) fn locate_crate_on_derive_macro(ast: &DeriveInput) -> Ident {

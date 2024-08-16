@@ -1,82 +1,78 @@
 #![allow(unused)]
-use ruva::serde_json;
+pub trait TMyTrait<T, U> {
+	fn my_method5(&self, a: T, b: U);
+	fn my_method(&self) -> impl std::future::Future<Output = ()>;
+}
+struct A;
 
-#[test]
-fn test_injectable_trait() {
-	#[ruva::injectable]
-	pub trait TMyTrait<T, U> {
-		fn my_method(&self);
-		fn my_method2(&mut self);
-		fn my_method3(&self, a: i32);
-		fn my_method4(self, a: U);
-		fn my_method5(&self, a: T, b: U);
-	}
+#[ruva::inject]
+impl TMyTrait<i32, i32> for A {
+	fn my_method5(&self, _a: i32, _b: i32) {}
+	async fn my_method(&self) {}
+}
 
-	struct A;
+struct B;
 
-	#[ruva::inject]
-	impl TMyTrait<String, i32> for A {
-		fn my_method(&self) {}
-		fn my_method2(&mut self) {}
-		fn my_method3(&self, _a: i32) {}
-		fn my_method4(self, _a: i32) {}
-		fn my_method5(&self, _a: String, _b: i32) {}
-	}
-	fn func_take_my_trait<T: TMyTrait<String, i32>>((_t, _d): (T, i32)) {
-		let method_info: &str = T::__RV_M_SIGNATURE;
-		assert_eq!(
-			method_info.replace(' ', ""),
-			"fnmy_method(&self)▁DLM▁fnmy_method2(&mutself)▁DLM▁fnmy_method3(&self,a:i32)▁DLM▁fnmy_method4(self,a:U)▁DLM▁fnmy_method5(&self,a:T,b:U)"
-		);
-
-		let generic_mapper: &str = T::__RV_G_MAP;
-		let mapper = serde_json::from_str::<serde_json::Value>(generic_mapper).unwrap();
-
-		let method_applied_to_first_generic = &mapper["T"];
-		assert_eq!(*method_applied_to_first_generic, serde_json::json!([["my_method5", 1]]));
-
-		let method_applied_to_second_generic = &mapper["U"];
-		assert_eq!(*method_applied_to_second_generic, serde_json::json!([["my_method4", 1], ["my_method5", 2]]));
-
-		let a = T::resolve("T,i32", 0);
-		println!("{}", a);
-	}
-
-	func_take_my_trait((A, 2));
+#[ruva::inject]
+impl TMyTrait<i32, i32> for B {
+	fn my_method5(&self, _a: i32, _b: i32) {}
+	async fn my_method(&self) {}
 }
 
 #[test]
-fn test_inject() {
-	pub trait TMyTrait<T, U> {
-		fn my_method5(&self, a: T, b: U);
-		fn my_method(&self) -> impl std::future::Future<Output = ()> + Send;
-	}
-	struct A;
+fn test_resolve() {
+	let a = A;
 
-	#[ruva::inject]
-	impl TMyTrait<String, i32> for A {
-		fn my_method5(&self, _a: String, _b: i32) {}
-		async fn my_method(&self) {}
+	let b = (a, 1);
+	b.my_method5(1, 1);
+
+	let x = (B, A);
+	x.my_method5(1, 2);
+
+	let c = (A, 1, 2);
+	c.my_method5(1, 2);
+
+	let d = (A, 1, 2, "a".to_string());
+	d.my_method5(1, 2);
+
+	let e = (A, 1, 2, "a".to_string(), 1.0);
+	e.my_method5(1, 2);
+}
+
+#[test]
+fn test_message_handler_without_generic() {
+	//WHEN
+	#[ruva::message_handler]
+	async fn my_handler(a: String, b: i32, c: i32) -> (i32, i32) {
+		(b, c)
 	}
 
-	let a = A::resolve("String,i32", 0);
-	assert_eq!(
-		a.replace("\\\\", "").replace("\\", "").replace("\t", "").replace("\n", "").replace(' ', ""),
-		r#"
-		impl<SinglifyType:TMyTrait <String, i32>> TMyTrait <String,i32> for (String,i32) {
-			fn my_method5(&self, _a: String, _b: i32) {  
-				self.▁▁▁.my_method5(_a, _b)}  
-			async fn my_method(& self) { 
-				await self.▁▁▁.my_method()
-				}
-		}
-		"#
-		.replace("\\\\", "")
-		.replace("\\", "")
-		.replace("\t", "")
-		.replace("\n", "")
-		.replace(" ", "")
-	);
+	//THEN input tuplified
+	_ = __my_handler(1.to_string(), (1, 2));
+	_ = my_handler(1.to_string(), 1, 2);
+}
+
+#[test]
+fn test_message_handler_with_generic() {
+	//GIVEN
+
+	//WHEN
+	#[ruva::message_handler]
+	async fn my_handler_with_generic<T: TMyTrait<i32, i32>>(a: String, b: i32, c: T) {
+		c.my_method5(b, b);
+		(c, b).my_method5(b, b)
+	}
+
+	//THEN input tuplified
+	_ = __my_handler_with_generic(1.to_string(), (1, A));
+	_ = __my_handler_with_generic(1.to_string(), (1, B));
+
+	_ = my_handler_with_generic(1.to_string(), 1, A);
+
+	//adding `ruva::message_handler` means that tuplified type implement the generic too.
+	fn func_take_my_trait<T: TMyTrait<i32, i32>>((a, b): (T, i32)) {
+		(a, b).my_method5(b, b);
+	}
 }
 
 #[test]
@@ -91,7 +87,7 @@ fn test_tuplified_trait() {
 		}
 	}
 
-	impl<T: TTrait> TTrait for (T, i32) {
+	impl<T: TTrait, U> TTrait for (T, U) {
 		fn my_method(&self) {
 			self.0.my_method()
 		}
@@ -99,5 +95,40 @@ fn test_tuplified_trait() {
 
 	fn func_take_my_trait<T: TTrait>((a, b): (T, i32)) {
 		(a, b).my_method();
+	}
+	fn func_take_my_trait2<T: TTrait>((a, b): (i32, T)) {
+		(b, a).my_method();
+	}
+
+	let a = || {
+		struct B;
+		impl TTrait for B {
+			fn my_method(&self) {
+				println!("Hello");
+			}
+		}
+		func_take_my_trait((B, 1));
+	};
+}
+
+#[test]
+fn test_tuplified_generic_trait() {
+	trait TTrait<T, U> {
+		fn m1(&self, a: T);
+		fn m2(&self, b: U);
+	}
+	struct A;
+
+	#[ruva::inject]
+	impl TTrait<i32, String> for A {
+		fn m1(&self, _a: i32) {}
+		fn m2(&self, _b: String) {}
+	}
+
+	fn func_take_my_trait<T: TTrait<i32, String>>((a, b): (T, i32)) {
+		(a, b).m1(b);
+	}
+	fn func_take_my_trait2<T: TTrait<i32, String>>((a, b): (i32, T)) {
+		(b, a).m2("a".into());
 	}
 }

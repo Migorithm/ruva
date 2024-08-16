@@ -230,7 +230,6 @@ fn reorder_attributes(input: &mut DeriveInput) {
 }
 
 pub fn render_into_command(input: proc_macro::TokenStream, attrs: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	// println!("{:?}", input);
 	let (macros_to_inject_to_body, macros_to_inject_to_original) = parse_attributes(&attrs);
 
 	let mut ast = parse_macro_input!(input as DeriveInput);
