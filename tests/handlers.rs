@@ -5,7 +5,7 @@ pub trait TMyTrait<T, U> {
 }
 struct A;
 
-#[ruva::inject]
+#[ruva_macro::inject]
 impl TMyTrait<i32, i32> for A {
 	fn my_method5(&self, _a: i32, _b: i32) {}
 	async fn my_method(&self) {}
@@ -13,7 +13,7 @@ impl TMyTrait<i32, i32> for A {
 
 struct B;
 
-#[ruva::inject]
+#[ruva_macro::inject]
 impl TMyTrait<i32, i32> for B {
 	fn my_method5(&self, _a: i32, _b: i32) {}
 	async fn my_method(&self) {}
@@ -42,7 +42,7 @@ fn test_resolve() {
 #[test]
 fn test_message_handler_without_generic() {
 	//WHEN
-	#[ruva::message_handler]
+	#[ruva_macro::message_handler]
 	fn my_handler(a: String, b: i32, c: i32) -> (i32, i32) {
 		(b, c)
 	}
@@ -57,7 +57,7 @@ fn test_message_handler_with_generic() {
 	//GIVEN
 
 	//WHEN
-	#[ruva::message_handler]
+	#[ruva_macro::message_handler]
 	async fn my_handler_with_generic<T: TMyTrait<i32, i32>>(a: String, b: i32, c: T) {
 		c.my_method5(b, b);
 		(c, b).my_method5(b, b);
@@ -119,7 +119,7 @@ fn test_tuplified_generic_trait() {
 	}
 	struct A;
 
-	#[ruva::inject]
+	#[ruva_macro::inject]
 	impl TTrait<i32, String> for A {
 		fn m1(&self, _a: i32) {}
 		fn m2(&self, _b: String) {}
@@ -130,5 +130,34 @@ fn test_tuplified_generic_trait() {
 	}
 	fn func_take_my_trait2<T: TTrait<i32, String>>((a, b): (i32, T)) {
 		(b, a).m2("a".into());
+	}
+}
+
+use std::marker::PhantomData;
+
+#[test]
+fn test_tuplified_generic_trait_with_generic() {
+	trait TAspect<T, U> {
+		fn apply(&self, cmd: T) -> Result<U, ()>;
+	}
+	struct SimpleAspect;
+	struct LfRequiringAspect<'a>(&'a str);
+
+	struct Message;
+
+	struct Response;
+	struct Error;
+
+	#[ruva_macro::message_handler]
+	pub(crate) async fn custom_handler<R>(cmd: Message, repo: &mut R) -> Result<Response, Error>
+	where
+		for<'a> R: TAspect<SimpleAspect, SimpleAspect> + TAspect<LfRequiringAspect<'a>, SimpleAspect>,
+	{
+		if repo.apply(SimpleAspect).is_ok() {
+			println!("success")
+		}
+
+		repo.apply(LfRequiringAspect("Some string")).is_ok();
+		Err(Error)
 	}
 }

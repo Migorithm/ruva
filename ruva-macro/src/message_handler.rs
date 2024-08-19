@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
-use syn::{parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, FnArg, ImplItem, ItemFn, ItemImpl};
+use syn::{parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, FnArg, ImplItem, ItemFn, ItemImpl, PatParen};
 
 static TRAIT_IMPL_COUNTER: LazyLock<std::sync::Arc<std::sync::RwLock<HashMap<String, i8>>>> = LazyLock::new(Default::default);
 fn raise_impl_counter(key: &str) {
@@ -14,7 +14,10 @@ fn raise_impl_counter(key: &str) {
 fn impl_generator(trait_info: &syn::Path, redeined_methods: &[String]) -> TokenStream2 {
 	(2..6)
 		.map(|order| {
-			let redefiend_methods = redeined_methods.iter().map(|method| syn::parse_str::<syn::ItemFn>(method).expect("Error!")).collect::<Vec<_>>();
+			let redefiend_methods = redeined_methods
+				.iter()
+				.map(|method| syn::parse_str::<syn::ItemFn>(method).expect("Error occurred while generating impl!"))
+				.collect::<Vec<_>>();
 
 			let idents: Vec<_> = (2..order + 1).map(|i| syn::Ident::new(&format!("D{}", i), proc_macro2::Span::call_site())).collect();
 
@@ -32,7 +35,6 @@ pub(crate) fn render_inject(input: TokenStream, _attrs: TokenStream) -> TokenStr
 	let input = parse_macro_input!(input as ItemImpl);
 
 	// Collect the signatures of all methods in the trait
-
 	let trait_info = input.trait_.clone().unwrap().1;
 	let key = trait_info.to_token_stream().to_string();
 	raise_impl_counter(key.as_str());
@@ -119,10 +121,24 @@ fn render_proxy_handler(input: &ItemFn, tuple_dep: &FnArg) -> ItemFn {
 		FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
 			syn::Pat::Ident(pat) => dedupled_args.push(pat.ident.clone()),
 			syn::Pat::Tuple(tuple) => dedupled_args.extend(tuple.elems.iter().map(|elem| syn::parse_quote! { #elem }).collect::<Vec<_>>()),
-			_ => panic!("Error!"),
+
+			syn::Pat::Paren(PatParen { pat, .. }) => {
+				if let syn::Pat::Ident(pat) = pat.as_ref() {
+					dedupled_args.push(pat.ident.clone());
+				} else {
+					eprintln!("probably not supported yet");
+					panic!("unsupported variant of syn::Pat::PatParen given!")
+				}
+			}
+			_ => {
+				eprintln!("probably not supported yet");
+				panic!("unsupported variant of syn::Pat given!")
+			}
 		},
 
-		_ => panic!("Error!"),
+		_ => {
+			panic!("Only FnArg::Typed variant is allowed!")
+		}
 	});
 
 	// render message_handler
@@ -142,7 +158,7 @@ fn render_proxy_handler(input: &ItemFn, tuple_dep: &FnArg) -> ItemFn {
 		if asyncness.is_some() { ".await" } else { "" }
 	);
 
-	let expr = syn::parse_str::<syn::Expr>(&token).expect("Error!");
+	let expr = syn::parse_str::<syn::Expr>(&token).expect("Expression parsing failed!");
 
 	message_handler.block = parse_quote!( { #expr });
 	message_handler
