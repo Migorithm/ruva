@@ -68,7 +68,7 @@ macro_rules! make_smart_pointer {
 macro_rules! make_conversion {
 	($type_name:ident, $($target:ty),*) => {
         $(
-            impl $crate::From<$target> for $type_name {
+            impl ::core::convert::From<$target> for $type_name {
                 fn from(value: $target) -> $type_name {
                     $type_name(value.into())
                 }
@@ -76,7 +76,7 @@ macro_rules! make_conversion {
         )*
     };
 	($type_name:ident<$target:ty>) => {
-		impl $crate::From<$target> for $type_name<$target> {
+		impl ::core::convert::From<$target> for $type_name<$target> {
 			fn from(value: $target) -> $type_name<$target> {
 				$type_name(value.into())
 			}
@@ -90,7 +90,9 @@ macro_rules! error {
 		(
 
 		) => {
-			|err| {tracing::error!("{:?} {}:{}", err, file!(),line!()); err}
+			|err| {
+                ::ruva::tracing::error!("{:?} {}:{}", err, file!(),line!()); err
+            }
 		};
         (
             $stmt:expr
@@ -98,6 +100,6 @@ macro_rules! error {
             $(, $arg:expr)* $(,)?
 
         ) => {
-            tracing::error!("{} {}:{}", format!($stmt, $($arg),*),file!(),line!())
+            ::ruva::tracing::error!("{} {}:{}", format!($stmt, $($arg),*),file!(),line!())
         };
 	}
