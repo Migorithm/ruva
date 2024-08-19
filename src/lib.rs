@@ -219,10 +219,12 @@
 pub extern crate static_assertions;
 
 pub use ruva_core::__register_uow_services_internal;
+pub use ruva_core::error;
 pub use ruva_core::init_event_handler;
-pub use ruva_core::register_uow_services;
-
+pub use ruva_core::make_conversion;
+pub use ruva_core::make_smart_pointer;
 pub use ruva_core::prelude::*;
 pub use ruva_core::prepare_bulk_operation;
+pub use ruva_core::register_uow_services;
 
 pub use ruva_macro::{aggregate, entity, event_hook, into_command, ApplicationError, ApplicationResponse, TConstruct, TEvent};
