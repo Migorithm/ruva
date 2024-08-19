@@ -4,13 +4,14 @@ use syn::{parse_macro_input, DeriveInput, ItemFn};
 
 #[macro_use]
 extern crate quote;
+
 mod command;
 mod construct;
 mod domain;
 mod handler;
 mod helpers;
-mod injectable;
 mod message;
+mod message_handler;
 mod result;
 mod utils;
 
@@ -286,6 +287,11 @@ pub fn derive_construct(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn injectable(attrs: TokenStream, input: TokenStream) -> TokenStream {
-	injectable::render_injectable(input, attrs)
+pub fn inject(attrs: TokenStream, input: TokenStream) -> TokenStream {
+	message_handler::render_inject(input, attrs)
+}
+
+#[proc_macro_attribute]
+pub fn message_handler(_: TokenStream, input: TokenStream) -> TokenStream {
+	message_handler::render_message_handler(input)
 }
