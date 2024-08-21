@@ -47,10 +47,10 @@ where
 	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
 	crate::responses::BaseError: std::convert::From<E>,
 {
-	// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
+	// ! msg.topic returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 	#[cfg(feature = "tracing")]
 	{
-		tracing::info!("Processing {}...", msg.topic());
+		tracing::info!("Processing {}...", msg.topic);
 	}
 
 	let handlers = event_handler.get(&msg.metadata().topic).ok_or_else(|| {
