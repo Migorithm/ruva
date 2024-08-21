@@ -50,7 +50,7 @@ where
 	// ! msg.topic returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
 	#[cfg(feature = "tracing")]
 	{
-		tracing::info!("Processing {}...", msg.topic);
+		tracing::info!("Processing {}...", msg.metadata().topic);
 	}
 
 	let handlers = event_handler.get(&msg.metadata().topic).ok_or_else(|| {
