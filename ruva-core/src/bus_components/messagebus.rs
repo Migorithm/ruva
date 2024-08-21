@@ -48,6 +48,10 @@ where
 	crate::responses::BaseError: std::convert::From<E>,
 {
 	// ! msg.topic() returns the name of event. It is crucial that it corresponds to the key registered on Event Handler.
+	#[cfg(feature = "tracing")]
+	{
+		tracing::info!("Processing {}...", msg.topic());
+	}
 
 	let handlers = event_handler.get(&msg.metadata().topic).ok_or_else(|| {
 		tracing::error!("Unprocessable Event Given! {:?}", msg);
@@ -126,7 +130,13 @@ where
 	/// ```rust,no_run
 	/// let res = service.execute_and_wait(message).await?;
 	/// ```
+
 	async fn execute_and_wait(&self, message: C, conn: &'static dyn TConnection) -> Result<R, E> {
+		#[cfg(feature = "tracing")]
+		{
+			tracing::info!("{}", std::any::type_name::<C>());
+		}
+
 		let context_manager = ContextManager::new(conn);
 		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 
@@ -146,6 +156,11 @@ where
 	/// let res = res.result();
 	/// ```
 	async fn execute_and_forget(&self, message: C, conn: &'static dyn TConnection) -> Result<CommandResponseWithEventFutures<R, E>, E> {
+		#[cfg(feature = "tracing")]
+		{
+			tracing::info!("{}", std::any::type_name::<C>());
+		}
+
 		let context_manager = ContextManager::new(conn);
 		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };

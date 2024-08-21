@@ -33,4 +33,5 @@ backtrace = { version = "0.3.73", optional = true}
 
 [features]
 backtrace = ["dep:backtrace"]
+tracing=[]
 sqlx-postgres = ["sqlx"]
