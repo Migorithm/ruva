@@ -128,7 +128,7 @@ where
 			tracing::info!("{}", std::any::type_name::<C>());
 		}
 
-		let context_manager = ContextManager::new(conn);
+		let context_manager = Arc::new(tokio::sync::RwLock::new(ContextManager::new(conn)));
 		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 
 		// Trigger event handler
@@ -152,7 +152,7 @@ where
 			tracing::info!("{}", std::any::type_name::<C>());
 		}
 
-		let context_manager = ContextManager::new(conn);
+		let context_manager = Arc::new(tokio::sync::RwLock::new(ContextManager::new(conn)));
 		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
 
@@ -228,7 +228,7 @@ macro_rules! init_event_handler {
 				handlers.extend(vec![
 					$(
 						Box::new(
-							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ::ruva::AtomicContextManager| -> ::ruva::Future<$E> {
+							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ruva::AtomicContextManager | -> ::ruva::Future<$E> {
 								let event_handler = $event_handler(context_manager);
 								Box::pin(event_handler.$handler(
 									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.
