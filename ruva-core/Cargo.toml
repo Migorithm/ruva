@@ -1,6 +1,6 @@
 [package]
 name = "ruva-core"
-version = "0.19.2"
+version = "0.19.3"
 edition = "2021"
 license = "MIT"
 description = "Rust Library For Event Driven TEvent Handling"
@@ -9,7 +9,7 @@ repository = "https://github.com/BeringLab/ruva"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ruva-macro= {version="0.19.2", path="../ruva-macro"}
+ruva-macro= {version="0.19.3", path="../ruva-macro"}
 downcast-rs ="1"
 tokio = { version = "1.35.0", features = [ "macros","sync","rt"] }
 serde = {version="1.0.179",features=["derive"]}
