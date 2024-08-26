@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::snowflake::id_generator;
+use crate::prelude::SnowFlake;
 
 #[derive(Debug, Clone)]
 pub struct OutBox {
@@ -16,7 +16,7 @@ pub struct OutBox {
 impl OutBox {
 	pub fn new(aggregate_id: String, aggregate_name: String, topic: String, state: String) -> Self {
 		Self {
-			id: id_generator().generate(),
+			id: *SnowFlake::generate(),
 			aggregate_id,
 			aggregate_name,
 			topic,

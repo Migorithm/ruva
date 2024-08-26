@@ -19,7 +19,6 @@
 //! ```
 
 use super::contexts::*;
-
 use super::executor::TConnection;
 use super::handler::EventHandlers;
 use crate::prelude::{TCommand, TEvent};
@@ -32,11 +31,7 @@ use std::sync::Arc;
 pub type TEventHandler<E> = hashbrown::HashMap<String, EventHandlers<E>>;
 
 #[async_trait]
-pub trait TEventBus<E>
-where
-	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
-	crate::responses::BaseError: std::convert::From<E>,
-{
+pub trait TEventBus<E> {
 	fn event_handler(&self) -> &'static TEventHandler<E>;
 }
 
@@ -107,11 +102,7 @@ where
 }
 
 /// Interface for messagebus to work on
-pub trait TCommandService<R, E>: Send + Sync
-where
-	R: ApplicationResponse,
-	E: ApplicationError,
-{
+pub trait TCommandService<R, E>: Send + Sync {
 	fn execute(self) -> impl std::future::Future<Output = Result<R, E>> + Send;
 }
 
@@ -137,7 +128,7 @@ where
 			tracing::info!("{}", std::any::type_name::<C>());
 		}
 
-		let context_manager = ContextManager::new(conn);
+		let context_manager = Arc::new(tokio::sync::RwLock::new(ContextManager::new(conn)));
 		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 
 		// Trigger event handler
@@ -161,7 +152,7 @@ where
 			tracing::info!("{}", std::any::type_name::<C>());
 		}
 
-		let context_manager = ContextManager::new(conn);
+		let context_manager = Arc::new(tokio::sync::RwLock::new(ContextManager::new(conn)));
 		let res = self.command_handler(context_manager.clone(), message).execute().await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
 
@@ -237,7 +228,7 @@ macro_rules! init_event_handler {
 				handlers.extend(vec![
 					$(
 						Box::new(
-							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ::ruva::AtomicContextManager| -> ::ruva::Future<$E> {
+							|e: ::std::sync::Arc<dyn ::ruva::TEvent>, context_manager: ruva::AtomicContextManager | -> ::ruva::Future<$E> {
 								let event_handler = $event_handler(context_manager);
 								Box::pin(event_handler.$handler(
 									// * Convert event so event handler accepts not Arc<dyn TEvent> but `event_happend` type of message.

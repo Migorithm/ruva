@@ -1,8 +1,6 @@
-use crate::prelude::TEvent;
+use crate::{bus_components::contexts::AtomicContextManager, prelude::TEvent};
 
 use std::pin::Pin;
-
-use crate::bus_components::contexts::AtomicContextManager;
 
 pub type Future<E> = Pin<Box<dyn futures::Future<Output = Result<(), E>> + Send>>;
 pub type FutureResult<E> = Result<Future<E>, E>;

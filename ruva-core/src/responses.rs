@@ -10,7 +10,7 @@ pub enum BaseError {
 	ServiceError,
 }
 
-pub trait ApplicationResponse: 'static + Send + Sync {}
+pub trait ApplicationResponse: Send + Sync {}
 
 pub trait ApplicationError: 'static + std::fmt::Debug + Send + Sync {}
 impl ApplicationError for BaseError {}

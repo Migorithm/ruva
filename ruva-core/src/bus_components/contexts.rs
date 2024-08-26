@@ -1,9 +1,6 @@
 use super::executor::TConnection;
 use crate::{make_smart_pointer, prelude::TEvent};
 use std::{collections::VecDeque, sync::Arc};
-use tokio::sync::RwLock;
-
-pub type AtomicContextManager = Arc<RwLock<ContextManager>>;
 
 /// Request Context Manager
 /// it lives as long as the request lives
@@ -12,10 +9,17 @@ pub struct ContextManager {
 	pub conn: &'static dyn TConnection,
 }
 
+pub type AtomicContextManager = Arc<tokio::sync::RwLock<ContextManager>>;
+
 impl ContextManager {
 	/// Creation of context manager returns context manager AND event receiver
-	pub fn new(conn: &'static dyn TConnection) -> AtomicContextManager {
-		Arc::new(RwLock::new(Self { event_queue: VecDeque::new(), conn }))
+	pub fn new(conn: &'static dyn TConnection) -> Self {
+		Self { event_queue: VecDeque::new(), conn }
+	}
+}
+impl From<ContextManager> for AtomicContextManager {
+	fn from(value: ContextManager) -> Self {
+		Arc::new(tokio::sync::RwLock::new(value))
 	}
 }
 

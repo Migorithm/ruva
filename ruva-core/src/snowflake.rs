@@ -208,22 +208,18 @@ fn race_next_milli(timestamp: i64, epoch: SystemTime) -> i64 {
 	}
 }
 
-pub fn id_generator() -> &'static NumericalUniqueIdGenerator {
-	use std::sync::OnceLock;
-	static SNOWFLAKE: OnceLock<NumericalUniqueIdGenerator> = OnceLock::new();
-	SNOWFLAKE.get_or_init(|| {
-		NumericalUniqueIdGenerator::new(
-			std::env::var("DATACENTER_ID").expect("DATACENTER_ID MUST BE SET").parse::<i32>().expect("Parsing Failed!"),
-			std::env::var("MACHINE_ID").expect("MACHINE_ID MUST BE SET").parse::<i32>().expect("Parsing Failed!"),
-		)
-	})
-}
+static ID_GENERATOR: std::sync::LazyLock<NumericalUniqueIdGenerator> = std::sync::LazyLock::new(|| {
+	NumericalUniqueIdGenerator::new(
+		std::env::var("DATACENTER_ID").unwrap_or("1".to_string()).parse::<i32>().expect("Parsing Failed!"),
+		std::env::var("MACHINE_ID").unwrap_or("1".to_string()).parse::<i32>().expect("Parsing Failed!"),
+	)
+});
 
 #[derive(Clone, Hash, PartialEq, Debug, Eq, Ord, PartialOrd, Copy, Default)]
 pub struct SnowFlake(pub i64);
 impl SnowFlake {
 	pub fn generate() -> Self {
-		id_generator().generate().into()
+		ID_GENERATOR.generate().into()
 	}
 }
 
@@ -351,7 +347,7 @@ fn test_generate_not_sequential_value_when_sleep() {
 
 #[test]
 fn test_singleton_generate() {
-	let id_generator = id_generator();
+	let id_generator = &ID_GENERATOR;
 	let mut ids = Vec::with_capacity(1000000);
 
 	for _ in 0..99 {
