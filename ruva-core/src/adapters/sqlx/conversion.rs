@@ -2,11 +2,11 @@ use crate::prelude::BaseError;
 use crate::snowflake::SnowFlake;
 
 use sqlx::error::BoxDynError;
-use sqlx::postgres::{PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef};
+use sqlx::postgres::{PgHasArrayType, PgTypeInfo, PgValueRef};
 use sqlx::{Encode, Postgres, Type};
 
 impl Encode<'_, Postgres> for SnowFlake {
-	fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> sqlx::encode::IsNull {
+	fn encode_by_ref(&self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'_>) -> Result<sqlx::encode::IsNull, BoxDynError> {
 		let value = self.0;
 		<i64 as Encode<Postgres>>::encode(value, buf)
 	}
@@ -29,19 +29,15 @@ impl sqlx::Type<Postgres> for SnowFlake {
 	}
 }
 
-impl PgHasArrayType for SnowFlake {
-	fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-		<i64 as PgHasArrayType>::array_type_info()
-	}
-
-	fn array_compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
-		<i64 as PgHasArrayType>::array_compatible(ty)
-	}
-}
-
 impl From<sqlx::Error> for BaseError {
 	fn from(value: sqlx::Error) -> Self {
 		tracing::error!("{:?}", value);
 		Self::DatabaseError(value.to_string())
+	}
+}
+
+impl PgHasArrayType for SnowFlake {
+	fn array_type_info() -> PgTypeInfo {
+		<i64 as PgHasArrayType>::array_type_info()
 	}
 }
