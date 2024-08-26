@@ -60,7 +60,6 @@ where
 #[doc(hidden)]
 macro_rules! __register_uow_services_internal {
     (
-        $messagebus:ty,
         $response:ty,
         $error:ty,
         $h:expr,
@@ -79,7 +78,7 @@ macro_rules! __register_uow_services_internal {
                 }
             }
 
-            impl ::ruva::TMessageBus<$response,$error,$command> for $messagebus{
+            impl ::ruva::TMessageBus<$response,$error,$command> for ::ruva::MessageBus{
                 fn command_handler(
                     &self,
                     context_manager: ruva::AtomicContextManager,
@@ -96,7 +95,6 @@ macro_rules! __register_uow_services_internal {
 macro_rules! register_uow_services {
     // Case with custom handler function
     (
-        $messagebus:ty,
         $response:ty,
         $error:ty,
         $h:expr,
@@ -105,12 +103,11 @@ macro_rules! register_uow_services {
             $command:ty => $handler:expr
         ),*
     ) => {
-       	ruva::__register_uow_services_internal!($messagebus, $response, $error, $h, $($command => $handler),*);
+       	ruva::__register_uow_services_internal!($response, $error, $h, $($command => $handler),*);
     };
 
     // Default case
     (
-        $messagebus:ty,
         $response:ty,
         $error:ty,
 
@@ -118,6 +115,6 @@ macro_rules! register_uow_services {
             $command:ty => $handler:expr
         ),*
     ) => {
-        ruva::__register_uow_services_internal!($messagebus, $response, $error, ::std::convert::identity, $($command => $handler),*);
+        ruva::__register_uow_services_internal!($response, $error, ::std::convert::identity, $($command => $handler),*);
     };
 }
