@@ -15,8 +15,10 @@ pub mod prelude {
 	pub use crate::bus_components::contexts::Context;
 	pub use crate::bus_components::contexts::ContextManager;
 	pub use crate::bus_components::contexts::TSetCurrentEvents;
+	pub use crate::bus_components::executor::TConnection;
 	pub use crate::bus_components::handler::*;
 	pub use crate::bus_components::messagebus::*;
+
 	pub use crate::message::*;
 	pub use crate::outbox::OutBox;
 	pub use crate::responses::{ApplicationError, ApplicationResponse, BaseError};
