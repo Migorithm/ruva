@@ -19,7 +19,6 @@
 //! ```
 
 use super::contexts::*;
-
 use super::executor::TConnection;
 use super::handler::EventHandlers;
 use crate::prelude::{TCommand, TEvent};
@@ -32,11 +31,7 @@ use std::sync::Arc;
 pub type TEventHandler<E> = hashbrown::HashMap<String, EventHandlers<E>>;
 
 #[async_trait]
-pub trait TEventBus<E>
-where
-	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
-	crate::responses::BaseError: std::convert::From<E>,
-{
+pub trait TEventBus<E> {
 	fn event_handler(&self) -> &'static TEventHandler<E>;
 }
 
@@ -107,11 +102,7 @@ where
 }
 
 /// Interface for messagebus to work on
-pub trait TCommandService<R, E>: Send + Sync
-where
-	R: ApplicationResponse,
-	E: ApplicationError,
-{
+pub trait TCommandService<R, E>: Send + Sync {
 	fn execute(self) -> impl std::future::Future<Output = Result<R, E>> + Send;
 }
 
