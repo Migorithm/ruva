@@ -52,10 +52,11 @@ impl Context {
 
 	pub async fn send_internally_notifiable_messages(&mut self) {
 		// SAFETY: This is safe because we are sure that the context manager is not dropped
-		unsafe {
-			let event_queue = &mut *(Arc::as_ptr(&self.super_ctx) as *mut ContextManager);
-			self.curr_events.iter().filter(|e| e.internally_notifiable()).for_each(|e| event_queue.push_back(e.clone()));
-		}
+
+		self.curr_events
+			.iter()
+			.filter(|e| e.internally_notifiable())
+			.for_each(|e| self.super_ctx.get_mut().push_back(e.clone()));
 	}
 }
 
