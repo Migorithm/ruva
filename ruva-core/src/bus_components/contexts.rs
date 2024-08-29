@@ -4,22 +4,23 @@ use std::{collections::VecDeque, sync::Arc};
 
 /// Request Context Manager
 /// it lives as long as the request lives
+
 pub struct ContextManager {
 	pub event_queue: VecDeque<Arc<dyn TEvent>>,
 	pub conn: &'static dyn TConnection,
 }
 
-pub type AtomicContextManager = Arc<tokio::sync::RwLock<ContextManager>>;
+pub type AtomicContextManager = Arc<ContextManager>;
 
 impl ContextManager {
 	/// Creation of context manager returns context manager AND event receiver
 	pub fn new(conn: &'static dyn TConnection) -> Self {
 		Self { event_queue: VecDeque::new(), conn }
 	}
-}
-impl From<ContextManager> for AtomicContextManager {
-	fn from(value: ContextManager) -> Self {
-		Arc::new(tokio::sync::RwLock::new(value))
+
+	/// SAFETY: This is safe because we are sure this method is used only in the context of command and event handling
+	pub(crate) fn get_mut<'a>(self: &Arc<Self>) -> &'a mut ContextManager {
+		unsafe { &mut *(Arc::as_ptr(self) as *mut ContextManager) }
 	}
 }
 
@@ -49,10 +50,12 @@ impl Context {
 		self.set_current_events(aggregate.take_events());
 	}
 
-	pub async fn send_internally_notifiable_messages(&self) {
-		let event_queue = &mut self.super_ctx.write().await;
-
-		self.curr_events.iter().filter(|e| e.internally_notifiable()).for_each(|e| event_queue.push_back(e.clone()));
+	pub async fn send_internally_notifiable_messages(&mut self) {
+		// SAFETY: This is safe because we are sure that the context manager is not dropped
+		unsafe {
+			let event_queue = &mut *(Arc::as_ptr(&self.super_ctx) as *mut ContextManager);
+			self.curr_events.iter().filter(|e| e.internally_notifiable()).for_each(|e| event_queue.push_back(e.clone()));
+		}
 	}
 }
 

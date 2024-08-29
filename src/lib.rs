@@ -146,7 +146,7 @@
 //! ```rust,ignore
 //! use std::marker::PhantomData;
 //! use ruva_core::prelude::TUnitOfWork;
-//! use ruva_core::prelude::TRepository;
+//! use ruva_core::prelude::TSetCurrentEvents;
 //!
 //!
 //! // Service Handler
@@ -155,7 +155,7 @@
 //! }
 //! impl<R> CustomHandler<R>
 //! where
-//!     R: TRepository + TUnitOfWork,
+//!     R: TSetCurrentEvents + TUnitOfWork,
 //! {
 //!     pub async fn create_aggregate(
 //!         cmd: CreateCommand,

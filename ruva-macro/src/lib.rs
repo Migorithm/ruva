@@ -183,20 +183,6 @@ pub fn response_derive(attr: TokenStream) -> TokenStream {
 ///     pub age: i64,
 /// }
 ///
-/// #[async_trait]
-/// impl TRepository< TestAggregate> for SqlRepository<TestAggregate> {
-///     fn new(executor: Arc<RwLock<SQLExecutor>>) -> Self {
-///          ...
-///     }
-///
-///     #[event_hook]
-///     async fn update(
-///         &mut self,
-///         aggregate: &mut TestAggregate,
-///     ) -> Result<(), BaseError> {
-///         Ok(())
-///     }
-/// }
 ///
 /// async fn test_event_hook() {
 ///     //GIVEN

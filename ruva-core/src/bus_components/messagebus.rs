@@ -37,7 +37,7 @@ pub trait TEventBus<E> {
 
 /// This function is used to handle event. It is called recursively until there is no event left in the queue.
 #[async_recursion]
-async fn handle_event<E>(msg: Arc<dyn TEvent>, context_manager: AtomicContextManager, event_handler: &'static TEventHandler<E>) -> Result<(), E>
+async fn handle_event<E>(msg: Arc<dyn TEvent>, context_manager: AtomicContextManager, event_handler: &'static TEventHandler<E>) -> Result<AtomicContextManager, E>
 where
 	E: ApplicationError + std::convert::From<crate::responses::BaseError> + std::convert::From<E>,
 	crate::responses::BaseError: std::convert::From<E>,
@@ -56,7 +56,7 @@ where
 	match handlers {
 		EventHandlers::Sync(h) => {
 			for (i, handler) in h.iter().enumerate() {
-				if let Err(err) = handler(msg.clone(), context_manager.clone()).await {
+				if let Err(err) = handler(msg.clone(), Arc::clone(&context_manager)).await {
 					// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
 					match err.into() {
 						BaseError::StopSentinel => {
@@ -67,7 +67,7 @@ where
 						BaseError::StopSentinelWithEvent(event) => {
 							let error_msg = format!("Stop Sentinel With Event Arrived In {i}th Event!");
 							crate::backtrace_error!("{}", error_msg);
-							context_manager.write().await.push_back(event);
+							context_manager.get_mut().push_back(event);
 							break;
 						}
 						err => {
@@ -79,10 +79,7 @@ where
 			}
 		}
 		EventHandlers::Async(h) => {
-			let mut futures = Vec::new();
-			for handler in h.iter() {
-				futures.push(handler(msg.clone(), context_manager.clone()));
-			}
+			let futures = h.iter().map(|handler| handler(msg.clone(), Arc::clone(&context_manager)));
 			if let Err(err) = futures::future::try_join_all(futures).await {
 				let error_msg = format!("Error Occurred While Handling Event! Error:{:?}", err);
 				crate::backtrace_error!("{}", error_msg);
@@ -91,14 +88,15 @@ where
 	}
 
 	// Resursive case
-	let incoming_event = context_manager.write().await.event_queue.pop_front();
+	let incoming_event = context_manager.get_mut().pop_front();
+
 	if let Some(event) = incoming_event {
-		if let Err(err) = handle_event(event, context_manager.clone(), event_handler).await {
+		if let Err(err) = handle_event(event, Arc::clone(&context_manager), event_handler).await {
 			// ! Safety:: BaseError Must Be Enforced To Be Accepted As Variant On ServiceError
 			tracing::error!("{:?}", err);
 		}
 	}
-	Ok(())
+	Ok(context_manager)
 }
 
 /// Interface for messagebus to work on
@@ -128,13 +126,13 @@ where
 			tracing::info!("{}", std::any::type_name::<C>());
 		}
 
-		let context_manager = Arc::new(tokio::sync::RwLock::new(ContextManager::new(conn)));
-		let res = self.command_handler(context_manager.clone(), message).execute().await?;
+		let context_manager = Arc::new(ContextManager::new(conn));
+		let res = self.command_handler(Arc::clone(&context_manager), message).execute().await?;
 
 		// Trigger event handler
-		if !context_manager.read().await.event_queue.is_empty() {
-			let event = context_manager.write().await.event_queue.pop_front();
-			let _s = handle_event(event.unwrap(), context_manager.clone(), self.event_handler()).await?;
+		if !context_manager.event_queue.is_empty() {
+			let event = context_manager.get_mut().pop_front();
+			handle_event(event.unwrap(), Arc::clone(&context_manager), self.event_handler()).await?;
 		}
 		Ok(res)
 	}
@@ -152,14 +150,15 @@ where
 			tracing::info!("{}", std::any::type_name::<C>());
 		}
 
-		let context_manager = Arc::new(tokio::sync::RwLock::new(ContextManager::new(conn)));
-		let res = self.command_handler(context_manager.clone(), message).execute().await?;
+		let context_manager = Arc::new(ContextManager::new(conn));
+		let res = self.command_handler(Arc::clone(&context_manager), message).execute().await?;
 		let mut res = CommandResponseWithEventFutures { result: res, join_handler: None };
 
 		// Trigger event handler
-		if !context_manager.read().await.event_queue.is_empty() {
-			let event = context_manager.write().await.event_queue.pop_front();
-			res.join_handler = Some(tokio::spawn(handle_event(event.unwrap(), context_manager.clone(), self.event_handler())));
+		if !context_manager.event_queue.is_empty() {
+			let event = context_manager.get_mut().pop_front().unwrap();
+
+			res.join_handler = Some(tokio::spawn(handle_event(event, context_manager, self.event_handler())));
 		}
 		Ok(res)
 	}
@@ -167,7 +166,7 @@ where
 
 pub struct CommandResponseWithEventFutures<T, E> {
 	result: T,
-	join_handler: Option<tokio::task::JoinHandle<std::result::Result<(), E>>>,
+	join_handler: Option<tokio::task::JoinHandle<std::result::Result<AtomicContextManager, E>>>,
 }
 impl<T, E> CommandResponseWithEventFutures<T, E>
 where
