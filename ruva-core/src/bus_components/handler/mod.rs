@@ -5,7 +5,7 @@
 //! impl<C, R> TCommandService<ServiceResponse, ServiceError> for CommandHandler<(C, R)>
 //! where
 //!     C: TCommand + for<'a> TGetHandler<&'a mut R, Result<ServiceResponse>>,
-//!     R: TRepository + TUnitOfWork,
+//!     R: TSetCurrentEvents + TUnitOfWork,
 //! {
 //!     async fn execute(&mut self) -> Result<ServiceResponse> {
 //!         let CommandHandler((cmd, dep)) = self;

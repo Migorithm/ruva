@@ -51,7 +51,7 @@ impl TUnitOfWork for Context {
 	async fn begin(&mut self) -> Result<(), BaseError> {
 		match self.pg_transaction.as_mut() {
 			None => {
-				let trx = &self.super_ctx.write().await.conn;
+				let trx = self.super_ctx.conn;
 
 				if let Some(trx) = trx.downcast_ref::<&PgPool>().or(trx.downcast_ref::<PgPool>().as_ref()) {
 					self.pg_transaction = Some(trx.begin().await?);
