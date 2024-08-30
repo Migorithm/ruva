@@ -30,7 +30,7 @@ pub struct MakeOrder {
     pub items: Vec<String>,
 }
 ```
-As you attach [into_command] derive macro, [MessageBus] now is going to be able to understand how and where it should
+As you attach [into_command] derive macro, [MessageBus] is now able to understand how and where it should
 dispatch the command to.
 
 Likewise, you can do the same thing for Event:
@@ -83,7 +83,6 @@ For your convenience, Ruva provides declarative macros that handles transaction 
 
 ```rust
 ruva::register_uow_services!(
-	MessageBus,
 	ServiceResponse,
 	ServiceError,
 
@@ -117,11 +116,11 @@ init_event_handler!(
            NotificationHandler::send_mail,
            ],
            
-    #[asynchronous]
+    #[async]
     OrderSucceeded: [
            DeliveryHandler::checkout_delivery_items,
            InventoryHandler::change_inventory_count
-           ]
+    ]
 }
 );
 ```
