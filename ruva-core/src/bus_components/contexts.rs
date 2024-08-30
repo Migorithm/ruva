@@ -69,3 +69,36 @@ impl TSetCurrentEvents for Context {
 		self.curr_events.extend(events)
 	}
 }
+
+#[tokio::test]
+async fn test_context_managers() {
+	struct CustomConnection;
+	#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+	struct CustomEvent(usize);
+	impl TEvent for CustomEvent {
+		fn externally_notifiable(&self) -> bool {
+			true
+		}
+		fn internally_notifiable(&self) -> bool {
+			true
+		}
+		fn state(&self) -> String {
+			"state".to_string()
+		}
+	}
+	impl TConnection for CustomConnection {}
+
+	async fn add_event_to_queue(context_manager: Arc<ContextManager>, order: usize) {
+		context_manager.get_mut().push_back(std::sync::Arc::new(CustomEvent(order)));
+	}
+
+	let context_manager = Arc::new(ContextManager::new(&CustomConnection));
+
+	let count = 10000000;
+	let futures = (0..count).map(|order| add_event_to_queue(Arc::clone(&context_manager), order));
+	futures::future::join_all(futures).await;
+
+	assert_eq!(context_manager.len(), count);
+	let events = context_manager.iter().map(|e| e.downcast_ref::<CustomEvent>().unwrap().0).collect::<Vec<_>>();
+	assert_eq!(events, (0..count).collect::<Vec<_>>());
+}
